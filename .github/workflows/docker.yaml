@@ -1,0 +1,35 @@
+name: Docker CI
+
+on: push
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+          
+      - name: Check if registry exist if dont create it
+        run: |
+          aws ecr describe-repositories --repository-names ${{ secrets.DOCKER_REGISTRY_URL }} || aws ecr create-repository --repository-name ${{ secrets.DOCKER_REGISTRY_URL }} --image-scanning-configuration scanOnPush=true
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
+        
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v1
+        
+      - name: Docker Login
+        uses: docker/login-action@v1.14.1
+        with:
+          registry: ${{ secrets.DOCKER_REGISTRY_URL }} 
+          username: ${{ secrets.DOCKER_REGISTRY_USERNAME }} 
+          password: ${{ secrets.DOCKER_REGISTRY_PASSWORD }} 
+
+      - name: Build and push Docker images
+        uses: docker/build-push-action@v2.10.0
+        with:
+          context: .
+          push: true
+          tags: ${{ secerts.DOCKER_REGISTRY_URL }}/app/example:latest # definir
