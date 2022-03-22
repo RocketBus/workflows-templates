@@ -1,6 +1,20 @@
 name: Docker CI
 
-on: push
+on:
+  workflow_call:
+    inputs:
+      AWS_REGION:
+        required: true
+        default: us-east-1
+        type: string
+      DOCKER_REGISTRY_URL:
+        required: false
+        type: string  
+    secrets:
+      AWS_ACCESS_KEY_ID:
+        required: true
+      AWS_SECRET_ACCESS_KEY:
+        required: true
 
 jobs:
   build:
@@ -14,7 +28,7 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_DEFAULT_REGION }}
+          aws-region: ${{ inputs.AWS_REGION }}
 
       - name: Login to Amazon ECR
         id: login_ecr
@@ -37,4 +51,4 @@ jobs:
         with:
           context: .
           push: true
-          tags: ${{ steps.create_repository.outputs.repository }}:latest # definir
+          tags: ${{ steps.create_repository.outputs.repository }}:latest
