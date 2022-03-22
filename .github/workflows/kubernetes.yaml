@@ -1,0 +1,56 @@
+name: Kubernetes Deployment
+
+on:
+  workflow_call:
+    inputs:
+      ENVIRONMENT:
+        type: string
+        required: true
+      IMAGE_TAG:
+        type: string
+        required: true
+      AWS_REGION:
+        type: string
+        required: false
+        default: us-east-1
+      EKS_CLUSTER_NAME:
+        type: string
+        required: true
+      AWS_ROLE_ARN:
+        type: string
+        required: true
+    secrets:
+      AWS_ACCESS_KEY_ID:
+        required: true
+      AWS_SECRET_ACCESS_KEY:
+        required: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.ENVIRONMENT }}
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ inputs.AWS_REGION }}
+
+      - uses: azure/setup-helm@v1
+        with:
+          version: v3.8.0
+
+      - name: Helm upgrade
+        env:
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          RELEASE_NAME=${GITHUB_REPOSITORY#*/}
+          CHART_PATH=charts/${RELEASE_NAME}
+
+          aws eks update-kubeconfig --region ${{ inputs.AWS_REGION }} --name ${{ inputs.EKS_CLUSTER_NAME }} --role-arn ${{ inputs.AWS_ROLE_ARN }}
+          helm upgrade --install ${RELEASE_NAME} ${CHART_PATH} \
+            --create-namespace --namespace ${NAMESPACE} \
+            --values values.${{ inputs.ENVIRONMENT }}.yaml --set image.tag=${{ inputs.IMAGE_TAG }}

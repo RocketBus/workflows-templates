@@ -3,11 +3,11 @@ name: Node.js CI
 on:
   workflow_call:
     inputs:
-      node_version:
+      NODE_VERSION:
         type: string
         required: false
         default: '16'
-      skip_test:
+      SKIP_TEST:
         type: boolean
         required: false
         default: false
@@ -26,10 +26,10 @@ jobs:
           .next
           out
         key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-    - name: Use Node.js ${{ inputs.node_version }}
+    - name: Use Node.js ${{ inputs.NODE_VERSION }}
       uses: actions/setup-node@v2
       with:
-        node_version: ${{ inputs.node_version }}
+        node_version: ${{ inputs.NODE_VERSION }}
     - name: Install Dependencies
       run: npm ci
     - name: Build
@@ -52,5 +52,5 @@ jobs:
     - name: Lint
       run: npm run lint
     - name: Test
-      if: ${{ ! inputs.skip_test }}
+      if: ${{ ! inputs.SKIP_TEST }}
       run: npm test
