@@ -41,14 +41,20 @@ jobs:
         id: create_repository
         env:
           ECR_REGISTRY: ${{ steps.login_ecr.outputs.registry }}
+          COMMIT_SHA: ${{ github.sha }}
         run: |
+          SHORT_COMMIT_SHA=${COMMIT_SHA:0:7}
           ECR_REPOSITORY=${GITHUB_REPOSITORY#*/}
           aws ecr describe-repositories --repository-names ${ECR_REPOSITORY} || aws ecr create-repository --repository-name ${ECR_REPOSITORY} --image-scanning-configuration scanOnPush=true
+          
           echo "::set-output name=repository::${ECR_REGISTRY}/${ECR_REPOSITORY}"
+          echo "::set-output name=image_tag::${{ github.ref_name }}-${SHORT_COMMIT_SHA}"
 
       - name: Build and push Docker images
         uses: docker/build-push-action@v2.10.0
         with:
           context: .
+          tags: |
+            ${{ steps.create_repository.outputs.repository }}/${{ github.ref_name }}-${{ steps.create_repository.outputs.image_tag }}
+            ${{ steps.create_repository.outputs.repository }}:latest
           push: true
-          tags: ${{ steps.create_repository.outputs.repository }}:latest
