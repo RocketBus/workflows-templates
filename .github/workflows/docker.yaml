@@ -28,10 +28,7 @@ jobs:
       repository: ${{ steps.ci_properties.outputs.repository }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
-
-      - name: Debug
-        run: echo ${{ github.event_name }}      
+        uses: actions/checkout@v2      
 
       - name: Set ci_properties
         id: ci_properties
@@ -50,7 +47,7 @@ jobs:
           AWS_REGION[live]=us-east-2
 
           IMAGE_NAME=${GITHUB_REPOSITORY#*/}
-          IMAGE_TAG=${{ github.ref_name }}-${COMMIT_SHA:0:7}
+          [[ ${{ github.event_name }} == 'pull_request' ]] && IMAGE_TAG=pr-${{ github.event.pull_request.number }}-${COMMIT_SHA:0:7} || IMAGE_TAG=${{ github.ref_name }}-${COMMIT_SHA:0:7}
 
           REGISTRY=${AWS_ACCOUNT_ID[$ENVIRONMENT]}.dkr.ecr.${AWS_REGION[$ENVIRONMENT]}.amazonaws.com
           REPOSITORY=${REGISTRY}/${IMAGE_NAME}
