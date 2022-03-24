@@ -80,18 +80,18 @@ jobs:
         uses: docker/build-push-action@v2
         with:
           context: .
-          cache-from: type=registry,ref=${{ steps.image_metadata.outputs.repository }}:buildcache
-          cache-to: type=registry,ref=${{ steps.image_metadata.outputs.repository }}:buildcache,mode=max
+          cache-from: type=registry,ref=${{ steps.ci_properties.outputs.repository }}:buildcache
+          cache-to: type=registry,ref=${{ steps.ci_properties.outputs.repository }}:buildcache,mode=max
           tags: |
-            ${{ steps.image_metadata.outputs.repository }}:${{ steps.image_metadata.outputs.image_tag }}
-            ${{ steps.image_metadata.outputs.repository }}:latest
-          outputs: type=docker,dest=/tmp/${{ steps.image_metadata.outputs.image_name }}.tar
+            ${{ steps.ci_properties.outputs.repository }}:${{ steps.ci_properties.outputs.image_tag }}
+            ${{ steps.ci_properties.outputs.repository }}:latest
+          outputs: type=docker,dest=/tmp/${{ steps.ci_properties.outputs.image_name }}.tar
 
       - name: Upload artifact
         uses: actions/upload-artifact@v2
         with:
-          name: ${{ steps.image_metadata.outputs.image_name }}
-          path: /tmp/${{ steps.image_metadata.outputs.image_name }}.tar
+          name: ${{ steps.ci_properties.outputs.image_name }}
+          path: /tmp/${{ steps.ci_properties.outputs.image_name }}.tar
 
   release:
     runs-on: ubuntu-latest
