@@ -30,6 +30,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
 
+      - name: Debug
+        run: echo ${{ github.event_name }}      
+
       - name: Set ci_properties
         id: ci_properties
         env:
