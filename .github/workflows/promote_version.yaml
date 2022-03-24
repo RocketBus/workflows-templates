@@ -1,0 +1,97 @@
+name: Docker promote image tag
+
+on:
+  workflow_call:
+    inputs:
+      FROM_ENVIRONMENT:
+        type: string
+        required: false
+        default: 'stage'
+      FROM_BRANCH:
+        type: string
+        required: false
+        default: 'main'
+      ENVIRONMENT:
+        type: string
+        required: true
+    secrets:
+      AWS_ACCESS_KEY_ID:
+        required: true
+      AWS_SECRET_ACCESS_KEY:
+        required: true
+    outputs:
+      IMAGE_TAG:
+        value: ${{ jobs.release.outputs.image_tag }}
+      REPOSITORY:
+        value: ${{ jobs.release.outputs.repository }}
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    outputs:
+      image_tag: ${{ steps.properties.outputs.image_tag }}
+      repository: ${{ steps.properties.outputs.repository }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Set properties
+        id: properties
+        env:
+          FROM_ENVIRONMENT: ${{ inputs.FROM_ENVIRONMENT }}
+          ENVIRONMENT: ${{ inputs.ENVIRONMENT }}
+          COMMIT_SHA: ${{ github.sha }}
+        run: |
+          declare -A AWS_ACCOUNT_ID AWS_REGION
+          
+          AWS_ACCOUNT_ID[dev]=180811438061
+          AWS_ACCOUNT_ID[stage]=406026015868
+          AWS_ACCOUNT_ID[live]=114395709799
+
+          AWS_REGION[dev]=us-east-2
+          AWS_REGION[stage]=us-east-2
+          AWS_REGION[live]=us-east-2
+
+          IMAGE_NAME=${GITHUB_REPOSITORY#*/}
+          FROM_IMAGE_TAG=${{ inputs.FROM_BRANCH }}-${COMMIT_SHA:0:7}
+          IMAGE_TAG=${{ github.ref_name }}
+
+          FROM_REGISTRY=${AWS_ACCOUNT_ID[$FROM_ENVIRONMENT]}.dkr.ecr.${AWS_REGION[$FROM_ENVIRONMENT]}.amazonaws.com
+          FROM_REPOSITORY=${FROM_REGISTRY}/${IMAGE_NAME}
+          REGISTRY=${AWS_ACCOUNT_ID[$ENVIRONMENT]}.dkr.ecr.${AWS_REGION[$ENVIRONMENT]}.amazonaws.com
+          REPOSITORY=${REGISTRY}/${IMAGE_NAME}
+
+          ROLE_ARN=arn:aws:iam::${AWS_ACCOUNT_ID[$ENVIRONMENT]}:role/CrossAccount-Global-Developer
+
+          echo "::set-output name=from_aws_account_id::${AWS_ACCOUNT_ID[$FROM_ENVIRONMENT]}"
+          echo "::set-output name=from_aws_region::${AWS_REGION[$FROM_ENVIRONMENT]}"
+          echo "::set-output name=from_image_tag::${FROM_IMAGE_TAG}"
+          echo "::set-output name=from_repository::${FROM_REPOSITORY}"
+
+          echo "::set-output name=aws_account_id::${AWS_ACCOUNT_ID[$ENVIRONMENT]}"
+          echo "::set-output name=aws_region::${AWS_REGION[$ENVIRONMENT]}"
+          echo "::set-output name=role_arn::${ROLE_ARN}"
+          echo "::set-output name=image_name::${IMAGE_NAME}"
+          echo "::set-output name=image_tag::${IMAGE_TAG}"
+          echo "::set-output name=repository::${REPOSITORY}"
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ steps.properties.outputs.aws_region }}
+
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v1
+        with:
+          registries: ${{ steps.properties.outputs.from_aws_account_id }}, ${{ steps.properties.outputs.aws_account_id }}
+
+      - name: Promote image
+        run: |
+          docker pull ${{ steps.properties.outputs.from_repository }}:${{ steps.properties.outputs.image_tag }}
+          docker tag ${{ steps.properties.outputs.from_repository }}:${{ steps.properties.outputs.from_image_tag }} ${{ steps.properties.outputs.repository }}:${{ steps.properties.outputs.image_tag }}
+          docker push ${{ steps.properties.outputs.repository }}:${{ steps.properties.outputs.image_tag }}
