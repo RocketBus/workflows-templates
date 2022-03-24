@@ -29,8 +29,8 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - name: Set properties
-        id: properties
+      - name: Set ci_properties
+        id: ci_properties
         env:
           ENVIRONMENT: ${{ inputs.ENVIRONMENT }}
         run: |
@@ -55,7 +55,7 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ steps.properties.outputs.aws_region }}
+          aws-region: ${{ steps.ci_properties.outputs.aws_region }}
 
       - name: Helm upgrade
         env:
@@ -70,7 +70,7 @@ jobs:
           EKS_CLUSTER_NAME[stage]=k0-stg-clickbus-net
           EKS_CLUSTER_NAME[live]=k0-live-clickbus-net
 
-          aws eks update-kubeconfig --name ${EKS_CLUSTER_NAME[$ENVIRONMENT]} --role-arn ${{ steps.properties.outputs.role_arn }}
+          aws eks update-kubeconfig --name ${EKS_CLUSTER_NAME[$ENVIRONMENT]} --role-arn ${{ steps.ci_properties.outputs.role_arn }}
           echo helm upgrade --install ${RELEASE_NAME} ${CHART_PATH} \
             --create-namespace --namespace ${NAMESPACE} \
             --reuse-values --values values.${{ inputs.ENVIRONMENT }}.yaml \

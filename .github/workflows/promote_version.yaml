@@ -29,14 +29,14 @@ jobs:
   release:
     runs-on: ubuntu-latest
     outputs:
-      image_tag: ${{ steps.properties.outputs.image_tag }}
-      repository: ${{ steps.properties.outputs.repository }}
+      image_tag: ${{ steps.ci_properties.outputs.image_tag }}
+      repository: ${{ steps.ci_properties.outputs.repository }}
     steps:
       - name: Checkout
         uses: actions/checkout@v2
 
-      - name: Set properties
-        id: properties
+      - name: Set ci_properties
+        id: ci_properties
         env:
           FROM_ENVIRONMENT: ${{ inputs.FROM_ENVIRONMENT }}
           ENVIRONMENT: ${{ inputs.ENVIRONMENT }}
@@ -83,15 +83,15 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ steps.properties.outputs.aws_region }}
+          aws-region: ${{ steps.ci_properties.outputs.aws_region }}
 
       - name: Login to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v1
         with:
-          registries: ${{ steps.properties.outputs.from_aws_account_id }}, ${{ steps.properties.outputs.aws_account_id }}
+          registries: ${{ steps.ci_properties.outputs.from_aws_account_id }}, ${{ steps.ci_properties.outputs.aws_account_id }}
 
       - name: Promote image
         run: |
-          docker pull ${{ steps.properties.outputs.from_repository }}:${{ steps.properties.outputs.image_tag }}
-          docker tag ${{ steps.properties.outputs.from_repository }}:${{ steps.properties.outputs.from_image_tag }} ${{ steps.properties.outputs.repository }}:${{ steps.properties.outputs.image_tag }}
-          docker push ${{ steps.properties.outputs.repository }}:${{ steps.properties.outputs.image_tag }}
+          docker pull ${{ steps.ci_properties.outputs.from_repository }}:${{ steps.ci_properties.outputs.image_tag }}
+          docker tag ${{ steps.ci_properties.outputs.from_repository }}:${{ steps.ci_properties.outputs.from_image_tag }} ${{ steps.ci_properties.outputs.repository }}:${{ steps.ci_properties.outputs.image_tag }}
+          docker push ${{ steps.ci_properties.outputs.repository }}:${{ steps.ci_properties.outputs.image_tag }}
