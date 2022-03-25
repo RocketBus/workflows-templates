@@ -74,6 +74,9 @@ jobs:
           echo "ECR_REGISTRY=${ECR_REGISTRY}" >> $GITHUB_ENV
           echo "ECR_REPOSITORY=${ECR_REPOSITORY}" >> $GITHUB_ENV
 
+          AWS_ACCOUNTS_IDS=$(echo "${AWS_ACCOUNT_ID} ${SRC_AWS_ACCOUNT_ID}" | tr ' ' ',' | sed 's/,$//')
+          echo "AWS_ACCOUNTS_IDS=${AWS_ACCOUNTS_IDS}" >> $GITHUB_ENV
+
           echo "::set-output name=aws_account_id::${AWS_ACCOUNT_ID}"
           echo "::set-output name=aws_region::${AWS_REGION}"
           echo "::set-output name=ecr_repository::${ECR_REPOSITORY}"
@@ -98,7 +101,7 @@ jobs:
       - name: Login to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v1
         with:
-          registries: "${{ env.AWS_ACCOUNT_ID }}, ${{ env.SRC_AWS_ACCOUNT_ID }}"
+          registries: ${{ env.AWS_ACCOUNTS_IDS }}
                   
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@v1
