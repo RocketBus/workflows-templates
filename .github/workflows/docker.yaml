@@ -14,8 +14,6 @@ on:
     outputs:
       IMAGE_TAGS:
         value: ${{ jobs.build.outputs.image_tags }}
-      REPOSITORY:
-        value: ${{ jobs.build.outputs.repository }}
 
 jobs:
   build:
@@ -25,7 +23,6 @@ jobs:
       aws_region: ${{ steps.ci_properties.outputs.aws_region }}
       image_name: ${{ steps.ci_properties.outputs.image_name }}
       image_tags: ${{ steps.meta.outputs.tags }}
-      repository: ${{ steps.ci_properties.outputs.repository }}
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -67,8 +64,6 @@ jobs:
             type=ref,suffix=-{{sha}},event=branch
             type=ref,prefix=pr-,suffix=-{{sha}},event=pr
             type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=semver,pattern={{major}}
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v1
@@ -132,5 +127,4 @@ jobs:
       - name: Push image
         run: |
           docker load --input /tmp/${{ needs.build.outputs.image_name }}.tar
-          docker images
-          docker push ${{ needs.build.outputs.repository }}:${{ needs.build.outputs.image_tags }}
+          for IMAGE_TAG in ${{ needs.build.outputs.image_tags }}; do docker push ${IMAGE_TAG}; done
