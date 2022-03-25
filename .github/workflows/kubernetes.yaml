@@ -32,7 +32,7 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: quay.io/roboll/helmfile:v0.143.1
-    environment: ${{ env.ENV }}
+    environment: ${{ inputs.env }}
     steps:
       - uses: actions/checkout@v2
 
