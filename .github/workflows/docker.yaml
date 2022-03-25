@@ -133,5 +133,4 @@ jobs:
         run: |
           docker load --input /tmp/${{ needs.build.outputs.image_name }}.tar
           docker images
-          docker push ${{ needs.build.outputs.repository }}:${{ needs.build.outputs.image_tag }}
-          docker push ${{ needs.build.outputs.repository }}:latest
+          docker push ${{ needs.build.outputs.repository }}:${{ needs.build.outputs.image_tags }}
