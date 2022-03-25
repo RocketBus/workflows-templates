@@ -120,8 +120,10 @@ jobs:
       - name: Retag image
         if: ${{ inputs.promote_image_version }}
         run: |
-          COMMIT_SHA=${{ github.sha }}
-          SRC_IMAGE_TAG="${{ env.SRC_ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ inputs.revision_from_branch }}-${COMMIT_SHA:0:7}"
+          SRC_IMAGE_TAG=${{ env.SRC_ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ inputs.revision_from_branch }}-${GITHUB_SHA:0:7}
+          echo ${GITHUB_ENV}
+          
+          env
           
           docker pull ${SRC_IMAGE_TAG}
           for IMAGE_TAG in "${{ steps.meta.outputs.tags }}"; do docker tag ${SRC_IMAGE_TAG} ${IMAGE_TAG}; done
