@@ -105,7 +105,7 @@ jobs:
 
       - name: Build image
         uses: docker/build-push-action@v2
-        if: ${{ inputs.promote_image_version }}
+        if: ${{ ! inputs.promote_image_version }}
         with:
           context: .
           cache-from: type=registry,ref=${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:buildcache
@@ -115,9 +115,9 @@ jobs:
           outputs: type=docker,dest=/tmp/${{ env.ECR_REPOSITORY }}.tar
 
       - name: Retag image
-        if: ${{ ! inputs.promote_image_version }}
+        if: ${{ inputs.promote_image_version }}
         env:
-          COMMIT_SHA=${{ github.sha }}
+          COMMIT_SHA: ${{ github.sha }}
         run: |
           SRC_IMAGE_TAG=${{ env.SRC_ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ inputs.revision_from_branch }}-${COMMIT_SHA:0:7}
           
