@@ -59,7 +59,7 @@ jobs:
 
       - name: Helm upgrade
         run: |
-          IMAGE_TAGS=($(echo ${{ inputs.image_tags }}))
+          IMAGE_TAGS=(${{ inputs.image_tags }})
           ECR_REPOSITORY=${FIRST_IMAGE_TAG[0]%:*}
           IMAGE_TAG=${FIRST_IMAGE_TAG[0]#*:}
           RELEASE_NAME=${GITHUB_REPOSITORY#*/}
