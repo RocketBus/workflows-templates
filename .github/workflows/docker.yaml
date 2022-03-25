@@ -52,9 +52,9 @@ jobs:
       - name: Set env
         id: set_env
         run: |
-          SRC_AWS_ACCOUNT_ID=SRC_AWS_ACCOUNT_ID_${SRC_ENV^^}
+          SRC_AWS_ACCOUNT_ID=AWS_ACCOUNT_ID_${SRC_ENV^^}
           SRC_AWS_ACCOUNT_ID=${!SRC_AWS_ACCOUNT_ID}
-          SRC_AWS_REGION=SRC_AWS_REGION_${SRC_ENV^^}
+          SRC_AWS_REGION=AWS_REGION_${SRC_ENV^^}
           SRC_AWS_REGION=${!SRC_AWS_REGION}
           SRC_ECR_REGISTRY=${SRC_AWS_ACCOUNT_ID}.dkr.ecr.${SRC_AWS_REGION}.amazonaws.com
 
@@ -80,8 +80,6 @@ jobs:
           echo "::set-output name=aws_account_id::${AWS_ACCOUNT_ID}"
           echo "::set-output name=aws_region::${AWS_REGION}"
           echo "::set-output name=ecr_repository::${ECR_REPOSITORY}"
-          
-          echo $GITHUB_ENV
 
       - name: Docker meta
         id: meta
@@ -166,4 +164,4 @@ jobs:
         run: |
           docker load --input /tmp/${{ needs.build.outputs.ecr_repository }}.tar
           aws ecr describe-repositories --repository-names ${{ needs.build.outputs.ecr_repository }} 2> /dev/null || aws ecr create-repository --repository-name ${{ needs.build.outputs.ecr_repository }} --image-scanning-configuration scanOnPush=true
-          for IMAGE_TAG in "${{ steps.meta.outputs.tags }}"; do docker push ${IMAGE_TAG}; done
+          for IMAGE_TAG in "${{ needs.build.outputs.image_tags }}"; do docker push ${IMAGE_TAG}; done
