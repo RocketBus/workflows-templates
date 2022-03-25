@@ -80,6 +80,8 @@ jobs:
           echo "::set-output name=aws_account_id::${AWS_ACCOUNT_ID}"
           echo "::set-output name=aws_region::${AWS_REGION}"
           echo "::set-output name=ecr_repository::${ECR_REPOSITORY}"
+          
+          echo $GITHUB_ENV
 
       - name: Docker meta
         id: meta
