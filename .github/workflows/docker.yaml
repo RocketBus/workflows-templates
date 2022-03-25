@@ -18,9 +18,6 @@ on:
         type: string
         required: false
         default: 'main'
-      env:
-        type: string
-        required: true
     secrets:
       aws_access_key_id:
         required: true
