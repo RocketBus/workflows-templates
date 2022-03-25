@@ -3,21 +3,21 @@ name: Kubernetes Deployment
 on:
   workflow_call:
     inputs:
-      ENVIRONMENT:
+      env:
         type: string
         required: true
-      WEIGHT:
+      weight:
         type: string
         required: false
         default: '100'
-      IMAGE_TAG:
+      image_tags:
         type: string
         required: false
         default: ''
     secrets:
-      AWS_ACCESS_KEY_ID:
+      aws_access_key_id:
         required: true
-      AWS_SECRET_ACCESS_KEY:
+      aws_secret_access_key:
         required: true
 
 jobs:
@@ -25,14 +25,14 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: quay.io/roboll/helmfile:v0.143.1
-    environment: ${{ inputs.ENVIRONMENT }}
+    environment: ${{ inputs.env }}
     steps:
       - uses: actions/checkout@v2
 
       - name: Set ci_properties
         id: ci_properties
         env:
-          ENVIRONMENT: ${{ inputs.ENVIRONMENT }}
+          ENVIRONMENT: ${{ inputs.env }}
         run: |
           declare -A AWS_ACCOUNT_ID AWS_REGION
           
@@ -53,25 +53,27 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-access-key-id: ${{ secrets.aws_access_key_id }}
+          aws-secret-access-key: ${{ secrets.aws_secret_access_key }}
           aws-region: ${{ steps.ci_properties.outputs.aws_region }}
 
       - name: Helm upgrade
         env:
-          ENVIRONMENT: ${{ inputs.ENVIRONMENT }}
+          ENVIRONMENT: ${{ inputs.env }}
         run: |
           declare -A EKS_CLUSTER_NAME
           
           RELEASE_NAME=${GITHUB_REPOSITORY#*/}
+          NAMESPACE=${RELEASE_NAME}
           CHART_PATH=charts/${RELEASE_NAME}
 
           EKS_CLUSTER_NAME[dev]=k0-dev-clickbus-net
           EKS_CLUSTER_NAME[stage]=k0-stg-clickbus-net
           EKS_CLUSTER_NAME[live]=k0-live-clickbus-net
 
-          aws eks update-kubeconfig --name ${EKS_CLUSTER_NAME[$ENVIRONMENT]} --role-arn ${{ steps.ci_properties.outputs.role_arn }}
+          aws eks update-kubeconfig --name ${EKS_CLUSTER_NAME[$ENVIRONMENT]} --region ${{ steps.ci_properties.outputs.aws_region }} --role-arn ${{ steps.ci_properties.outputs.role_arn }}
+
           echo helm upgrade --install ${RELEASE_NAME} ${CHART_PATH} \
             --create-namespace --namespace ${NAMESPACE} \
-            --reuse-values --values values.${{ inputs.ENVIRONMENT }}.yaml \
-            --set image.tag=${{ inputs.IMAGE_TAG }}
+            --reuse-values --values values.${ENVIRONMENT}.yaml \
+            --set image.tag=${{ inputs.image_tags }}

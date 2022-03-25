@@ -3,16 +3,16 @@ name: Docker CI
 on:
   workflow_call:
     inputs:
-      ENVIRONMENT:
+      env:
         type: string
         required: true
     secrets:
-      AWS_ACCESS_KEY_ID:
+      aws_access_key_id:
         required: true
-      AWS_SECRET_ACCESS_KEY:
+      aws_secret_access_key:
         required: true
     outputs:
-      IMAGE_TAGS:
+      image_tags:
         value: ${{ jobs.build.outputs.image_tags }}
 
 jobs:
@@ -30,7 +30,7 @@ jobs:
       - name: Set ci_properties
         id: ci_properties
         env:
-          ENVIRONMENT: ${{ inputs.ENVIRONMENT }}
+          ENVIRONMENT: ${{ inputs.env }}
         run: |
           declare -A AWS_ACCOUNT_ID AWS_REGION
           
@@ -68,9 +68,10 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-access-key-id: ${{ secrets.aws_access_key_id }}
+          aws-secret-access-key: ${{ secrets.aws_secret_access_key }}
           aws-region: ${{ steps.ci_properties.outputs.aws_region }}
+          role-to-assume: ${{ steps.ci_properties.outputs.role_arn }}
 
       - name: Login to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v1
@@ -106,9 +107,10 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-access-key-id: ${{ secrets.aws_access_key_id }}
+          aws-secret-access-key: ${{ secrets.aws_secret_access_key }}
           aws-region: ${{ needs.build.outputs.aws_region }}
+          role-to-assume: ${{ steps.ci_properties.outputs.role_arn }}
 
       - name: Login to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v1
