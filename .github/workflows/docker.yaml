@@ -127,5 +127,5 @@ jobs:
       - name: Push image
         run: |
           docker load --input /tmp/${{ needs.build.outputs.image_name }}.tar
-          aws ecr describe-repositories --repository-names ${{ needs.build.outputs.image_name }} || aws ecr create-repository --repository-name ${{ needs.build.outputs.image_name }} --image-scanning-configuration scanOnPush=true
+          aws ecr describe-repositories --repository-names ${{ needs.build.outputs.image_name }} 2> /dev/null || aws ecr create-repository --repository-name ${{ needs.build.outputs.image_name }} --image-scanning-configuration scanOnPush=true
           for IMAGE_TAG in ${{ needs.build.outputs.image_tags }}; do docker push ${IMAGE_TAG}; done
