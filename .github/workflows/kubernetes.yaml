@@ -8,7 +8,7 @@ on:
         required: true
       image_tags:
         type: string
-        required: false
+        required: true
     secrets:
       aws_access_key_id:
         required: true
@@ -30,8 +30,6 @@ env:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    container:
-      image: quay.io/roboll/helmfile:v0.143.1
     environment: ${{ inputs.env }}
     steps:
       - uses: actions/checkout@v2
@@ -56,6 +54,9 @@ jobs:
           aws-access-key-id: ${{ secrets.aws_access_key_id }}
           aws-secret-access-key: ${{ secrets.aws_secret_access_key }}
           aws-region: ${{ env.AWS_REGION }}
+          
+      - name: Setup helmfile
+        uses: mamezou-tech/setup-helmfile@v0.9.0
 
       - name: Helm upgrade
         run: |
@@ -68,10 +69,7 @@ jobs:
 
           aws eks update-kubeconfig --name ${EKS_CLUSTER_NAME} --region ${AWS_REGION}
 
-          [[ -n ${ECR_REPOSITORY} ]] && HELM_SETS="--set image.repository=${ECR_REPOSITORY}"
-          [[ -n ${IMAGE_TAG} ]] && HELM_SETS="${HELM_SETS} --set image.tag=${IMAGE_TAG}"
-
-          echo helm upgrade --install ${RELEASE_NAME} ${CHART_PATH} \
+          helm upgrade --install ${RELEASE_NAME} ${CHART_PATH} \
             --create-namespace --namespace ${NAMESPACE} \
-            --reuse-values --values ${CHART_PATH}/values.${ENV}.yaml \
-            ${HELM_SETS}
+            --values ${CHART_PATH}/environments/${ENV}/values.yaml \
+            --set image.repository=${ECR_REPOSITORY} --set image.tag=${IMAGE_TAG}
