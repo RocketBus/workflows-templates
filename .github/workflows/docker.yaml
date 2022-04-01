@@ -13,7 +13,7 @@ on:
       image_from_env:
         type: string
         required: false
-        default: 'stg'
+        default: 'stage'
       revision_from_branch:
         type: string
         required: false
@@ -31,15 +31,15 @@ env:
   ENV: ${{ inputs.env }}
   SRC_ENV: ${{ inputs.image_from_env }}
   AWS_ACCOUNT_ID_DEV: 180811438061
-  AWS_ACCOUNT_ID_STG: 180811438061
+  AWS_ACCOUNT_ID_STAGE: 180811438061
   AWS_ACCOUNT_ID_LIVE: 180811438061
   AWS_REGION_DEV: us-east-2 
-  AWS_REGION_STG: us-east-2
+  AWS_REGION_STAGE: us-east-2
   AWS_REGION_LIVE: us-east-2
 
 jobs:
   build:
-    runs-on: ${{ inputs.env }}.clickbus.net
+    runs-on: ubuntu-latest
     outputs:
       aws_accounts_ids: ${{ steps.set_env.outputs.aws_accounts_ids }}
       aws_region: ${{ steps.set_env.outputs.aws_region }}
@@ -62,8 +62,10 @@ jobs:
           echo "SRC_AWS_REGION=${SRC_AWS_REGION}" >> $GITHUB_ENV
           echo "SRC_ECR_REGISTRY=${SRC_ECR_REGISTRY}" >> $GITHUB_ENV
 
-          AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query "Account" --output text)
-          AWS_REGION=$(aws configure get region)
+          AWS_ACCOUNT_ID=AWS_ACCOUNT_ID_${ENV^^}
+          AWS_ACCOUNT_ID=${!AWS_ACCOUNT_ID}
+          AWS_REGION=AWS_REGION_${ENV^^}
+          AWS_REGION=${!AWS_REGION}
           ECR_REGISTRY=${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
           ECR_REPOSITORY=${GITHUB_REPOSITORY#*/}
 
@@ -90,20 +92,20 @@ jobs:
             type=ref,prefix=pr-,suffix=-{{sha}},event=pr
             type=semver,pattern={{version}}
 
-      # - name: Configure AWS credentials
-      #   uses: aws-actions/configure-aws-credentials@v1
-      #   with:
-      #     aws-access-key-id: ${{ secrets.aws_access_key_id }}
-      #     aws-secret-access-key: ${{ secrets.aws_secret_access_key }}
-      #     aws-region: ${{ env.AWS_REGION }}
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.aws_access_key_id }}
+          aws-secret-access-key: ${{ secrets.aws_secret_access_key }}
+          aws-region: ${{ env.AWS_REGION }}
 
       - name: Login to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v1
         with:
           registries: ${{ env.AWS_ACCOUNTS_IDS }}
                   
-      # - name: Setup Docker Buildx
-      #   uses: docker/setup-buildx-action@v1
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v1
 
       - name: Build image
         uses: docker/build-push-action@v2
@@ -133,26 +135,26 @@ jobs:
           retention-days: 1
 
   release:
-    runs-on: ${{ inputs.env }}.clickbus.net
+    runs-on: ubuntu-latest
     needs: build
     steps:
       - name: Checkout
         uses: actions/checkout@v2
 
-      # - name: Configure AWS credentials
-      #   uses: aws-actions/configure-aws-credentials@v1
-      #   with:
-      #     aws-access-key-id: ${{ secrets.aws_access_key_id }}
-      #     aws-secret-access-key: ${{ secrets.aws_secret_access_key }}
-      #     aws-region: ${{ needs.build.outputs.aws_region }}
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.aws_access_key_id }}
+          aws-secret-access-key: ${{ secrets.aws_secret_access_key }}
+          aws-region: ${{ needs.build.outputs.aws_region }}
 
       - name: Login to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v1
         with:
           registries: ${{ needs.build.outputs.aws_accounts_ids }}
                   
-      # - name: Setup Docker Buildx
-      #   uses: docker/setup-buildx-action@v1
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v1
 
       - name: Download artifact
         uses: actions/download-artifact@v2
