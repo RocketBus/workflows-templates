@@ -165,6 +165,7 @@ jobs:
                   
       - name: Push image tags
         run: |
-          aws sts get-caller-identity --query "Account" --output text
           docker load --input /tmp/${{ needs.build.outputs.ecr_repository }}.tar
+          ECR_REGISTRY=${{ needs.build.outputs.aws_account_id }}.dkr.ecr.${{ needs.build.outputs.aws_region }}.amazonaws.com
+          aws ecr get-login-password --region "${{ needs.build.outputs.aws_region }}" | docker login --username AWS --password-stdin "${ECR_REGISTRY}"
           for IMAGE_TAG in ${{ needs.build.outputs.image_tags }}; do docker push ${IMAGE_TAG}; done
