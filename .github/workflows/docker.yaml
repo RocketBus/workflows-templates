@@ -103,7 +103,7 @@ jobs:
         uses: aws-actions/amazon-ecr-login@v1
         with:
           registries: ${{ env.AWS_ACCOUNTS_IDS }}
-                  
+
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@v1
 
@@ -151,6 +151,8 @@ jobs:
 
       - name: Login to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v1
+        with:
+          registries: ${{ needs.build.outputs.aws_account_id }}
                   
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@v1
@@ -163,5 +165,6 @@ jobs:
                   
       - name: Push image tags
         run: |
+          aws sts get-caller-identity --query "Account" --output text
           docker load --input /tmp/${{ needs.build.outputs.ecr_repository }}.tar
           for IMAGE_TAG in ${{ needs.build.outputs.image_tags }}; do docker push ${IMAGE_TAG}; done
