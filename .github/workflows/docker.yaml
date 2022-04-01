@@ -29,6 +29,7 @@ jobs:
       aws_account_id: ${{ steps.env.outputs.aws_account_id }}
       aws_region: ${{ steps.env.outputs.aws_region }}
       ecr_registry: ${{ steps.env.outputs.ecr_registry }}
+      ecr_repository: ${{ steps.env.outputs.ecr_repository }}
       aws_iam_role: ${{ steps.env.outputs.aws_iam_role }}
       image_tags: ${{ steps.meta.outputs.tags }}
     steps:
