@@ -41,7 +41,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     outputs:
-      aws_accounts_ids: ${{ steps.set_env.outputs.aws_accounts_ids }}
+      aws_account_id: ${{ steps.set_env.outputs.aws_account_id }}
       aws_region: ${{ steps.set_env.outputs.aws_region }}
       ecr_repository: ${{ steps.set_env.outputs.ecr_repository }}
       image_tags: ${{ steps.meta.outputs.tags }}
@@ -78,7 +78,6 @@ jobs:
           echo "AWS_ACCOUNTS_IDS=${AWS_ACCOUNTS_IDS}" >> $GITHUB_ENV
 
           echo "::set-output name=aws_account_id::${AWS_ACCOUNT_ID}"
-          echo "::set-output name=aws_accounts_ids::${AWS_ACCOUNTS_IDS}"
           echo "::set-output name=aws_region::${AWS_REGION}"
           echo "::set-output name=ecr_repository::${ECR_REPOSITORY}"
 
@@ -152,8 +151,6 @@ jobs:
 
       - name: Login to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v1
-        with:
-          registries: ${{ needs.build.outputs.aws_accounts_ids }}
                   
       - name: Setup Docker Buildx
         uses: docker/setup-buildx-action@v1
@@ -167,5 +164,4 @@ jobs:
       - name: Push image tags
         run: |
           docker load --input /tmp/${{ needs.build.outputs.ecr_repository }}.tar
-          aws ecr describe-repositories --repository-names ${{ needs.build.outputs.ecr_repository }} 2> /dev/null || aws ecr create-repository --repository-name ${{ needs.build.outputs.ecr_repository }} --image-scanning-configuration scanOnPush=true
           for IMAGE_TAG in ${{ needs.build.outputs.image_tags }}; do docker push ${IMAGE_TAG}; done
