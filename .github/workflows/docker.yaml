@@ -10,14 +10,6 @@ on:
         type: boolean
         required: false
         default: false
-      image_from_env:
-        type: string
-        required: false
-        default: 'stage'
-      revision_from_branch:
-        type: string
-        required: false
-        default: 'main'
     secrets:
       aws_access_key_id:
         required: true
@@ -29,63 +21,47 @@ on:
 
 env:
   ENV: ${{ inputs.env }}
-  SRC_ENV: ${{ inputs.image_from_env }}
-  AWS_ACCOUNT_ID_DEV: 180811438061
-  AWS_ACCOUNT_ID_STAGE: 180811438061
-  AWS_ACCOUNT_ID_LIVE: 180811438061
-  AWS_REGION_DEV: us-east-2 
-  AWS_REGION_STAGE: us-east-2
-  AWS_REGION_LIVE: us-east-2
 
 jobs:
   build:
     runs-on: ubuntu-latest
     outputs:
-      aws_account_id: ${{ steps.set_env.outputs.aws_account_id }}
-      aws_region: ${{ steps.set_env.outputs.aws_region }}
-      ecr_repository: ${{ steps.set_env.outputs.ecr_repository }}
+      aws_account_id: ${{ steps.env.outputs.aws_account_id }}
+      aws_region: ${{ steps.env.outputs.aws_region }}
+      ecr_registry: ${{ steps.env.outputs.ecr_registry }}
+      aws_iam_role: ${{ steps.env.outputs.aws_iam_role }}
       image_tags: ${{ steps.meta.outputs.tags }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
-      - name: Set env
-        id: set_env
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Set env variables
+        id: env
         run: |
-          SRC_AWS_ACCOUNT_ID=AWS_ACCOUNT_ID_${SRC_ENV^^}
-          SRC_AWS_ACCOUNT_ID=${!SRC_AWS_ACCOUNT_ID}
-          SRC_AWS_REGION=AWS_REGION_${SRC_ENV^^}
-          SRC_AWS_REGION=${!SRC_AWS_REGION}
-          SRC_ECR_REGISTRY=${SRC_AWS_ACCOUNT_ID}.dkr.ecr.${SRC_AWS_REGION}.amazonaws.com
+          declare -A AWS_ACCOUNTS_IDS AWS_REGIONS
+          AWS_ACCOUNTS_IDS=([dev]=180811438061 [stage]=406026015868 [live]=114395709799)
+          AWS_REGIONS=([dev]=us-east-2 [stage]=us-east-2 [live]=us-east-2)
+          AWS_ACCOUNT_ID=${AWS_ACCOUNTS_IDS[$ENV]}
+          AWS_REGION=${AWS_REGIONS[$ENV]}
 
-          echo "SRC_AWS_ACCOUNT_ID=${SRC_AWS_ACCOUNT_ID}" >> $GITHUB_ENV
-          echo "SRC_AWS_REGION=${SRC_AWS_REGION}" >> $GITHUB_ENV
-          echo "SRC_ECR_REGISTRY=${SRC_ECR_REGISTRY}" >> $GITHUB_ENV
-
-          AWS_ACCOUNT_ID=AWS_ACCOUNT_ID_${ENV^^}
-          AWS_ACCOUNT_ID=${!AWS_ACCOUNT_ID}
-          AWS_REGION=AWS_REGION_${ENV^^}
-          AWS_REGION=${!AWS_REGION}
           ECR_REGISTRY=${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
           ECR_REPOSITORY=${GITHUB_REPOSITORY#*/}
-
-          echo "AWS_ACCOUNT_ID=${AWS_ACCOUNT_ID}" >> $GITHUB_ENV
-          echo "AWS_REGION=${AWS_REGION}" >> $GITHUB_ENV
-          echo "ECR_REGISTRY=${ECR_REGISTRY}" >> $GITHUB_ENV
-          echo "ECR_REPOSITORY=${ECR_REPOSITORY}" >> $GITHUB_ENV
-
-          AWS_ACCOUNTS_IDS=$(echo "${AWS_ACCOUNT_ID} ${SRC_AWS_ACCOUNT_ID}" | tr ' ' ',' | sed 's/,$//')
-          echo "AWS_ACCOUNTS_IDS=${AWS_ACCOUNTS_IDS}" >> $GITHUB_ENV
+          AWS_IAM_ROLE=arn:aws:iam::${AWS_ACCOUNT_ID}:role/CrossAccount-Global-Developer
 
           echo "::set-output name=aws_account_id::${AWS_ACCOUNT_ID}"
           echo "::set-output name=aws_region::${AWS_REGION}"
+          echo "::set-output name=ecr_registry::${ECR_REGISTRY}"
           echo "::set-output name=ecr_repository::${ECR_REPOSITORY}"
+          echo "::set-output name=aws_iam_role::${AWS_IAM_ROLE}"
 
       - name: Docker meta
         id: meta
         uses: docker/metadata-action@v3
         with:
-          images: "${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}"
+          images: "${{ steps.env.outputs.ecr_registry }}/${{ steps.env.outputs.ecr_repository }}"
           tags: |
             type=ref,suffix=-{{sha}},event=branch
             type=ref,prefix=pr-,suffix=-{{sha}},event=pr
@@ -96,42 +72,30 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.aws_access_key_id }}
           aws-secret-access-key: ${{ secrets.aws_secret_access_key }}
-          aws-region: ${{ env.AWS_REGION }}
-          mask-aws-account-id: false
+          aws-region: ${{ steps.env.outputs.aws_region }}
+          role-skip-session-tagging: true
+          role-to-assume: ${{ steps.env.outputs.aws_iam_role }}
+          role-duration-seconds: 1200
+          role-session-name: GitHubActionsBuildSession
 
       - name: Login to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v1
         with:
-          registries: ${{ env.AWS_ACCOUNTS_IDS }}
-
-      - name: Setup Docker Buildx
-        uses: docker/setup-buildx-action@v1
+          registries: ${{ steps.env.outputs.aws_account_id }}
 
       - name: Build image
         uses: docker/build-push-action@v2
-        if: ${{ ! inputs.promote_image_version }}
         with:
           context: .
-#           cache-from: type=registry,ref=${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:buildcache
-#           cache-to: type=registry,ref=${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:buildcache,mode=max
           labels: ${{ steps.meta.outputs.labels }}
           tags: ${{ steps.meta.outputs.tags }}
-          outputs: type=docker,dest=/tmp/${{ env.ECR_REPOSITORY }}.tar
-
-      - name: Retag image
-        if: ${{ inputs.promote_image_version }}
-        run: |
-          SRC_IMAGE_TAG=${{ env.SRC_ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ inputs.revision_from_branch }}-${GITHUB_SHA:0:7}
-          
-          docker pull ${SRC_IMAGE_TAG}
-          for IMAGE_TAG in ${{ steps.meta.outputs.tags }}; do docker tag ${SRC_IMAGE_TAG} ${IMAGE_TAG}; done
-          docker save ${{ steps.meta.outputs.tags }} -o /tmp/${{ env.ECR_REPOSITORY }}.tar
+          outputs: type=docker,dest=/tmp/${{ steps.env.outputs.ecr_repository }}.tar
 
       - name: Upload artifact
         uses: actions/upload-artifact@v2
         with:
-          name: ${{ env.ECR_REPOSITORY }}
-          path: /tmp/${{ env.ECR_REPOSITORY }}.tar
+          name: ${{ steps.env.outputs.ecr_repository }}
+          path: /tmp/${{ steps.env.outputs.ecr_repository }}.tar
           retention-days: 1
 
   release:
@@ -139,7 +103,10 @@ jobs:
     needs: build
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
+                  
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v1
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v1
@@ -147,15 +114,15 @@ jobs:
           aws-access-key-id: ${{ secrets.aws_access_key_id }}
           aws-secret-access-key: ${{ secrets.aws_secret_access_key }}
           aws-region: ${{ needs.build.outputs.aws_region }}
-          mask-aws-account-id: false
+          role-skip-session-tagging: true
+          role-to-assume: ${{ needs.build.outputs.aws_iam_role }}
+          role-duration-seconds: 1200
+          role-session-name: GitHubActionsBuildSession
 
       - name: Login to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v1
         with:
           registries: ${{ needs.build.outputs.aws_account_id }}
-                  
-      - name: Setup Docker Buildx
-        uses: docker/setup-buildx-action@v1
 
       - name: Download artifact
         uses: actions/download-artifact@v2
@@ -166,6 +133,12 @@ jobs:
       - name: Push image tags
         run: |
           docker load --input /tmp/${{ needs.build.outputs.ecr_repository }}.tar
-          ECR_REGISTRY=${{ needs.build.outputs.aws_account_id }}.dkr.ecr.${{ needs.build.outputs.aws_region }}.amazonaws.com
-          aws ecr get-login-password --region "${{ needs.build.outputs.aws_region }}" | docker login --username AWS --password-stdin "${ECR_REGISTRY}"
-          for IMAGE_TAG in ${{ needs.build.outputs.image_tags }}; do docker push ${IMAGE_TAG}; done
+
+          aws ecr describe-repositories \
+            --registry-id ${{ needs.build.outputs.aws_account_id }} \
+            --repository-names ${{ needs.build.outputs.ecr_repository }} 2> /dev/null \
+            || aws ecr create-repository --repository-name ${{ needs.build.outputs.ecr_repository }} --image-scanning-configuration scanOnPush=true
+
+          for IMAGE_TAG in ${{ needs.build.outputs.image_tags }}; do
+            docker push ${IMAGE_TAG}
+          done
