@@ -77,6 +77,7 @@ jobs:
           role-to-assume: ${{ steps.env.outputs.aws_iam_role }}
           role-duration-seconds: 1200
           role-session-name: GitHubActionsBuildSession
+          mask-aws-account-id: false
 
       - name: Login to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v1
@@ -118,6 +119,7 @@ jobs:
           role-to-assume: ${{ needs.build.outputs.aws_iam_role }}
           role-duration-seconds: 1200
           role-session-name: GitHubActionsBuildSession
+          mask-aws-account-id: false
 
       - name: Login to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v1
