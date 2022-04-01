@@ -70,6 +70,8 @@ jobs:
           aws eks update-kubeconfig --name ${EKS_CLUSTER_NAME} --region ${AWS_REGION} --role-arn arn:aws:iam::${AWS_ACCOUNT_ID}:role/${EKS_CLUSTER_NAME}-AmazonEKSAdmin
 
           helm upgrade --install ${RELEASE_NAME} ${CHART_PATH} \
+            --dependency-update \
             --create-namespace --namespace ${NAMESPACE} \
             --values ${CHART_PATH}/environments/${ENV}/values.yaml \
+            --values ${CHART_PATH}/environments/${ENV}/secrets.yaml \
             --set image.repository=${ECR_REPOSITORY} --set image.tag=${IMAGE_TAG}
