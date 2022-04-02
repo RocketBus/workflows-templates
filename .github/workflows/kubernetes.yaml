@@ -17,57 +17,57 @@ on:
 
 env:
   ENV: ${{ inputs.env }}
-  AWS_ACCOUNT_ID_DEV: 180811438061
-  AWS_ACCOUNT_ID_STG: 180811438061
-  AWS_ACCOUNT_ID_LIVE: 180811438061
-  AWS_REGION_DEV: us-east-2 
-  AWS_REGION_STG: us-east-2
-  AWS_REGION_LIVE: us-east-2
-  EKS_CLUSTER_NAME_DEV: k8s-dev-85c52b0e
-  EKS_CLUSTER_NAME_STG: k8s-dev-85c52b0e
-  EKS_CLUSTER_NAME_LIVE: k8s-dev-85c52b0e
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     environment: ${{ inputs.env }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
-      - name: Set env
-        id: set_env
+      - name: Set env variables
+        id: env
         run: |
-          AWS_ACCOUNT_ID=AWS_ACCOUNT_ID_${ENV^^}
-          AWS_ACCOUNT_ID=${!AWS_ACCOUNT_ID}
-          AWS_REGION=AWS_REGION_${ENV^^}
-          AWS_REGION=${!AWS_REGION}
-          EKS_CLUSTER_NAME=EKS_CLUSTER_NAME_${ENV^^}
-          EKS_CLUSTER_NAME=${!EKS_CLUSTER_NAME}
+          declare -A AWS_ACCOUNTS_IDS AWS_REGIONS
+          AWS_ACCOUNTS_IDS=([dev]=180811438061 [stage]=406026015868 [live]=114395709799)
+          AWS_REGIONS=([dev]=us-east-2 [stage]=us-east-2 [live]=us-east-2)
+          EKS_CLUSTERS=([dev]=k8s-dev-85c52b0e)
 
-          echo "AWS_ACCOUNT_ID=${AWS_ACCOUNT_ID}" >> $GITHUB_ENV
-          echo "AWS_REGION=${AWS_REGION}" >> $GITHUB_ENV
-          echo "EKS_CLUSTER_NAME=${EKS_CLUSTER_NAME}" >> $GITHUB_ENV
+          AWS_ACCOUNT_ID=${AWS_ACCOUNTS_IDS[$ENV]}
+          AWS_REGION=${AWS_REGIONS[$ENV]}
+          EKS_CLUSTER=${EKS_CLUSTERS[$ENV]}
+
+          AWS_IAM_ROLE=arn:aws:iam::${AWS_ACCOUNT_ID}:role/CrossAccount-Global-Developer
+
+          echo "::set-output name=aws_region::${AWS_REGION}"
+          echo "::set-output name=aws_iam_role::${AWS_IAM_ROLE}"
+          echo "::set-output name=eks_cluster::${EKS_CLUSTER}"
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
           aws-access-key-id: ${{ secrets.aws_access_key_id }}
           aws-secret-access-key: ${{ secrets.aws_secret_access_key }}
-          aws-region: ${{ env.AWS_REGION }}
+          aws-region: ${{ steps.env.outputs.aws_region }}
+          role-skip-session-tagging: true
+          role-to-assume: ${{ steps.env.outputs.aws_iam_role }}
+          role-duration-seconds: 1200
+          role-session-name: GitHubActionsDeploySession
+          mask-aws-account-id: false
           
-      - name: Setup helmfile
+      - name: Setup kubernetes tools
         uses: mamezou-tech/setup-helmfile@v0.9.0
 
       - name: Helm upgrade
         run: |
           IMAGE_TAGS=(${{ inputs.image_tags }})
-          ECR_REPOSITORY=${FIRST_IMAGE_TAG[0]%:*}
-          IMAGE_TAG=${FIRST_IMAGE_TAG[0]#*:}
+          ECR_REPOSITORY=${IMAGE_TAGS[0]%:*}
+          IMAGE_TAG=${IMAGE_TAGS[0]#*:}
           RELEASE_NAME=${GITHUB_REPOSITORY#*/}
           NAMESPACE=${RELEASE_NAME}
           CHART_PATH=charts/${RELEASE_NAME}
 
-          aws eks update-kubeconfig --name ${EKS_CLUSTER_NAME} --region ${AWS_REGION} --role-arn arn:aws:iam::${AWS_ACCOUNT_ID}:role/CrossAccount-Global-Developer
+          aws eks update-kubeconfig --name ${{ steps.env.outputs.eks_cluster }}
 
           helm upgrade --install ${RELEASE_NAME} ${CHART_PATH} \
             --dependency-update \

@@ -45,6 +45,7 @@ jobs:
           declare -A AWS_ACCOUNTS_IDS AWS_REGIONS
           AWS_ACCOUNTS_IDS=([dev]=180811438061 [stage]=406026015868 [live]=114395709799)
           AWS_REGIONS=([dev]=us-east-2 [stage]=us-east-2 [live]=us-east-2)
+
           AWS_ACCOUNT_ID=${AWS_ACCOUNTS_IDS[$ENV]}
           AWS_REGION=${AWS_REGIONS[$ENV]}
 
@@ -87,10 +88,13 @@ jobs:
 
       - name: Build image
         uses: docker/build-push-action@v2
+        if: ${{ ! inputs.promote_image_version }}
         with:
           context: .
           labels: ${{ steps.meta.outputs.labels }}
           tags: ${{ steps.meta.outputs.tags }}
+          cache-from: type=registry,ref=${{ steps.env.outputs.ecr_registry }}/${{ steps.env.outputs.ecr_repository }}:buildcache
+          cache-to: type=registry,ref=${{ steps.env.outputs.ecr_registry }}/${{ steps.env.outputs.ecr_repository }}:buildcache,mode=max
           outputs: type=docker,dest=/tmp/${{ steps.env.outputs.ecr_repository }}.tar
 
       - name: Upload artifact
@@ -99,6 +103,34 @@ jobs:
           name: ${{ steps.env.outputs.ecr_repository }}
           path: /tmp/${{ steps.env.outputs.ecr_repository }}.tar
           retention-days: 1
+
+  test:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Linting
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          labels: ${{ steps.meta.outputs.labels }}
+          tags: ${{ steps.meta.outputs.tags }}
+          cache-from: type=registry,ref=${{ steps.env.outputs.ecr_registry }}/${{ steps.env.outputs.ecr_repository }}:buildcache
+          target: linting
+
+      - name: Tests
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          labels: ${{ steps.meta.outputs.labels }}
+          tags: ${{ steps.meta.outputs.tags }}
+          cache-from: type=registry,ref=${{ steps.env.outputs.ecr_registry }}/${{ steps.env.outputs.ecr_repository }}:buildcache
+          target: tests
 
   release:
     runs-on: ubuntu-latest
