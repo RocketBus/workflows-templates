@@ -6,10 +6,22 @@ on:
       env:
         type: string
         required: true
+      skip_tests:
+        type: boolean
+        required: false
+        default: false
       promote_image_version:
         type: boolean
         required: false
         default: false
+      promote_from_branch:
+        type: string
+        required: false
+        default: main
+      promote_from_env:
+        type: string
+        required: false
+        default: stage
     secrets:
       aws_access_key_id:
         required: true
@@ -59,6 +71,13 @@ jobs:
           echo "::set-output name=ecr_repository::${ECR_REPOSITORY}"
           echo "::set-output name=aws_iam_role::${AWS_IAM_ROLE}"
 
+          FROM_AWS_ACCOUNT_ID=${AWS_ACCOUNTS_IDS[$FROM_ENV]}
+          FROM_AWS_REGION=${AWS_REGIONS[$FROM_ENV]}
+          FROM_ECR_REGISTRY=${FROM_AWS_ACCOUNT_ID}.dkr.ecr.${FROM_AWS_REGION}.amazonaws.com
+
+          echo "::set-output name=from_aws_account_id::${FROM_AWS_ACCOUNT_ID}"
+          echo "::set-output name=from_ecr_registry::${FROM_ECR_REGISTRY}"
+
       - name: Docker meta
         id: meta
         uses: docker/metadata-action@v3
@@ -84,18 +103,26 @@ jobs:
       - name: Login to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v1
         with:
-          registries: ${{ steps.env.outputs.aws_account_id }}
+          registries: ${{ steps.env.outputs.aws_account_id }}, ${{ steps.env.outputs.from_aws_account_id }}
 
       - name: Build image
-        uses: docker/build-push-action@v2
         if: ${{ ! inputs.promote_image_version }}
+        uses: docker/build-push-action@v2
         with:
           context: .
           labels: ${{ steps.meta.outputs.labels }}
           tags: ${{ steps.meta.outputs.tags }}
-          cache-from: type=registry,ref=${{ steps.env.outputs.ecr_registry }}/${{ steps.env.outputs.ecr_repository }}:latest
-          cache-to: type=inline
           outputs: type=docker,dest=/tmp/${{ steps.env.outputs.ecr_repository }}.tar
+
+      - name: Promote image
+        if: ${{ inputs.promote_image_version }}
+        run: |
+          SRC_IMAGE_TAG=${{ steps.env.outputs.from_ecr_registry }}/${{ steps.env.outputs.ecr_repository }}:${{ inputs.promote_from_branch }}-${GITHUB_SHA:0:7}
+          docker pull ${SRC_IMAGE_TAG}
+          for IMAGE_TAG in ${{ steps.meta.outputs.tags }}; do
+            docker tag ${SRC_IMAGE_TAG} ${IMAGE_TAG}
+          done
+          docker save ${{ steps.meta.outputs.tags }} -o /tmp/${{ steps.env.outputs.ecr_repository }}.tar
 
       - name: Upload artifact
         uses: actions/upload-artifact@v2
@@ -106,7 +133,9 @@ jobs:
 
   test:
     runs-on: ubuntu-latest
-    needs: build
+    needs:
+      - build
+    if: ${{ (! inputs.skip_tests) || (! inputs.promote_image_version) }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -120,8 +149,6 @@ jobs:
           context: .
           labels: ${{ steps.meta.outputs.labels }}
           tags: ${{ steps.meta.outputs.tags }}
-          cache-from: type=registry,ref=${{ steps.env.outputs.ecr_registry }}/${{ steps.env.outputs.ecr_repository }}:latest
-          cache-to: type=inline
           target: linting
 
       - name: Tests
@@ -130,14 +157,11 @@ jobs:
           context: .
           labels: ${{ steps.meta.outputs.labels }}
           tags: ${{ steps.meta.outputs.tags }}
-          cache-from: type=registry,ref=${{ steps.env.outputs.ecr_registry }}/${{ steps.env.outputs.ecr_repository }}:latest
-          cache-to: type=inline
           target: tests
 
   release:
     runs-on: ubuntu-latest
     needs:
-      - test 
       - build
     steps:
       - name: Checkout
