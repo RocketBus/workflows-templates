@@ -104,7 +104,7 @@ jobs:
       - name: Login to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v1
         with:
-          registries: ${{ steps.env.outputs.aws_account_id }}, ${{ steps.env.outputs.from_aws_account_id }}
+          registries: ${{ steps.env.outputs.aws_account_id }},${{ steps.env.outputs.from_aws_account_id }}
 
       - name: Build image
         if: ${{ ! inputs.promote_image_version }}
