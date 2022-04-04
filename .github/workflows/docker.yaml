@@ -55,8 +55,8 @@ jobs:
         id: env
         run: |
           declare -A AWS_ACCOUNTS_IDS AWS_REGIONS
-          AWS_ACCOUNTS_IDS=([dev]=180811438061 [stage]=406026015868 [live]=114395709799)
-          AWS_REGIONS=([dev]=us-east-2 [stage]=us-east-2 [live]=us-east-2)
+          AWS_ACCOUNTS_IDS=(["dev"]=180811438061 ["stage"]=406026015868 ["live"]=114395709799)
+          AWS_REGIONS=(["dev"]=us-east-2 ["stage"]=us-east-2 ["live"]=us-east-2)
 
           AWS_ACCOUNT_ID=${AWS_ACCOUNTS_IDS[$ENV]}
           AWS_REGION=${AWS_REGIONS[$ENV]}
@@ -161,6 +161,7 @@ jobs:
 
   release:
     runs-on: ubuntu-latest
+    if: ${{ success() }}
     needs:
       - build
     steps:
