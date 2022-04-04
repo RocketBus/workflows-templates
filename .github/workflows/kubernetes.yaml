@@ -22,6 +22,8 @@ jobs:
   deploy:
     runs-on: ${{ inputs.env }}.clickbus.net
     environment: ${{ inputs.env }}
+    container:
+      image: quay.io/roboll/helmfile:v0.144.0
     steps:
       - uses: actions/checkout@v3
 
@@ -54,9 +56,6 @@ jobs:
           role-duration-seconds: 1200
           role-session-name: GitHubActionsDeploySession
           mask-aws-account-id: false
-          
-      - name: Setup kubernetes tools
-        uses: mamezou-tech/setup-helmfile@v0.9.0
 
       - name: Helm upgrade
         run: |
