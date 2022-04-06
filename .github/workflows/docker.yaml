@@ -37,7 +37,7 @@ env:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.env }}
     outputs:
       aws_account_id: ${{ steps.env.outputs.aws_account_id }}
       aws_region: ${{ steps.env.outputs.aws_region }}
@@ -133,7 +133,7 @@ jobs:
           retention-days: 1
 
   test:
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.env }}
     needs:
       - build
     if: ${{ (! inputs.skip_tests) || (! inputs.promote_image_version) }}
@@ -161,7 +161,7 @@ jobs:
           target: tests
 
   release:
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.env }}
     needs:
       - build
     steps:

@@ -20,10 +20,8 @@ env:
 
 jobs:
   deploy:
-    runs-on: ${{ inputs.env }}.clickbus.net
+    runs-on: ${{ inputs.env }}
     environment: ${{ inputs.env }}
-    container:
-      image: quay.io/roboll/helmfile:v0.144.0
     steps:
       - uses: actions/checkout@v3
 
