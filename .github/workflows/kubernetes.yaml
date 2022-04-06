@@ -37,7 +37,7 @@ jobs:
           AWS_REGION=${AWS_REGIONS[$ENV]}
           EKS_CLUSTER=${EKS_CLUSTERS[$ENV]}
 
-          AWS_IAM_ROLE=arn:aws:iam::${AWS_ACCOUNT_ID}:role/CrossAccount-Global-Developer
+          AWS_IAM_ROLE=arn:aws:iam::${AWS_ACCOUNT_ID}:role/CrossAccount-Global-Admin
 
           echo "::set-output name=aws_region::${AWS_REGION}"
           echo "::set-output name=aws_iam_role::${AWS_IAM_ROLE}"
