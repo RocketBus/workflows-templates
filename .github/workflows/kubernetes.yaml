@@ -49,11 +49,6 @@ jobs:
           aws-access-key-id: ${{ secrets.aws_access_key_id }}
           aws-secret-access-key: ${{ secrets.aws_secret_access_key }}
           aws-region: ${{ steps.env.outputs.aws_region }}
-          role-skip-session-tagging: true
-          role-to-assume: ${{ steps.env.outputs.aws_iam_role }}
-          role-duration-seconds: 1200
-          role-session-name: GitHubActionsDeploySession
-          mask-aws-account-id: false
 
       - name: Helm upgrade
         run: |
@@ -64,9 +59,18 @@ jobs:
           NAMESPACE=${RELEASE_NAME}
           CHART_PATH=charts/${RELEASE_NAME}
 
-          aws eks update-kubeconfig --name ${{ steps.env.outputs.eks_cluster }} --region ${{ steps.env.outputs.aws_region }} --role-arn ${{ steps.env.outputs.aws_iam_role }}
+          aws ecr get-login-password \
+            --region us-east-1 | helm registry login \
+            --username AWS \
+            --password-stdin 203176318594.dkr.ecr.us-east-1.amazonaws.com
 
-          helm upgrade --install ${RELEASE_NAME} ${CHART_PATH} \
+          aws eks update-kubeconfig \
+            --name ${{ steps.env.outputs.eks_cluster }} \
+            --region ${{ steps.env.outputs.aws_region }} \
+            --role-arn ${{ steps.env.outputs.aws_iam_role }}
+
+          helm upgrade \
+            --install ${RELEASE_NAME} ${CHART_PATH} \
             --dependency-update \
             --create-namespace --namespace ${NAMESPACE} \
             --values ${CHART_PATH}/environments/${ENV}/values.yaml \
