@@ -51,8 +51,7 @@ jobs:
 
       - name: Set up Docker Context for Buildx
         id: buildx-context
-        run: |
-          docker context create builders
+        run: docker context create builders
 
       - name: Set up Docker Buildx
         id: buildx
@@ -108,8 +107,7 @@ jobs:
           role-to-assume: ${{ steps.env.outputs.aws_iam_role }}
           role-duration-seconds: 1200
           role-session-name: GitHubActionsBuildSession
-          mask-aws-account-id: false      - name: Setup Docker Buildx
-        uses: docker/setup-buildx-action@v1
+          mask-aws-account-id: false
 
       - name: Login to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v1
@@ -153,8 +151,7 @@ jobs:
 
       - name: Set up Docker Context for Buildx
         id: buildx-context
-        run: |
-          docker context create builders
+        run: docker context create builders
 
       - name: Set up Docker Buildx
         id: buildx
@@ -189,8 +186,7 @@ jobs:
                   
       - name: Set up Docker Context for Buildx
         id: buildx-context
-        run: |
-          docker context create builders
+        run: docker context create builders
 
       - name: Set up Docker Buildx
         id: buildx
