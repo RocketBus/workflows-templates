@@ -64,7 +64,7 @@ jobs:
           NAMESPACE=${RELEASE_NAME}
           CHART_PATH=charts/${RELEASE_NAME}
 
-          aws eks update-kubeconfig --name ${{ steps.env.outputs.eks_cluster }}
+          aws eks update-kubeconfig --name ${{ steps.env.outputs.eks_cluster }} --region ${{ steps.env.outputs.aws_region }} --role-arn ${{ steps.env.outputs.aws_iam_role }}
 
           helm upgrade --install ${RELEASE_NAME} ${CHART_PATH} \
             --dependency-update \
