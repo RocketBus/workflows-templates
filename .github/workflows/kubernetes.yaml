@@ -49,6 +49,22 @@ jobs:
           aws-access-key-id: ${{ secrets.aws_access_key_id }}
           aws-secret-access-key: ${{ secrets.aws_secret_access_key }}
           aws-region: ${{ steps.env.outputs.aws_region }}
+
+      - name: Helm dependency update
+        run: |
+          aws ecr get-login-password \
+            --region us-east-1 | helm registry login \
+            --username AWS \
+            --password-stdin 203176318594.dkr.ecr.us-east-1.amazonaws.com
+
+          helm dep up
+        
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.aws_access_key_id }}
+          aws-secret-access-key: ${{ secrets.aws_secret_access_key }}
+          aws-region: ${{ steps.env.outputs.aws_region }}
           role-skip-session-tagging: true
           role-to-assume: ${{ steps.env.outputs.aws_iam_role }}
           role-duration-seconds: 1200
@@ -64,16 +80,10 @@ jobs:
           NAMESPACE=${RELEASE_NAME}
           CHART_PATH=charts/${RELEASE_NAME}
 
-          aws ecr get-login-password \
-            --region us-east-1 | helm registry login \
-            --username AWS \
-            --password-stdin 203176318594.dkr.ecr.us-east-1.amazonaws.com
-
           aws eks update-kubeconfig --name ${{ steps.env.outputs.eks_cluster }}
 
           helm upgrade \
             --install ${RELEASE_NAME} ${CHART_PATH} \
-            --dependency-update \
             --create-namespace --namespace ${NAMESPACE} \
             --values ${CHART_PATH}/environments/${ENV}/values.yaml \
             --values ${CHART_PATH}/environments/${ENV}/secrets.yaml \
