@@ -57,7 +57,10 @@ jobs:
             --username AWS \
             --password-stdin 203176318594.dkr.ecr.us-east-1.amazonaws.com
 
-          helm dep up
+          RELEASE_NAME=${GITHUB_REPOSITORY#*/}
+          CHART_PATH=charts/${RELEASE_NAME}
+
+          helm dep up ${CHART_PATH}
         
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v1
