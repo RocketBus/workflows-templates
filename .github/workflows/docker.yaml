@@ -161,6 +161,7 @@ jobs:
           endpoint: builders
 
       - name: Linting
+        continue-on-error: true
         uses: docker/build-push-action@v2
         with:
           context: .
