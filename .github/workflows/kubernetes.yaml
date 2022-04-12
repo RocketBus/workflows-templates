@@ -89,5 +89,5 @@ jobs:
             --install ${RELEASE_NAME} ${CHART_PATH} \
             --create-namespace --namespace ${NAMESPACE} \
             --values ${CHART_PATH}/environments/${ENV}/values.yaml \
-            --values ${CHART_PATH}/environments/${ENV}/secrets.yaml \
+            --values secrets://${CHART_PATH}/environments/${ENV}/secrets.yaml \
             --set image.repository=${ECR_REPOSITORY} --set image.tag=${IMAGE_TAG}
