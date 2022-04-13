@@ -28,7 +28,7 @@ jobs:
       - name: Set env variables
         id: env
         run: |
-          declare -A AWS_ACCOUNTS_IDS AWS_REGIONS
+          declare -A AWS_ACCOUNTS_IDS AWS_REGIONS EKS_CLUSTERS
           AWS_ACCOUNTS_IDS=([dev]=180811438061 [stg]=406026015868 [live]=114395709799)
           AWS_REGIONS=([dev]=us-east-2 [stg]=us-east-2 [live]=us-east-2)
           EKS_CLUSTERS=([dev]=k8s-dev-85c52b0e [stg]=k8s-stg-7a1d63f9 [live]=k8s-live-620f830f)
