@@ -10,6 +10,10 @@ on:
         type: boolean
         required: false
         default: false
+      skip_lint:
+        type: boolean
+        required: false
+        default: false
       promote_image_version:
         type: boolean
         required: false
@@ -167,6 +171,7 @@ jobs:
 
       - name: Linting
         uses: docker/build-push-action@v2
+        if: ${{ !inputs.skip_lint }}
         with:
           context: .
           labels: ${{ steps.meta.outputs.labels }}
