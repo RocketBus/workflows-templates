@@ -22,6 +22,10 @@ on:
         type: string
         required: false
         default: main
+      build_args:
+        type: string
+        required: false
+        default: ""
     secrets:
       aws_access_key_id:
         required: true
@@ -121,6 +125,7 @@ jobs:
           context: .
           labels: ${{ steps.meta.outputs.labels }}
           tags: ${{ steps.meta.outputs.tags }}
+          build-args: ${{ inputs.build_args }}
           outputs: type=docker,dest=/tmp/${{ steps.env.outputs.ecr_repository }}.tar
 
       - name: Promote image
@@ -161,7 +166,6 @@ jobs:
           endpoint: builders
 
       - name: Linting
-        continue-on-error: true
         uses: docker/build-push-action@v2
         with:
           context: .
