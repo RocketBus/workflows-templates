@@ -85,7 +85,10 @@ jobs:
 
           aws eks update-kubeconfig --name ${{ steps.env.outputs.eks_cluster }}
 
-          [[ ${{ github.event_name }} == 'pull_request' ]] && PREFIX_HOST=pr-${{ github.event.number }}
+          if [[ ${{ github.event_name }} == 'pull_request' ]]; then
+            PREFIX_HOST=pr-${{ github.event.number }}
+            RELEASE_NAME=${RELEASE_NAME}-pr-${{ github.event.number }}
+          fi
 
           helm upgrade \
             --install ${RELEASE_NAME} ${CHART_PATH} \
@@ -93,3 +96,11 @@ jobs:
             --values ${CHART_PATH}/environments/${ENV}/values.yaml \
             --values secrets://${CHART_PATH}/environments/${ENV}/secrets.yaml \
             --set image.repository=${ECR_REPOSITORY} --set image.tag=${IMAGE_TAG} --set ingress.prefixHost=${PREFIX_HOST}
+
+      - name: Helm uninstall PR
+        if: github.event.pull_request.merged == true
+        run: |
+          RELEASE_NAME=${GITHUB_REPOSITORY#*/}-pr-${{ github.event.number }}
+          NAMESPACE=${RELEASE_NAME}
+
+          helm uninstall ${RELEASE_NAME} -n ${NAMESPACE}

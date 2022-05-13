@@ -91,9 +91,12 @@ jobs:
           FROM_AWS_ACCOUNT_ID=${AWS_ACCOUNTS_IDS[$FROM_ENV]}
           FROM_AWS_REGION=${AWS_REGIONS[$FROM_ENV]}
           FROM_ECR_REGISTRY=${FROM_AWS_ACCOUNT_ID}.dkr.ecr.${FROM_AWS_REGION}.amazonaws.com
+          FROM_AWS_IAM_ROLE=arn:aws:iam::${FROM_AWS_ACCOUNT_ID}:role/CrossAccount-Global-Developer
 
           echo "::set-output name=from_aws_account_id::${FROM_AWS_ACCOUNT_ID}"
+          echo "::set-output name=from_aws_region::${FROM_AWS_REGION}"
           echo "::set-output name=from_ecr_registry::${FROM_ECR_REGISTRY}"
+          echo "::set-output name=from_aws_iam_role::${FROM_AWS_IAM_ROLE}"
 
       - name: Docker meta
         id: meta
@@ -120,7 +123,7 @@ jobs:
       - name: Login to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v1
         with:
-          registries: ${{ steps.env.outputs.aws_account_id }},${{ steps.env.outputs.from_aws_account_id }}
+          registries: ${{ steps.env.outputs.aws_account_id }}
 
       - name: Build image
         if: ${{ ! inputs.promote_image_version }}
@@ -131,6 +134,25 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           build-args: ${{ inputs.build_args }}
           outputs: type=docker,dest=/tmp/${{ steps.env.outputs.ecr_repository }}.tar
+
+      - name: Configure AWS credentials
+        if: ${{ inputs.promote_image_version }}
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.aws_access_key_id }}
+          aws-secret-access-key: ${{ secrets.aws_secret_access_key }}
+          aws-region: ${{ steps.env.outputs.from_aws_region }}
+          role-skip-session-tagging: true
+          role-to-assume: ${{ steps.env.outputs.from_aws_iam_role }}
+          role-duration-seconds: 1200
+          role-session-name: GitHubActionsBuildSession
+          mask-aws-account-id: false
+          
+      - name: Login to Amazon ECR
+        if: ${{ inputs.promote_image_version }}
+        uses: aws-actions/amazon-ecr-login@v1
+        with:
+          registries: ${{ steps.env.outputs.from_aws_account_id }}
 
       - name: Promote image
         if: ${{ inputs.promote_image_version }}
