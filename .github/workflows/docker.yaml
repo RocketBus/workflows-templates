@@ -159,10 +159,10 @@ jobs:
         run: |
           SRC_IMAGE_TAG=${{ steps.env.outputs.from_ecr_registry }}/${{ steps.env.outputs.ecr_repository }}:${{ inputs.promote_from_branch }}-${GITHUB_SHA:0:7}
           docker pull ${SRC_IMAGE_TAG}
-          for IMAGE_TAG in ${{ steps.meta.outputs.tags }}; do
+          for IMAGE_TAG in $(echo "${{ steps.meta.outputs.tags }}" | tr '\n' ' '); do
             docker tag ${SRC_IMAGE_TAG} ${IMAGE_TAG}
           done
-          docker save "${{ steps.meta.outputs.tags }}" -o /tmp/${{ steps.env.outputs.ecr_repository }}.tar
+          docker save $(echo "${{ steps.meta.outputs.tags }}" | tr '\n' ' ') -o /tmp/${{ steps.env.outputs.ecr_repository }}.tar
 
       - name: Upload artifact
         uses: actions/upload-artifact@v2
@@ -259,6 +259,6 @@ jobs:
             --repository-names ${{ needs.build.outputs.ecr_repository }} 2> /dev/null \
             || aws ecr create-repository --repository-name ${{ needs.build.outputs.ecr_repository }} --image-scanning-configuration scanOnPush=true
 
-          for IMAGE_TAG in ${{ needs.build.outputs.image_tags }}; do
+          for IMAGE_TAG in $(echo "${{ needs.build.outputs.image_tags }}" | tr '\n' ' '); do
             docker push ${IMAGE_TAG}
           done
