@@ -159,7 +159,7 @@ jobs:
         run: |
           SRC_IMAGE_TAG=${{ steps.env.outputs.from_ecr_registry }}/${{ steps.env.outputs.ecr_repository }}:${{ inputs.promote_from_branch }}-${GITHUB_SHA:0:7}
           docker pull ${SRC_IMAGE_TAG}
-          for IMAGE_TAG in "${{ steps.meta.outputs.tags }}"; do
+          for IMAGE_TAG in ${{ steps.meta.outputs.tags }}; do
             docker tag ${SRC_IMAGE_TAG} ${IMAGE_TAG}
           done
           docker save "${{ steps.meta.outputs.tags }}" -o /tmp/${{ steps.env.outputs.ecr_repository }}.tar
