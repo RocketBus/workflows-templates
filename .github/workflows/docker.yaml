@@ -6,14 +6,6 @@ on:
       env:
         type: string
         required: true
-      skip_tests:
-        type: boolean
-        required: false
-        default: false
-      skip_lint:
-        type: boolean
-        required: false
-        default: false
       promote_image_version:
         type: boolean
         required: false
@@ -41,10 +33,11 @@ on:
 
 env:
   ENV: ${{ inputs.env }}
-  FROM_ENV: ${{ inputs.promote_from_env }}
+  SOURCE_ENV: ${{ inputs.promote_from_env }}
 
 jobs:
   build:
+    if: ${{ ! inputs.promote_image_version }}
     runs-on: ${{ inputs.env }}
     outputs:
       aws_account_id: ${{ steps.env.outputs.aws_account_id }}
@@ -52,7 +45,9 @@ jobs:
       ecr_registry: ${{ steps.env.outputs.ecr_registry }}
       ecr_repository: ${{ steps.env.outputs.ecr_repository }}
       aws_iam_role: ${{ steps.env.outputs.aws_iam_role }}
+      tests_avaliable: ${{ steps.env.outputs.tests_avaliable }}
       image_tags: ${{ steps.meta.outputs.tags }}
+
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -88,15 +83,8 @@ jobs:
           echo "::set-output name=ecr_repository::${ECR_REPOSITORY}"
           echo "::set-output name=aws_iam_role::${AWS_IAM_ROLE}"
 
-          FROM_AWS_ACCOUNT_ID=${AWS_ACCOUNTS_IDS[$FROM_ENV]}
-          FROM_AWS_REGION=${AWS_REGIONS[$FROM_ENV]}
-          FROM_ECR_REGISTRY=${FROM_AWS_ACCOUNT_ID}.dkr.ecr.${FROM_AWS_REGION}.amazonaws.com
-          FROM_AWS_IAM_ROLE=arn:aws:iam::${FROM_AWS_ACCOUNT_ID}:role/CrossAccount-Global-Developer
-
-          echo "::set-output name=from_aws_account_id::${FROM_AWS_ACCOUNT_ID}"
-          echo "::set-output name=from_aws_region::${FROM_AWS_REGION}"
-          echo "::set-output name=from_ecr_registry::${FROM_ECR_REGISTRY}"
-          echo "::set-output name=from_aws_iam_role::${FROM_AWS_IAM_ROLE}"
+          TESTS_AVALIABLE=$(grep -E 'FROM (.+) AS (lint|unit-tests|integration-tests|e2e-tests)$' Dockerfile | awk '{print $4}' | tr '\n' ',' | sed 's/,$//')
+          echo "::set-output name=tests_avaliable::${TESTS_AVALIABLE}"
 
       - name: Docker meta
         id: meta
@@ -108,25 +96,7 @@ jobs:
             type=ref,prefix=pr-,suffix=-{{sha}},event=pr
             type=semver,pattern={{version}}
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v1
-        with:
-          aws-access-key-id: ${{ secrets.aws_access_key_id }}
-          aws-secret-access-key: ${{ secrets.aws_secret_access_key }}
-          aws-region: ${{ steps.env.outputs.aws_region }}
-          role-skip-session-tagging: true
-          role-to-assume: ${{ steps.env.outputs.aws_iam_role }}
-          role-duration-seconds: 1200
-          role-session-name: GitHubActionsBuildSession
-          mask-aws-account-id: false
-          
-      - name: Login to Amazon ECR
-        uses: aws-actions/amazon-ecr-login@v1
-        with:
-          registries: ${{ steps.env.outputs.aws_account_id }}
-
       - name: Build image
-        if: ${{ ! inputs.promote_image_version }}
         uses: docker/build-push-action@v2
         with:
           context: .
@@ -135,47 +105,14 @@ jobs:
           build-args: ${{ inputs.build_args }}
           outputs: type=docker,dest=/tmp/${{ steps.env.outputs.ecr_repository }}.tar
 
-      - name: Configure AWS credentials
-        if: ${{ inputs.promote_image_version }}
-        uses: aws-actions/configure-aws-credentials@v1
-        with:
-          aws-access-key-id: ${{ secrets.aws_access_key_id }}
-          aws-secret-access-key: ${{ secrets.aws_secret_access_key }}
-          aws-region: ${{ steps.env.outputs.from_aws_region }}
-          role-skip-session-tagging: true
-          role-to-assume: ${{ steps.env.outputs.from_aws_iam_role }}
-          role-duration-seconds: 1200
-          role-session-name: GitHubActionsBuildSession
-          mask-aws-account-id: false
-          
-      - name: Login to Amazon ECR
-        if: ${{ inputs.promote_image_version }}
-        uses: aws-actions/amazon-ecr-login@v1
-        with:
-          registries: ${{ steps.env.outputs.from_aws_account_id }}
-
-      - name: Promote image
-        if: ${{ inputs.promote_image_version }}
-        run: |
-          SRC_IMAGE_TAG=${{ steps.env.outputs.from_ecr_registry }}/${{ steps.env.outputs.ecr_repository }}:${{ inputs.promote_from_branch }}-${GITHUB_SHA:0:7}
-          docker pull ${SRC_IMAGE_TAG}
-          for IMAGE_TAG in $(echo "${{ steps.meta.outputs.tags }}" | tr '\n' ' '); do
-            docker tag ${SRC_IMAGE_TAG} ${IMAGE_TAG}
-          done
-          docker save $(echo "${{ steps.meta.outputs.tags }}" | tr '\n' ' ') -o /tmp/${{ steps.env.outputs.ecr_repository }}.tar
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v2
-        with:
-          name: ${{ steps.env.outputs.ecr_repository }}
-          path: /tmp/${{ steps.env.outputs.ecr_repository }}.tar
-          retention-days: 1
-
   test:
+    if: ${{ ! inputs.promote_image_version }}
     runs-on: ${{ inputs.env }}
     needs:
       - build
-    if: ${{ !inputs.skip_tests }}
+    strategy:
+      matrix:
+        test: [${{ needs.build.outputs.tests_avaliable }}]
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -191,31 +128,22 @@ jobs:
           version: latest
           endpoint: builders
 
-      - name: Linting
-        uses: docker/build-push-action@v2
-        if: ${{ !inputs.skip_lint }}
-        with:
-          context: .
-          labels: ${{ steps.meta.outputs.labels }}
-          tags: ${{ steps.meta.outputs.tags }}
-          target: linting
-
-      - name: Tests
+      - name: ${{ matrix.test }}
         uses: docker/build-push-action@v2
         with:
           context: .
-          labels: ${{ steps.meta.outputs.labels }}
-          tags: ${{ steps.meta.outputs.tags }}
-          target: tests
+          target: ${{ matrix.test }}
 
   release:
+    if: ${{ ! inputs.promote_image_version }}
     runs-on: ${{ inputs.env }}
     needs:
       - build
+      - test
     steps:
       - name: Checkout
         uses: actions/checkout@v3
-                  
+
       - name: Set up Docker Context for Buildx
         id: buildx-context
         run: docker context create builders
@@ -249,7 +177,7 @@ jobs:
         with:
           name: ${{ needs.build.outputs.ecr_repository }}
           path: /tmp
-                  
+
       - name: Push image tags
         run: |
           docker load --input /tmp/${{ needs.build.outputs.ecr_repository }}.tar
@@ -259,6 +187,110 @@ jobs:
             --repository-names ${{ needs.build.outputs.ecr_repository }} 2> /dev/null \
             || aws ecr create-repository --repository-name ${{ needs.build.outputs.ecr_repository }} --image-scanning-configuration scanOnPush=true
 
-          for IMAGE_TAG in $(echo "${{ needs.build.outputs.image_tags }}" | tr '\n' ' '); do
-            docker push ${IMAGE_TAG}
-          done
+          IMAGE_TAGS=(${{ needs.build.outputs.image_tags }})
+          IMAGE_TAG=${IMAGE_TAGS[0]}
+
+          docker push ${IMAGE_TAG}
+
+  retag image:
+    if: ${{ inputs.promote_image_version }}
+    runs-on: ${{ inputs.env }}
+    steps:
+      - name: Set up Docker Context for Buildx
+        id: buildx-context
+        run: docker context create builders
+
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v1
+        with:
+          version: latest
+          endpoint: builders
+
+      - name: Set env variables
+        id: env
+        run: |
+          declare -A AWS_ACCOUNTS_IDS AWS_REGIONS
+          AWS_ACCOUNTS_IDS=([dev]=180811438061 [stg]=406026015868 [live]=114395709799)
+          AWS_REGIONS=([dev]=us-east-2 [stg]=us-east-2 [live]=us-east-2)
+
+          AWS_ACCOUNT_ID=${AWS_ACCOUNTS_IDS[$ENV]}
+          AWS_REGION=${AWS_REGIONS[$ENV]}
+          ECR_REGISTRY=${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
+          ECR_REPOSITORY=${GITHUB_REPOSITORY#*/}
+          AWS_IAM_ROLE=arn:aws:iam::${AWS_ACCOUNT_ID}:role/CrossAccount-Global-Developer
+
+          echo "::set-output name=aws_account_id::${AWS_ACCOUNT_ID}"
+          echo "::set-output name=aws_region::${AWS_REGION}"
+          echo "::set-output name=ecr_registry::${ECR_REGISTRY}"
+          echo "::set-output name=ecr_repository::${ECR_REPOSITORY}"
+          echo "::set-output name=aws_iam_role::${AWS_IAM_ROLE}"
+
+          SOURCE_AWS_ACCOUNT_ID=${AWS_ACCOUNTS_IDS[$SOURCE_ENV]}
+          SOURCE_AWS_REGION=${AWS_REGIONS[$SOURCE_ENV]}
+          SOURCE_ECR_REGISTRY=${SOURCE_AWS_ACCOUNT_ID}.dkr.ecr.${SOURCE_AWS_REGION}.amazonaws.com
+          SOURCE_AWS_IAM_ROLE=arn:aws:iam::${SOURCE_AWS_ACCOUNT_ID}:role/CrossAccount-Global-Developer
+          SOURCE_IMAGE_TAG=${{ steps.env.outputs.source_ecr_registry }}/${{ steps.env.outputs.ecr_repository }}:${{ inputs.promote_from_branch }}-${GITHUB_SHA:0:7}
+
+          echo "::set-output name=source_aws_account_id::${SOURCE_AWS_ACCOUNT_ID}"
+          echo "::set-output name=source_aws_region::${SOURCE_AWS_REGION}"
+          echo "::set-output name=source_ecr_registry::${SOURCE_ECR_REGISTRY}"
+          echo "::set-output name=source_aws_iam_role::${SOURCE_AWS_IAM_ROLE}"
+          echo "::set-output name=source_image_tag::${SOURCE_IMAGE_TAG}"
+
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v3
+        with:
+          images: "${{ steps.env.outputs.ecr_registry }}/${{ steps.env.outputs.ecr_repository }}"
+          tags: |
+            type=ref,suffix=-{{sha}},event=branch
+            type=ref,prefix=pr-,suffix=-{{sha}},event=pr
+            type=semver,pattern={{version}}
+
+      - name: Configure AWS credentials
+        if: ${{ inputs.promote_image_version }}
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.aws_access_key_id }}
+          aws-secret-access-key: ${{ secrets.aws_secret_access_key }}
+          aws-region: ${{ steps.env.outputs.source_aws_region }}
+          role-skip-session-tagging: true
+          role-to-assume: ${{ steps.env.outputs.source_aws_iam_role }}
+          role-duration-seconds: 1200
+          role-session-name: GitHubActionsBuildSession
+          mask-aws-account-id: false
+
+      - name: Login to Amazon ECR
+        if: ${{ inputs.promote_image_version }}
+        uses: aws-actions/amazon-ecr-login@v1
+        with:
+          registries: ${{ steps.env.outputs.source_aws_account_id }}
+
+      - name: Pull image tag
+        run: docker pull ${{ steps.env.outputs.source_image_tag }}
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.aws_access_key_id }}
+          aws-secret-access-key: ${{ secrets.aws_secret_access_key }}
+          aws-region: ${{ steps.env.outputs.aws_region }}
+          role-skip-session-tagging: true
+          role-to-assume: ${{ steps.env.outputs.aws_iam_role }}
+          role-duration-seconds: 1200
+          role-session-name: GitHubActionsBuildSession
+          mask-aws-account-id: false
+
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v1
+        with:
+          registries: ${{ steps.env.outputs.aws_account_id }}
+
+      - name: Push image tags
+        run: |
+          IMAGE_TAGS=(${{ steps.meta.outputs.tags }})
+          IMAGE_TAG=${IMAGE_TAGS[0]}
+
+          docker tag ${{ steps.env.outputs.source_image_tag }} ${IMAGE_TAG}
+          docker push ${IMAGE_TAG}
