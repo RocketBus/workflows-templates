@@ -106,8 +106,7 @@ jobs:
           tags: |
             type=ref,suffix=-{{sha}},event=branch
             type=ref,prefix=pr-,suffix=-{{sha}},event=pr
-            type=semver,pattern={{version}}
-            type=raw,value=latest,enable=false
+            type=ref,event=tag
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v1
