@@ -103,7 +103,14 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           tags: ${{ steps.meta.outputs.tags }}
           build-args: ${{ inputs.build_args }}
-          outputs: type=docker,dest=/tmp/${{ steps.env.outputs.ecr_repository }}.tar
+          outputs: type=docker,dest=/tmp/${{ steps.env.outputs.ecr_repository }}.
+          
+      - name: Upload artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ steps.env.outputs.ecr_repository }}
+          path: /tmp/${{ steps.env.outputs.ecr_repository }}.tar
+          retention-days: 1
 
   test:
     if: ${{ (! inputs.promote_image_version) && needs.build.outputs.tests_avaliable != '[""]' }}
@@ -173,7 +180,7 @@ jobs:
           registries: ${{ needs.build.outputs.aws_account_id }}
 
       - name: Download artifact
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: ${{ needs.build.outputs.ecr_repository }}
           path: /tmp
