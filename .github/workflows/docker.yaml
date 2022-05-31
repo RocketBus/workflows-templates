@@ -106,7 +106,7 @@ jobs:
           outputs: type=docker,dest=/tmp/${{ steps.env.outputs.ecr_repository }}.tar
 
   test:
-    if: ${{ ! inputs.promote_image_version }}
+    if: ${{ (! inputs.promote_image_version) && needs.build.outputs.tests_avaliable != '[""]' }}
     runs-on: ${{ inputs.env }}
     needs:
       - build
