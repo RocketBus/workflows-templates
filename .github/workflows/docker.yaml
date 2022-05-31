@@ -84,7 +84,7 @@ jobs:
           echo "::set-output name=aws_iam_role::${AWS_IAM_ROLE}"
 
           TESTS_AVALIABLE=$(grep -E 'FROM (.+) AS (lint|unit-tests|integration-tests|e2e-tests)$' Dockerfile | awk '{print $4}' | tr '\n' ',' | sed 's/,$//')
-          echo "::set-output name=tests_avaliable::${TESTS_AVALIABLE}"
+          echo "::set-output name=tests_avaliable::${TESTS_AVALIABLE:-skip}"
 
       - name: Docker meta
         id: meta
@@ -106,7 +106,7 @@ jobs:
           outputs: type=docker,dest=/tmp/${{ steps.env.outputs.ecr_repository }}.tar
 
   test:
-    if: ${{ ! inputs.promote_image_version }}
+    if: ${{ (! inputs.promote_image_version) && needs.build.outputs.tests_avaliable != "skip" }}
     runs-on: ${{ inputs.env }}
     needs:
       - build
