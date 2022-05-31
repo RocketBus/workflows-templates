@@ -83,7 +83,7 @@ jobs:
           echo "::set-output name=ecr_repository::${ECR_REPOSITORY}"
           echo "::set-output name=aws_iam_role::${AWS_IAM_ROLE}"
 
-          TESTS_AVALIABLE=$(grep -E 'FROM (.+) AS (lint|unit-tests|integration-tests|e2e-tests)$' Dockerfile | awk '{print $4}' | tr '\n' ',' | sed 's/,$//')
+          TESTS_AVALIABLE=$(grep -E '^FROM (.+) AS (lint|unit-tests|integration-tests|e2e-tests)$' Dockerfile | awk '{print $4}' | tr '\n' ',' | sed 's/,$//')
           echo "::set-output name=tests_avaliable::$(jq -ncR '[inputs]' <<< ${TESTS_AVALIABLE})"
 
       - name: Docker meta
