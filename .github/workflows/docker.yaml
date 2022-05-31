@@ -112,7 +112,7 @@ jobs:
       - build
     strategy:
       matrix:
-        test: [ fromJson(needs.build.outputs.tests_avaliable) ]
+        test: ${{ fromJson(needs.build.outputs.tests_avaliable) }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
