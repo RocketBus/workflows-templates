@@ -192,7 +192,7 @@ jobs:
 
           docker push ${IMAGE_TAG}
 
-  retag image:
+  retag_image:
     if: ${{ inputs.promote_image_version }}
     runs-on: ${{ inputs.env }}
     steps:
