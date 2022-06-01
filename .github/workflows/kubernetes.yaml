@@ -9,6 +9,10 @@ on:
       image_tags:
         type: string
         required: true
+      destroy:
+        type: boolean
+        required: false
+        default: false
     secrets:
       aws_access_key_id:
         required: true
@@ -20,6 +24,7 @@ env:
 
 jobs:
   deploy:
+    if: ${{ ! inputs.destroy }}
     runs-on: ${{ inputs.env }}
     environment: ${{ inputs.env }}
     steps:
@@ -61,7 +66,7 @@ jobs:
           CHART_PATH=charts/${RELEASE_NAME}
 
           helm dep up ${CHART_PATH}
-        
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
@@ -85,9 +90,63 @@ jobs:
 
           aws eks update-kubeconfig --name ${{ steps.env.outputs.eks_cluster }}
 
+          if [[ ${{ github.event_name }} == 'pull_request' ]]; then
+            PREFIX_HOST=pr-${{ github.event.number }}
+            RELEASE_NAME=${RELEASE_NAME}-pr-${{ github.event.number }}
+          fi
+
           helm upgrade \
             --install ${RELEASE_NAME} ${CHART_PATH} \
             --create-namespace --namespace ${NAMESPACE} \
             --values ${CHART_PATH}/environments/${ENV}/values.yaml \
             --values secrets://${CHART_PATH}/environments/${ENV}/secrets.yaml \
             --set image.repository=${ECR_REPOSITORY} --set image.tag=${IMAGE_TAG} --set ingress.prefixHost=${PREFIX_HOST}
+
+  destroy:
+    if: ${{ inputs.destroy }}
+    runs-on: ${{ inputs.env }}
+    environment: ${{ inputs.env }}
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set env variables
+        id: env
+        run: |
+          declare -A AWS_ACCOUNTS_IDS AWS_REGIONS EKS_CLUSTERS
+          AWS_ACCOUNTS_IDS=([dev]=180811438061 [stg]=406026015868 [live]=114395709799)
+          AWS_REGIONS=([dev]=us-east-2 [stg]=us-east-2 [live]=us-east-2)
+          EKS_CLUSTERS=([dev]=k8s-dev-85c52b0e [stg]=k8s-stg-7a1d63f9 [live]=k8s-live-620f830f)
+
+          AWS_ACCOUNT_ID=${AWS_ACCOUNTS_IDS[$ENV]}
+          AWS_REGION=${AWS_REGIONS[$ENV]}
+          EKS_CLUSTER=${EKS_CLUSTERS[$ENV]}
+
+          AWS_IAM_ROLE=arn:aws:iam::${AWS_ACCOUNT_ID}:role/CrossAccount-Global-Admin
+
+          echo "::set-output name=aws_region::${AWS_REGION}"
+          echo "::set-output name=aws_iam_role::${AWS_IAM_ROLE}"
+          echo "::set-output name=eks_cluster::${EKS_CLUSTER}"
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.aws_access_key_id }}
+          aws-secret-access-key: ${{ secrets.aws_secret_access_key }}
+          aws-region: ${{ steps.env.outputs.aws_region }}
+          role-skip-session-tagging: true
+          role-to-assume: ${{ steps.env.outputs.aws_iam_role }}
+          role-duration-seconds: 1200
+          role-session-name: GitHubActionsBuildSession
+          mask-aws-account-id: false
+
+      - name: Helm uninstall PR
+        run: |
+          RELEASE_NAME=${GITHUB_REPOSITORY#*/}
+          NAMESPACE=${RELEASE_NAME}
+
+          if [[ ${{ github.event_name }} == 'pull_request' ]]; then
+            PREFIX_HOST=pr-${{ github.event.number }}
+            RELEASE_NAME=${RELEASE_NAME}-pr-${{ github.event.number }}
+          fi
+
+          helm uninstall ${RELEASE_NAME} -n ${NAMESPACE}
