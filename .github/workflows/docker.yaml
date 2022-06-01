@@ -158,7 +158,7 @@ jobs:
           retention-days: 1
 
   test:
-    if: ${{ needs.build.outputs.tests_avaliable != '[""]' && ((! inputs.promote_image_version) || (! inputs.skip_tests)) }}
+    if: ${{ (needs.build.outputs.tests_avaliable != '[""]' && (! inputs.promote_image_version)) || (! inputs.skip_tests) }}
     runs-on: ${{ inputs.env }}
     needs:
       - build
