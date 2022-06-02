@@ -92,7 +92,14 @@ jobs:
 
           if [[ ${{ github.event_name }} == 'pull_request' ]]; then
             PREFIX_HOST=pr-${{ github.event.number }}
-            RELEASE_NAME=${RELEASE_NAME}-pr-${{ github.event.number }}
+            PR_RELEASE_NAME=${RELEASE_NAME}-pr-${{ github.event.number }}
+          
+            helm upgrade \
+              --install ${PR_RELEASE_NAME} ${CHART_PATH} \
+              --create-namespace --namespace ${NAMESPACE} \
+              --values ${CHART_PATH}/environments/${ENV}/values.yaml \
+              --values secrets://${CHART_PATH}/environments/${ENV}/secrets.yaml \
+              --set image.repository=${ECR_REPOSITORY} --set image.tag=${IMAGE_TAG} --set ingress.prefixHost=${PREFIX_HOST}
           fi
 
           helm upgrade \
@@ -100,7 +107,7 @@ jobs:
             --create-namespace --namespace ${NAMESPACE} \
             --values ${CHART_PATH}/environments/${ENV}/values.yaml \
             --values secrets://${CHART_PATH}/environments/${ENV}/secrets.yaml \
-            --set image.repository=${ECR_REPOSITORY} --set image.tag=${IMAGE_TAG} --set ingress.prefixHost=${PREFIX_HOST}
+            --set image.repository=${ECR_REPOSITORY} --set image.tag=${IMAGE_TAG}
 
   destroy:
     if: ${{ inputs.destroy }}
