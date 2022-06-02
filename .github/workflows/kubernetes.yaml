@@ -143,6 +143,8 @@ jobs:
         run: |
           RELEASE_NAME=${GITHUB_REPOSITORY#*/}
           NAMESPACE=${RELEASE_NAME}
+          
+          aws eks update-kubeconfig --name ${{ steps.env.outputs.eks_cluster }}
 
           if [[ ${{ github.event_name }} == 'pull_request' ]]; then
             PREFIX_HOST=pr-${{ github.event.number }}
