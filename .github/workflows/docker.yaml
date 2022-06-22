@@ -90,7 +90,7 @@ jobs:
           SOURCE_AWS_REGION=${AWS_REGIONS[$SOURCE_ENV]}
           SOURCE_ECR_REGISTRY=${SOURCE_AWS_ACCOUNT_ID}.dkr.ecr.${SOURCE_AWS_REGION}.amazonaws.com
           SOURCE_AWS_IAM_ROLE=arn:aws:iam::${SOURCE_AWS_ACCOUNT_ID}:role/CrossAccount-Global-Developer
-          SOURCE_IMAGE_TAG=${{ steps.env.outputs.source_ecr_registry }}/${{ steps.env.outputs.ecr_repository }}:${{ inputs.promote_from_branch }}-${GITHUB_SHA:0:7}
+          SOURCE_IMAGE_TAG=${SOURCE_ECR_REGISTRY}/${ECR_REPOSITORY}:${{ inputs.promote_from_branch }}-${GITHUB_SHA:0:7}
 
           echo "::set-output name=source_aws_account_id::${SOURCE_AWS_ACCOUNT_ID}"
           echo "::set-output name=source_aws_region::${SOURCE_AWS_REGION}"
