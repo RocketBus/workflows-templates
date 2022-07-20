@@ -1,0 +1,66 @@
+name: Docker push
+
+on:
+  workflow_call:
+    inputs:
+      promote_image:
+        type: boolean
+        required: false
+        default: true
+      source_image_tag:
+        type: string
+        required: false
+      image_repository:
+        type: string
+        required: true
+      image_tag:
+        type: string
+        required: true
+    secrets:
+      aws_access_key_id:
+        required: true
+      aws_secret_access_key:
+        required: true
+
+env:
+  RUNS_ON: k8s-live
+  AWS_REGION: us-east-1
+
+jobs:
+  push:
+    name: Push Image
+    runs-on: ${{ env.RUNS_ON }}
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.aws_access_key_id }}
+          aws-secret-access-key: ${{ secrets.aws_secret_access_key }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login_ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Docker retag
+        if: ${{ inputs.promote_image }}
+        run: |
+          MANIFEST=$(aws ecr batch-get-image --repository-name ${{ inputs.image_repository }} --image-ids imageTag=${{ inputs.source_image_tag }} --output json | jq --raw-output --join-output '.images[0].imageManifest')
+          aws ecr put-image --repository-name ${{ inputs.image_repository }} --image-tag ${{ inputs.image_tag }} --image-manifest "$MANIFEST"
+
+      - name: Download artifact
+        if: ${{ !inputs.promote_image }}
+        uses: actions/download-artifact@v3
+        with:
+          name: docker-artifact
+
+      - name: Docker push
+        if: ${{ !inputs.promote_image }}
+        run: |
+          aws ecr describe-repositories \
+            --repository-names ${{ inputs.image_repository }} 2> /dev/null
+          
+          [[ $? -ne 0 ]] && aws ecr create-repository --repository-name ${{ inputs.image_repository }} --image-scanning-configuration scanOnPush=true
+
+          docker load --input image.tar
+          docker push ${{ steps.login_ecr.outputs.registry }}/${{ inputs.image_repository }}:${{ inputs.image_tag }}
