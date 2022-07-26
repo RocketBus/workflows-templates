@@ -1,22 +1,32 @@
-name: Build
+name: Build workflow
 
 on:
   workflow_call:
     inputs:
-      app_version:
-        type: string
-        required: false
-      build_disabled:
+      build_docker_disabled:
         type: boolean
         required: false
-        default: true
+        default: false
+      docker_context:
+        type: string
+        required: false
+        default: .
+      dockerfile_path:
+        type: string
+        required: false
+        default: Dockerfile
+      docker_target:
+        type: string
+        required: false
+        default: ""
+      docker_build_args:
+        type: string
+        required: false
+        default: ""
       jdk_version:
         type: string
         required: false
         default: "11"
-      language:
-        type: string
-        required: false
       node_package_manager:
         type: string
         required: false
@@ -29,75 +39,281 @@ on:
         type: string
         required: false
         default: "latest"
+    secrets:
+      aws_access_key_id:
+        required: true
+      aws_secret_access_key:
+        required: true
+    outputs:
+      image_repository:
+        value: ${{ jobs.build_docker.outputs.image_repository }}
+      image_tag:
+        value: ${{ jobs.build_docker.outputs.image_tag }}
+      pre_release_tag:
+        value: ${{ jobs.code.outputs.preReleaseTag }}
+      sem_ver:
+        value: ${{ jobs.code.outputs.semVer }}
+      short_sha:
+        value: ${{ jobs.code.outputs.shortSha }}
+      project_language:
+        value: ${{ jobs.code.outputs.project_language }}
 
 env:
-  RUNS_ON: eks-live
+  RUNS_ON: live
+  AWS_REGION: us-east-2s
   MAVEN_OPTS: "-Dhttps.protocols=TLSv1.2- Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=WARN -Djava.awt.headless=true"
   MAVEN_CLI_OPTS: "-B -e -fae -V"
 
 jobs:
-  build:
-    name: Build
+  code:
+    name: Code
     runs-on: ${{ env.RUNS_ON }}
-    if: ${{ !inputs.build_disabled }}
+    outputs:
+      pre_release_tag: ${{ steps.gitversion.outputs.preReleaseTag }}
+      sem_ver: ${{ steps.gitversion.outputs.semVer }}
+      short_sha: ${{ steps.gitversion.outputs.shortSha }}
+      project_language: ${{ steps.project_settings.outputs.language }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+        
+      - name: Install GitVersion
+        uses: gittools/actions/gitversion/setup@v0.9.7
+        with:
+          versionSpec: '5.x'
+
+      - name: Determine version
+        id: gitversion
+        uses: gittools/actions/gitversion/execute@v0.9.7
+        with:
+          useConfigFile: true
+
+      - name: Display GitVersion outputs
+        run: |
+          echo "Major: ${{ steps.gitversion.outputs.major }}"
+          echo "Minor: ${{ steps.gitversion.outputs.minor }}"
+          echo "Patch: ${{ steps.gitversion.outputs.patch }}"
+          echo "PreReleaseTag: ${{ steps.gitversion.outputs.preReleaseTag }}"
+          echo "PreReleaseTagWithDash: ${{ steps.gitversion.outputs.preReleaseTagWithDash }}"
+          echo "PreReleaseLabel: ${{ steps.gitversion.outputs.preReleaseLabel }}"
+          echo "PreReleaseNumber: ${{ steps.gitversion.outputs.preReleaseNumber }}"
+          echo "WeightedPreReleaseNumber: ${{ steps.gitversion.outputs.weightedPreReleaseNumber }}"
+          echo "BuildMetaData: ${{ steps.gitversion.outputs.buildMetaData }}"
+          echo "BuildMetaDataPadded: ${{ steps.gitversion.outputs.buildMetaDataPadded }}"
+          echo "FullBuildMetaData: ${{ steps.gitversion.outputs.fullBuildMetaData }}"
+          echo "MajorMinorPatch: ${{ steps.gitversion.outputs.majorMinorPatch }}"
+          echo "SemVer: ${{ steps.gitversion.outputs.semVer }}"
+          echo "LegacySemVer: ${{ steps.gitversion.outputs.legacySemVer }}"
+          echo "LegacySemVerPadded: ${{ steps.gitversion.outputs.legacySemVerPadded }}"
+          echo "AssemblySemVer: ${{ steps.gitversion.outputs.assemblySemVer }}"
+          echo "AssemblySemFileVer: ${{ steps.gitversion.outputs.assemblySemFileVer }}"
+          echo "FullSemVer: ${{ steps.gitversion.outputs.fullSemVer }}"
+          echo "InformationalVersion: ${{ steps.gitversion.outputs.informationalVersion }}"
+          echo "BranchName: ${{ steps.gitversion.outputs.branchName }}"
+          echo "EscapedBranchName: ${{ steps.gitversion.outputs.escapedBranchName }}"
+          echo "Sha: ${{ steps.gitversion.outputs.sha }}"
+          echo "ShortSha: ${{ steps.gitversion.outputs.shortSha }}"
+          echo "NuGetVersionV2: ${{ steps.gitversion.outputs.nuGetVersionV2 }}"
+          echo "NuGetVersion: ${{ steps.gitversion.outputs.nuGetVersion }}"
+          echo "NuGetPreReleaseTagV2: ${{ steps.gitversion.outputs.nuGetPreReleaseTagV2 }}"
+          echo "NuGetPreReleaseTag: ${{ steps.gitversion.outputs.nuGetPreReleaseTag }}"
+          echo "VersionSourceSha: ${{ steps.gitversion.outputs.versionSourceSha }}"
+          echo "CommitsSinceVersionSource: ${{ steps.gitversion.outputs.commitsSinceVersionSource }}"
+          echo "CommitsSinceVersionSourcePadded: ${{ steps.gitversion.outputs.commitsSinceVersionSourcePadded }}"
+          echo "UncommittedChanges: ${{ steps.gitversion.outputs.uncommittedChanges }}"
+          echo "CommitDate: ${{ steps.gitversion.outputs.commitDate }}"
+
+      - name: Determine project language
+        id: project_settings
+        run: |
+          [[ -f pom.xml ]] && echo "::set-output name=language::java"
+          [[ -f package.json ]] && echo "::set-output name=language::javascript"
+          [[ -f composer.json ]] && echo "::set-output name=language::php"
+
+  build_artifact:
+    name: Build artifact
+    runs-on: ${{ env.RUNS_ON }}
+    needs:
+      - code
     steps:
       - name: Checkout
         uses: actions/checkout@v3
 
-      - name: Set up JDK
+      ###### Build Java
+
+      - name: Java | Set up JDK
         uses: actions/setup-java@v3
-        if: ${{ inputs.language == "java" }}
+        if: ${{ needs.code.outputs.project_language == "java" }}
         with:
           java-version: ${{ inputs.jdk_version }}
           distribution: 'adopt'
           cache: 'maven'
 
-      # - name: Update version on pom.xml
-      #   if: ${{ inputs.language == "java" }}
-      #   run: |
-      #     [[ -n ${{ inputs.app_version }} ]] && mvn $MAVEN_CLI_OPTS release:update-versions -DdevelopmentVersion=${{ inputs.app_version }}
+      - name: Java | Static code analysis (Linter)
+        if: ${{ needs.code.outputs.project_language == "java" }}
+        run: mvn $MAVEN_CLI_OPTS checkstyle:checkstyle
 
-      - name: Run build
-        if: ${{ inputs.language == "java" }}
-        run: mvn $MAVEN_CLI_OPTS -Dmaven.test.skip=true clean package
+      - name: Java | Compile
+        if: ${{ needs.code.outputs.project_language == "java" }}
+        run: mvn $MAVEN_CLI_OPTS compile
 
-      - name: Archive artifact
-        if: ${{ inputs.language == "java" }}
-        uses: actions/upload-artifact@v3
-        with:
-          path: target/*.jar
-          retention-days: 1
+      - name: Java | Package
+        if: ${{ needs.code.outputs.project_language == "java" }}
+        run: mvn $MAVEN_CLI_OPTS -Dmaven.test.skip=true package
 
-      - name: Setup Node.js
+      ###### Build Javascript
+
+      - name: Javascript | Setup Node.js
         uses: actions/setup-node@v3
-        if: ${{ inputs.language == "javascript" }}
+        if: ${{ needs.code.outputs.project_language == "javascript" }}
         with:
           node-version: ${{ inputs.node_version }}
-          cache: ${{ inputs.package_manager }}
+          cache: ${{ inputs.node_package_manager }}
 
-      - name: Install dependencies
-        if: ${{ inputs.language == "javascript" }}
+      - name: Javascript | Install dependencies
+        if: ${{ needs.code.outputs.project_language == "javascript" }}
         run: |
-          [[ ${{ inputs.package_manager }} == 'npm' ]] && npm ci --prefer-offline --ignore-scripts
-          [[ ${{ inputs.package_manager }} == 'yarn' ]] && yarn install --frozen-lockfile --ignore-scripts
+          [[ ${{ inputs.node_package_manager }} == 'npm' ]] && npm ci --prefer-offline --ignore-scripts
+          [[ ${{ inputs.node_package_manager }} == 'yarn' ]] && yarn install --frozen-lockfile --ignore-scripts
 
-      # - name: Update version on package.json
-      #   if: ${{ inputs.language == "javascript" }}
-      #   run: |
-      #     npm version --git-tag-version=false ${{ inputs.app_version }}
+      - name: Javascript | Static code analysis (Linter)
+        if: ${{ needs.code.outputs.project_language == "javascript" }}
+        run: eslint . --ext .js,.jsx,.ts,.tsx
 
-      - name: Cache Composer dependencies
+      - name: Javascript | Package
+        if: ${{ needs.code.outputs.project_language == "javascript" }}
+        run: |
+          [[ ${{ inputs.node_package_manager }} == 'npm' ]] && npm run build && npm pack
+          [[ ${{ inputs.node_package_manager }} == 'yarn' ]] && yarn run build && yarn pack
+
+      ###### Build PHP
+
+      - name: PHP | Cache Composer dependencies
         uses: actions/cache@v3
-        if: ${{ inputs.language == "php" }}
+        if: ${{ needs.code.outputs.project_language == "php" }}
         with:
           path: /tmp/composer-cache
           key: ${{ runner.os }}-${{ hashFiles('**/composer.lock') }}
 
-      - name: Install dependencies
+      - name: PHP | Install dependencies
         uses: php-actions/composer@v6
-        if: ${{ inputs.language == "php" }}
+        if: ${{ needs.code.outputs.project_language == "php" }}
         with:
           php_version: ${{ inputs.php_version }}
           version: latest
           dev: no
           args: --ignore-platform-reqs
+
+      - name: PHP | Static code analysis (Linter)
+        if: ${{ needs.code.outputs.project_language == "php" }}
+        run: vendor/bin/phplint . --exclude=vendor
+
+      - name: PHP | Package
+        if: ${{ needs.code.outputs.project_language == "php" }}
+        run: echo ''
+
+      ###### Archive artifact
+
+      - name: Archive artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: app-artifact
+          path: |
+            target/*.jar
+            package.tgz
+          retention-days: 1
+
+  build_docker:
+    name: Build Docker
+    runs-on: ${{ env.RUNS_ON }}
+    needs:
+      - code
+    outputs:
+      image_registry: ${{ steps.setup.outputs.image_registry }}
+      image_repository: ${{ steps.setup.outputs.image_repository }}
+      image_repository_uri: ${{ steps.setup.outputs.image_repository_uri }}
+      image_tag: ${{ steps.setup.outputs.image_tag }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      ###### Build Docker
+
+      - name: Set up Docker Context for Buildx
+        id: buildx-context
+        if: ${{ !inputs.build_docker_disabled }}
+        run: docker context create builders
+
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v2
+        if: ${{ !inputs.build_docker_disabled }}
+        with:
+          endpoint: builders
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        if: ${{ !inputs.build_docker_disabled }}
+        with:
+          aws-access-key-id: ${{ secrets.aws_access_key_id }}
+          aws-secret-access-key: ${{ secrets.aws_secret_access_key }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login_ecr
+        uses: aws-actions/amazon-ecr-login@v1
+        if: ${{ !inputs.build_docker_disabled }}
+
+      - name: Setup
+        id: setup
+        if: ${{ !inputs.build_docker_disabled }}
+        env:
+          IMAGE_REGISTRY: ${{ steps.login_ecr.outputs.registry }}
+          IMAGE_REPOSITORY: ${{ env.GITHUB_REPOSITORY }}
+        run: |
+          echo "::set-output name=image_registry::$IMAGE_REGISTRY"
+          echo "::set-output name=image_repository::$IMAGE_REPOSITORY"
+          echo "::set-output name=image_repository_uri::${IMAGE_REGISTRY}/${IMAGE_REPOSITORY}"
+          echo "::set-output name=image_tag::${{ needs.code.outputs.sem_ver }}"
+
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v4
+        if: ${{ matrix.build_type == "docker" }}
+        with:
+          images: ${{ steps.setup.outputs.image_repository_uri }}
+          tags: |
+            type=raw,value=${{ steps.setup.outputs.image_tag }}
+
+      - name: Static code analysis (Linter)
+        uses: hadolint/hadolint-action@v2.0.0
+        if: ${{ !inputs.build_docker_disabled }}
+        with:
+          dockerfile: ${{ inputs.dockerfile_path }}
+      
+      - name: Run build
+        uses: docker/build-push-action@v3
+        if: ${{ !inputs.build_docker_disabled }}
+        with:
+          cache-from: type=registry,ref=${{ steps.setup.outputs.image_repository_uri }}:buildcache
+          cache-to: type=registry,mode=max,ref=${{ steps.setup.outputs.image_repository_uri }}:buildcache,oci-mediatypes=false
+          context: ${{ inputs.docker_context }}
+          file: ${{ inputs.dockerfile_path }}
+          target: ${{ inputs.docker_target }}
+          build-args: ${{ inputs.docker_build_args }}
+          labels: ${{ steps.meta.outputs.labels }}
+          tags: ${{ steps.meta.outputs.tags }}
+          push: false
+          outputs: type=docker,dest=image.tar
+
+      ###### Archive container image
+
+      - name: Archive container image
+        uses: actions/upload-artifact@v3
+        if: ${{ !inputs.build_docker_disabled }}
+        with:
+          name: container-image
+          path: image.tar
+          retention-days: 1

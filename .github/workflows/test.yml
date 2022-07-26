@@ -1,4 +1,4 @@
-name: Test
+name: Test workflow
 
 on:
   workflow_call:
@@ -7,13 +7,6 @@ on:
         type: string
         required: false
         default: "11"
-      language:
-        type: string
-        required: false
-      lint_disabled:
-        type: boolean
-        required: false
-        default: false
       node_package_manager:
         type: string
         required: false
@@ -26,6 +19,10 @@ on:
         type: string
         required: false
         default: "latest"
+      project_language:
+        type: string
+        required: false
+        default: ""
       unit_tests_disabled:
         type: boolean
         required: false
@@ -34,66 +31,238 @@ on:
         type: boolean
         required: false
         default: false
-      system_tests_disabled:
-        type: boolean
-        required: false
-        default: false
-      sonarqube_scanning_disabled:
+      e2e_tests_disabled:
         type: boolean
         required: false
         default: false
 
 env:
-  RUNS_ON: eks-live
+  RUNS_ON: live
   MAVEN_OPTS: "-Dhttps.protocols=TLSv1.2- Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=WARN -Djava.awt.headless=true"
   MAVEN_CLI_OPTS: "-B -e -fae -V"
 
 jobs:
-  test:
-    name: Test
+  unit_tests:
+    name: Unit tests
     runs-on: ${{ env.RUNS_ON }}
-    if: ${{ !inputs.build_disabled }}
+    if: ${{ !inputs.unit_tests_disabled }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
 
-      - name: Set up JDK
+      ###### Java dependencies
+
+      - name: Java | Set up JDK
         uses: actions/setup-java@v3
-        if: ${{ inputs.language == "java" }}
+        if: ${{ inputs.project_language == "java" }}
         with:
           java-version: ${{ inputs.jdk_version }}
           distribution: 'adopt'
           cache: 'maven'
 
-      - name: Run build
-        if: ${{ inputs.language == "java" }}
-        run: mvn $MAVEN_CLI_OPTS -Dmaven.test.skip=true clean package
+      - name: Java | Compile
+        if: ${{ inputs.project_language == "java" }}
+        run: mvn $MAVEN_CLI_OPTS compile
 
-      - name: Setup Node.js
+      - name: Java | Run test
+        if: ${{ inputs.project_language == "java" }}
+        run: mvn $MAVEN_CLI_OPTS test
+
+      ###### Javascript dependencies
+
+      - name: Javascript | Setup Node.js
         uses: actions/setup-node@v3
-        if: ${{ inputs.language == "javascript" }}
+        if: ${{ inputs.project_language == "javascript" }}
         with:
           node-version: ${{ inputs.node_version }}
-          cache: ${{ inputs.package_manager }}
+          cache: ${{ inputs.node_package_manager }}
 
-      - name: Install dependencies
-        if: ${{ inputs.language == "javascript" }}
+      - name: Javascript | Install dependencies
+        if: ${{ inputs.project_language == "javascript" }}
         run: |
-          [[ ${{ inputs.package_manager }} == 'npm' ]] && npm ci --prefer-offline --ignore-scripts
-          [[ ${{ inputs.package_manager }} == 'yarn' ]] && yarn install --frozen-lockfile --ignore-scripts
+          [[ ${{ inputs.node_package_manager }} == 'npm' ]] && npm ci --prefer-offline --ignore-scripts
+          [[ ${{ inputs.node_package_manager }} == 'yarn' ]] && yarn install --frozen-lockfile --ignore-scripts
 
-      - name: Cache Composer dependencies
+      - name: Javascript | Run test
+        if: ${{ inputs.project_language == "javascript" }}
+        run: |
+          [[ ${{ inputs.node_package_manager }} == 'npm' ]] && npm run test:unit
+          [[ ${{ inputs.node_package_manager }} == 'yarn' ]] && yarn run test:unit
+
+      ###### PHP dependencies
+
+      - name: PHP | Cache Composer dependencies
         uses: actions/cache@v3
-        if: ${{ inputs.language == "php" }}
+        if: ${{ inputs.project_language == "php" }}
         with:
           path: /tmp/composer-cache
           key: ${{ runner.os }}-${{ hashFiles('**/composer.lock') }}
 
-      - name: Install dependencies
+      - name: PHP | Install dependencies
         uses: php-actions/composer@v6
-        if: ${{ inputs.language == "php" }}
+        if: ${{ inputs.project_language == "php" }}
         with:
           php_version: ${{ inputs.php_version }}
           version: latest
           dev: no
           args: --ignore-platform-reqs
+
+      - name: PHP | Run test
+        if: ${{ inputs.project_language == "php" }}
+        run: vendor/bin/phpunit tests/unit --colors=never --coverage-text --coverage-clover=phpunit.clover-coverage.xml --log-junit=phpunit.xml
+
+      - name: Archive test reports
+        uses: actions/upload-artifact@v3
+        with:
+          name: unit-tests-reports
+          path: |
+            phpunit.clover-coverage.xml
+            phpunit.xml
+          retention-days: 1
+
+  integration_tests:
+    name: Integration tests
+    runs-on: ${{ env.RUNS_ON }}
+    if: ${{ !inputs.integration_tests_disabled }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      ###### Java dependencies
+
+      - name: Java | Set up JDK
+        uses: actions/setup-java@v3
+        if: ${{ inputs.project_language == "java" }}
+        with:
+          java-version: ${{ inputs.jdk_version }}
+          distribution: 'adopt'
+          cache: 'maven'
+
+      - name: Java | Compile
+        if: ${{ inputs.project_language == "java" }}
+        run: mvn $MAVEN_CLI_OPTS compile
+
+      - name: Java | Run test
+        if: ${{ inputs.project_language == "java" }}
+        run: mvn $MAVEN_CLI_OPTS integration-tests
+
+      ###### Javascript dependencies
+
+      - name: Javascript | Setup Node.js
+        uses: actions/setup-node@v3
+        if: ${{ inputs.project_language == "javascript" }}
+        with:
+          node-version: ${{ inputs.node_version }}
+          cache: ${{ inputs.node_package_manager }}
+
+      - name: Javascript | Install dependencies
+        if: ${{ inputs.project_language == "javascript" }}
+        run: |
+          [[ ${{ inputs.node_package_manager }} == 'npm' ]] && npm ci --prefer-offline --ignore-scripts
+          [[ ${{ inputs.node_package_manager }} == 'yarn' ]] && yarn install --frozen-lockfile --ignore-scripts
+
+      - name: Javascript | Run test
+        if: ${{ inputs.project_language == "javascript" }}
+        run: |
+          [[ ${{ inputs.node_package_manager }} == 'npm' ]] && npm run test:integration
+          [[ ${{ inputs.node_package_manager }} == 'yarn' ]] && yarn run test:integration
+
+      ###### PHP dependencies
+
+      - name: PHP | Cache Composer dependencies
+        uses: actions/cache@v3
+        if: ${{ inputs.project_language == "php" }}
+        with:
+          path: /tmp/composer-cache
+          key: ${{ runner.os }}-${{ hashFiles('**/composer.lock') }}
+
+      - name: PHP | Install dependencies
+        uses: php-actions/composer@v6
+        if: ${{ inputs.project_language == "php" }}
+        with:
+          php_version: ${{ inputs.php_version }}
+          version: latest
+          dev: no
+          args: --ignore-platform-reqs
+
+      - name: PHP | Run test
+        if: ${{ inputs.project_language == "php" }}
+        run: vendor/bin/phpunit tests/integration --colors=never --coverage-text --coverage-clover=phpunit.clover-coverage.xml --log-junit=phpunit.xml
+
+      - name: Archive test reports
+        uses: actions/upload-artifact@v3
+        with:
+          name: unit-tests-reports
+          path: |
+            phpunit.clover-coverage.xml
+            phpunit.xml
+          retention-days: 1
+
+  e2e_tests:
+    name: E2E tests
+    runs-on: ${{ env.RUNS_ON }}
+    if: ${{ !inputs.e2e_tests_disabled }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      ###### Java dependencies
+
+      - name: Java | Set up JDK
+        uses: actions/setup-java@v3
+        if: ${{ inputs.project_language == "java" }}
+        with:
+          java-version: ${{ inputs.jdk_version }}
+          distribution: 'adopt'
+          cache: 'maven'
+
+      - name: Java | Compile
+        if: ${{ inputs.project_language == "java" }}
+        run: mvn $MAVEN_CLI_OPTS compile
+
+      - name: Java | Run test
+        if: ${{ inputs.project_language == "java" }}
+        run: mvn $MAVEN_CLI_OPTS e2e-tests
+
+      ###### Javascript dependencies
+
+      - name: Javascript | Setup Node.js
+        uses: actions/setup-node@v3
+        if: ${{ inputs.project_language == "javascript" }}
+        with:
+          node-version: ${{ inputs.node_version }}
+          cache: ${{ inputs.node_package_manager }}
+
+      - name: Javascript | Install dependencies
+        if: ${{ inputs.project_language == "javascript" }}
+        run: |
+          [[ ${{ inputs.node_package_manager }} == 'npm' ]] && npm ci --prefer-offline --ignore-scripts
+          [[ ${{ inputs.node_package_manager }} == 'yarn' ]] && yarn install --frozen-lockfile --ignore-scripts
+
+      - name: Javascript | Run test
+        if: ${{ inputs.project_language == "javascript" }}
+        run: |
+          [[ ${{ inputs.node_package_manager }} == 'npm' ]] && npm run test:e2e
+          [[ ${{ inputs.node_package_manager }} == 'yarn' ]] && yarn run test:e2e
+
+      ###### PHP dependencies
+
+      - name: PHP | Cache Composer dependencies
+        uses: actions/cache@v3
+        if: ${{ inputs.project_language == "php" }}
+        with:
+          path: /tmp/composer-cache
+          key: ${{ runner.os }}-${{ hashFiles('**/composer.lock') }}
+
+      - name: PHP | Install dependencies
+        uses: php-actions/composer@v6
+        if: ${{ inputs.project_language == "php" }}
+        with:
+          php_version: ${{ inputs.php_version }}
+          version: latest
+          dev: no
+          args: --ignore-platform-reqs
+
+      - name: PHP | Run test
+        if: ${{ inputs.project_language == "php" }}
+        run: echo "Running..."
