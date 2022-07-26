@@ -137,9 +137,9 @@ jobs:
       - name: Determine project language
         id: project_settings
         run: |
-          [[ -f pom.xml ]] && echo "::set-output name=language::java"
-          [[ -f package.json ]] && echo "::set-output name=language::javascript"
-          [[ -f composer.json ]] && echo "::set-output name=language::php"
+          [[ -f pom.xml ]] && echo "::set-output name=language::java" || true
+          [[ -f package.json ]] && echo "::set-output name=language::javascript" || true
+          [[ -f composer.json ]] && echo "::set-output name=language::php" || true
 
   build_artifact:
     name: Build artifact
