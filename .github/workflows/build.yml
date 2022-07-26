@@ -84,6 +84,9 @@ jobs:
         with:
           versionSpec: '5.x'
 
+      - name: Create GitVersion configuration file
+        run: echo ${{ secrets.gitversion_config }} | base64 -d > GitVersion.yml
+
       - name: Determine version
         id: gitversion
         uses: gittools/actions/gitversion/execute@v0.9.7
