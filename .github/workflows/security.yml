@@ -27,13 +27,10 @@ on:
       sonar_token:
         required: true
 
-env:
-  RUNS_ON: live
-
 jobs:
   static_application_security_testing:
     name: SAST
-    runs-on: ${{ env.RUNS_ON }}
+    runs-on: live
     if: ${{ !inputs.sast_disabled }}
     steps:
       - name: Download test reports
@@ -57,7 +54,7 @@ jobs:
 
   container_image_scanning:
     name: Container image scanning
-    runs-on: ${{ env.RUNS_ON }}
+    runs-on: live
     if: ${{ !inputs.container_image_scanning_disabled }}
     steps:
       - name: Download artifact
@@ -77,7 +74,7 @@ jobs:
 
   dynamic_application_security_test:
     name: DAST
-    runs-on: ${{ env.RUNS_ON }}
+    runs-on: live
     if: ${{ !inputs.dast_disabled }}
     steps:
       - name: ZAP Scan

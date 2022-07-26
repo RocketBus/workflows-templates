@@ -37,14 +37,13 @@ on:
         default: false
 
 env:
-  RUNS_ON: live
   MAVEN_OPTS: "-Dhttps.protocols=TLSv1.2- Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=WARN -Djava.awt.headless=true"
   MAVEN_CLI_OPTS: "-B -e -fae -V"
 
 jobs:
   unit_tests:
     name: Unit tests
-    runs-on: ${{ env.RUNS_ON }}
+    runs-on: live
     if: ${{ !inputs.unit_tests_disabled }}
     steps:
       - name: Checkout
@@ -122,7 +121,7 @@ jobs:
 
   integration_tests:
     name: Integration tests
-    runs-on: ${{ env.RUNS_ON }}
+    runs-on: live
     if: ${{ !inputs.integration_tests_disabled }}
     steps:
       - name: Checkout
@@ -200,7 +199,7 @@ jobs:
 
   e2e_tests:
     name: E2E tests
-    runs-on: ${{ env.RUNS_ON }}
+    runs-on: live
     if: ${{ !inputs.e2e_tests_disabled }}
     steps:
       - name: Checkout

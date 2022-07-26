@@ -59,7 +59,6 @@ on:
         value: ${{ jobs.code.outputs.project_language }}
 
 env:
-  RUNS_ON: live
   AWS_REGION: us-east-2
   MAVEN_OPTS: "-Dhttps.protocols=TLSv1.2- Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=WARN -Djava.awt.headless=true"
   MAVEN_CLI_OPTS: "-B -e -fae -V"
@@ -67,7 +66,7 @@ env:
 jobs:
   code:
     name: Code
-    runs-on: ${{ env.RUNS_ON }}
+    runs-on: live
     outputs:
       pre_release_tag: ${{ steps.gitversion.outputs.preReleaseTag }}
       sem_ver: ${{ steps.gitversion.outputs.semVer }}
@@ -137,7 +136,7 @@ jobs:
 
   build_artifact:
     name: Build artifact
-    runs-on: ${{ env.RUNS_ON }}
+    runs-on: live
     needs:
       - code
     steps:
@@ -230,7 +229,7 @@ jobs:
 
   build_docker:
     name: Build Docker
-    runs-on: ${{ env.RUNS_ON }}
+    runs-on: live
     needs:
       - code
     outputs:

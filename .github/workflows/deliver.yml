@@ -46,13 +46,12 @@ on:
         required: true
 
 env:
-  RUNS_ON: live
   AWS_REGION: us-east-2
 
 jobs:
   release:
     name: Release
-    runs-on: ${{ env.RUNS_ON }}
+    runs-on: live
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -72,7 +71,7 @@ jobs:
 
   publish_artifact:
     name: Publish artifact
-    runs-on: ${{ env.RUNS_ON }}
+    runs-on: live
     steps:
       - name: Download artifact
         uses: actions/download-artifact@v3
@@ -114,7 +113,7 @@ jobs:
 
   publish_docker:
     name: Publish Docker
-    runs-on: ${{ env.RUNS_ON }}
+    runs-on: live
     steps:
       - name: Docker | Set up Docker Context for Buildx
         id: buildx-context
