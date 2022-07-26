@@ -82,33 +82,33 @@ jobs:
 
       - name: Java | Set up JDK
         uses: actions/setup-java@v3
-        if: ${{ inputs.project_language == "java" }}
+        if: ${{ inputs.project_language == 'java' }}
         with:
           java-version: ${{ inputs.jdk_version }}
           distribution: 'adopt'
           cache: 'maven'
 
       - name: Java | Publish
-        if: ${{ inputs.project_language == "java" }}
+        if: ${{ inputs.project_language == 'java' }}
         run: echo ''
 
       ###### Publish Javascript
 
       - name: Javascript | Setup Node.js
         uses: actions/setup-node@v3
-        if: ${{ inputs.project_language == "javascript" }}
+        if: ${{ inputs.project_language == 'javascript' }}
         with:
           node-version: ${{ inputs.node_version }}
           cache: ${{ inputs.node_package_manager }}
 
       - name: Javascript | Publishapp_version
-        if: ${{ inputs.project_language == "javascript" }}
+        if: ${{ inputs.project_language == 'javascript' }}
         run: echo ''
 
       ###### Publish PHP
 
       - name: PHP | Publish
-        if: ${{ inputs.project_language == "php" }}
+        if: ${{ inputs.project_language == 'php' }}
         run: echo ''
 
   publish_docker:
