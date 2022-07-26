@@ -281,7 +281,6 @@ jobs:
       - name: Docker meta
         id: meta
         uses: docker/metadata-action@v4
-        if: ${{ matrix.build_type == "docker" }}
         with:
           images: ${{ steps.setup.outputs.image_repository_uri }}
           tags: |
