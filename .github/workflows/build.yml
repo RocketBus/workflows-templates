@@ -44,6 +44,8 @@ on:
         required: true
       aws_secret_access_key:
         required: true
+      gitversion_config:
+        required: false
     outputs:
       image_repository:
         value: ${{ jobs.build_docker.outputs.image_repository }}
