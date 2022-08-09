@@ -103,13 +103,13 @@ jobs:
               --create-namespace --namespace ${NAMESPACE} \
               --values ${CHART_PATH}/environments/${ENV}/values.yaml ${HELM_ARGS} \
               --set image.repository=${ECR_REPOSITORY} --set image.tag=${IMAGE_TAG} --set ingress.preffixHost=${PREFIX_HOST}
+          else
+            helm upgrade \
+              --install ${RELEASE_NAME} ${CHART_PATH} \
+              --create-namespace --namespace ${NAMESPACE} \
+              --values ${CHART_PATH}/environments/${ENV}/values.yaml ${HELM_ARGS} \
+              --set image.repository=${ECR_REPOSITORY} --set image.tag=${IMAGE_TAG}
           fi
-
-          helm upgrade \
-            --install ${RELEASE_NAME} ${CHART_PATH} \
-            --create-namespace --namespace ${NAMESPACE} \
-            --values ${CHART_PATH}/environments/${ENV}/values.yaml ${HELM_ARGS} \
-            --set image.repository=${ECR_REPOSITORY} --set image.tag=${IMAGE_TAG}
 
   destroy:
     if: ${{ inputs.destroy }}
