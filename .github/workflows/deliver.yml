@@ -23,8 +23,9 @@ env:
 jobs:
   release:
     name: Release
-    runs-on: live
     if: ${{ github.ref_name == github.event.repository.default_branch }}
+    runs-on: live
+    steps:
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
