@@ -34,7 +34,7 @@ jobs:
       ###### Java dependencies
 
       - name: Java | Create settings.xml file
-        run: echo ${{ secrets.maven_settings_file }} | base64 -d > settings.xml
+        run: echo ${{ secrets.maven_settings_file }} > settings.xml
 
       - name: Java | Set up JDK
         uses: actions/setup-java@v3

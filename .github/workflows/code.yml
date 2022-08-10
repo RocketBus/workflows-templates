@@ -65,7 +65,7 @@ jobs:
 
       - name: Create GitVersion configuration file
         run: |
-          echo ${{ secrets.gitversion_config }} | base64 -d > GitVersion.yml
+          echo ${{ secrets.gitversion_config }} > GitVersion.yml
 
       - name: Determine version
         id: gitversion
@@ -131,7 +131,7 @@ jobs:
       ###### Lint Java
 
       - name: Create settings.xml file
-        run: echo ${{ secrets.maven_settings_file }} | base64 -d > settings.xml
+        run: echo ${{ secrets.maven_settings_file }} > settings.xml
 
       - name: Java | Set up JDK
         uses: actions/setup-java@v3
