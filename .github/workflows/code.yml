@@ -19,6 +19,10 @@ on:
         type: string
         required: false
         default: "latest"
+      dockerfile_path:
+        type: string
+        required: false
+        default: Dockerfile
       lint_disabled:
         type: boolean
         required: false
@@ -187,3 +191,10 @@ jobs:
       - name: PHP | Static code analysis (Linter)
         if: ${{ needs.prepare.outputs.project_language == 'php' }}
         run: vendor/bin/phplint . --exclude=vendor
+
+      ###### Lint Dockerfile
+
+      - name: Static code analysis (Linter)
+        uses: hadolint/hadolint-action@v2.0.0
+        with:
+          dockerfile: ${{ inputs.dockerfile_path }}
