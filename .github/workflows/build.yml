@@ -199,7 +199,7 @@ jobs:
         with:
           dockerfile: ${{ inputs.dockerfile_path }}
       
-      - name: Run build
+      - name: Docker build
         uses: docker/build-push-action@v3
         with:
           cache-from: type=gha
@@ -211,7 +211,15 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           tags: ${{ steps.meta.outputs.tags }}
           push: false
+          load: true
           outputs: type=docker,dest=image.tar
+
+      - name: Scan image
+        uses: anchore/scan-action@v3
+        with:
+          image: ${{ steps.setup.outputs.image_repository_uri }}:${{ inputs.app_version }}
+          severity-cutoff: medium
+          fail-build: true
 
       ###### Archive container image
 
