@@ -201,10 +201,7 @@ jobs:
 
       - name: Create ECR repository
         run: |
-          aws ecr describe-repositories \
-            --repository-names ${{ steps.setup.outputs.image_repository }} 2> /dev/null
-          
-          [[ $? -ne 0 ]] && aws ecr create-repository --repository-name ${{ steps.setup.outputs.image_repository }} --image-scanning-configuration scanOnPush=true
+          aws ecr describe-repositories --repository-names ${{ steps.setup.outputs.image_repository }} 2> /dev/null || aws ecr create-repository --repository-name ${{ steps.setup.outputs.image_repository }} --image-scanning-configuration scanOnPush=true
 
           aws ecr set-repository-policy \
             --repository-name ${{ steps.setup.outputs.image_repository }} \
