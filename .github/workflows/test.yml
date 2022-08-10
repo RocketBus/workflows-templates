@@ -31,10 +31,6 @@ on:
         type: boolean
         required: false
         default: true
-      e2e_tests_disabled:
-        type: boolean
-        required: false
-        default: true
 
 env:
   MAVEN_OPTS: "-Dhttps.protocols=TLSv1.2- Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=WARN -Djava.awt.headless=true"
@@ -196,72 +192,3 @@ jobs:
             phpunit.clover-coverage.xml
             phpunit.xml
           retention-days: 1
-
-  e2e_tests:
-    name: E2E tests
-    runs-on: live
-    if: ${{ !inputs.e2e_tests_disabled }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-
-      ###### Java dependencies
-
-      - name: Java | Set up JDK
-        uses: actions/setup-java@v3
-        if: ${{ inputs.project_language == 'java' }}
-        with:
-          java-version: ${{ inputs.jdk_version }}
-          distribution: 'temurin'
-          cache: 'maven'
-
-      - name: Java | Compile
-        if: ${{ inputs.project_language == 'java' }}
-        run: mvn $MAVEN_CLI_OPTS compile
-
-      - name: Java | Run test
-        if: ${{ inputs.project_language == 'java' }}
-        run: mvn $MAVEN_CLI_OPTS e2e-tests
-
-      ###### Javascript dependencies
-
-      - name: Javascript | Setup Node.js
-        uses: actions/setup-node@v3
-        if: ${{ inputs.project_language == 'javascript' }}
-        with:
-          node-version: ${{ inputs.node_version }}
-          cache: ${{ inputs.node_package_manager }}
-
-      - name: Javascript | Install dependencies
-        if: ${{ inputs.project_language == 'javascript' }}
-        run: |
-          [[ ${{ inputs.node_package_manager }} == 'npm' ]] && npm ci --prefer-offline --ignore-scripts
-          [[ ${{ inputs.node_package_manager }} == 'yarn' ]] && yarn install --frozen-lockfile --ignore-scripts
-
-      - name: Javascript | Run test
-        if: ${{ inputs.project_language == 'javascript' }}
-        run: |
-          [[ ${{ inputs.node_package_manager }} == 'npm' ]] && npm run test:e2e
-          [[ ${{ inputs.node_package_manager }} == 'yarn' ]] && yarn run test:e2e
-
-      ###### PHP dependencies
-
-      - name: PHP | Cache Composer dependencies
-        uses: actions/cache@v3
-        if: ${{ inputs.project_language == 'php' }}
-        with:
-          path: /tmp/composer-cache
-          key: ${{ runner.os }}-${{ hashFiles('**/composer.lock') }}
-
-      - name: PHP | Install dependencies
-        uses: php-actions/composer@v6
-        if: ${{ inputs.project_language == 'php' }}
-        with:
-          php_version: ${{ inputs.php_version }}
-          version: latest
-          dev: no
-          args: --ignore-platform-reqs
-
-      - name: PHP | Run test
-        if: ${{ inputs.project_language == 'php' }}
-        run: echo ""
