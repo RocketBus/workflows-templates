@@ -147,101 +147,101 @@ jobs:
           [[ -f package.json ]] && echo "::set-output name=language::javascript" || true
           [[ -f composer.json ]] && echo "::set-output name=language::php" || true
 
-  build_artifact:
-    name: Build artifact
-    runs-on: live
-    if: ${{ !inputs.build_artifact_disabled }}
-    needs:
-      - code
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
+  # build_artifact:
+  #   name: Build artifact
+  #   runs-on: live
+  #   if: ${{ !inputs.build_artifact_disabled }}
+  #   needs:
+  #     - code
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v3
 
-      ###### Build Java
+  #     ###### Build Java
 
-      - name: Java | Set up JDK
-        uses: actions/setup-java@v3
-        if: ${{ needs.code.outputs.project_language == 'java' }}
-        with:
-          java-version: ${{ inputs.jdk_version }}
-          distribution: 'temurin'
-          cache: 'maven'
+  #     - name: Java | Set up JDK
+  #       uses: actions/setup-java@v3
+  #       if: ${{ needs.code.outputs.project_language == 'java' }}
+  #       with:
+  #         java-version: ${{ inputs.jdk_version }}
+  #         distribution: 'temurin'
+  #         cache: 'maven'
 
-      - name: Java | Static code analysis (Linter)
-        if: ${{ needs.code.outputs.project_language == 'java' }}
-        run: mvn $MAVEN_CLI_OPTS checkstyle:checkstyle
+  #     - name: Java | Static code analysis (Linter)
+  #       if: ${{ needs.code.outputs.project_language == 'java' }}
+  #       run: mvn $MAVEN_CLI_OPTS checkstyle:checkstyle
 
-      - name: Java | Compile
-        if: ${{ needs.code.outputs.project_language == 'java' }}
-        run: mvn $MAVEN_CLI_OPTS compile
+  #     - name: Java | Compile
+  #       if: ${{ needs.code.outputs.project_language == 'java' }}
+  #       run: mvn $MAVEN_CLI_OPTS compile
 
-      - name: Java | Package
-        if: ${{ needs.code.outputs.project_language == 'java' }}
-        run: mvn $MAVEN_CLI_OPTS -Dmaven.test.skip=true package
+  #     - name: Java | Package
+  #       if: ${{ needs.code.outputs.project_language == 'java' }}
+  #       run: mvn $MAVEN_CLI_OPTS -Dmaven.test.skip=true package
 
-      ###### Build Javascript
+  #     ###### Build Javascript
 
-      - name: Javascript | Setup Node.js
-        uses: actions/setup-node@v3
-        if: ${{ needs.code.outputs.project_language == 'javascript' }}
-        with:
-          node-version: ${{ inputs.node_version }}
-          cache: ${{ inputs.node_package_manager }}
+  #     - name: Javascript | Setup Node.js
+  #       uses: actions/setup-node@v3
+  #       if: ${{ needs.code.outputs.project_language == 'javascript' }}
+  #       with:
+  #         node-version: ${{ inputs.node_version }}
+  #         cache: ${{ inputs.node_package_manager }}
 
-      - name: Javascript | Install dependencies
-        if: ${{ needs.code.outputs.project_language == 'javascript' }}
-        run: |
-          [[ ${{ inputs.node_package_manager }} == 'npm' ]] && npm ci --prefer-offline --ignore-scripts
-          [[ ${{ inputs.node_package_manager }} == 'yarn' ]] && yarn install --frozen-lockfile --ignore-scripts
+  #     - name: Javascript | Install dependencies
+  #       if: ${{ needs.code.outputs.project_language == 'javascript' }}
+  #       run: |
+  #         [[ ${{ inputs.node_package_manager }} == 'npm' ]] && npm ci --prefer-offline --ignore-scripts
+  #         [[ ${{ inputs.node_package_manager }} == 'yarn' ]] && yarn install --frozen-lockfile --ignore-scripts
 
-      - name: Javascript | Static code analysis (Linter)
-        if: ${{ needs.code.outputs.project_language == 'javascript' }}
-        run: |
-          [[ ${{ inputs.node_package_manager }} == 'npm' ]] && npm run lint
-          [[ ${{ inputs.node_package_manager }} == 'yarn' ]] && yarn run lint
+  #     - name: Javascript | Static code analysis (Linter)
+  #       if: ${{ needs.code.outputs.project_language == 'javascript' }}
+  #       run: |
+  #         [[ ${{ inputs.node_package_manager }} == 'npm' ]] && npm run lint
+  #         [[ ${{ inputs.node_package_manager }} == 'yarn' ]] && yarn run lint
 
-      - name: Javascript | Package
-        if: ${{ needs.code.outputs.project_language == 'javascript' }}
-        run: |
-          [[ ${{ inputs.node_package_manager }} == 'npm' ]] && npm run build && npm pack
-          [[ ${{ inputs.node_package_manager }} == 'yarn' ]] && yarn run build && yarn pack
+  #     - name: Javascript | Package
+  #       if: ${{ needs.code.outputs.project_language == 'javascript' }}
+  #       run: |
+  #         [[ ${{ inputs.node_package_manager }} == 'npm' ]] && npm run build && npm pack
+  #         [[ ${{ inputs.node_package_manager }} == 'yarn' ]] && yarn run build && yarn pack
 
-      ###### Build PHP
+  #     ###### Build PHP
 
-      - name: PHP | Cache Composer dependencies
-        uses: actions/cache@v3
-        if: ${{ needs.code.outputs.project_language == 'php' }}
-        with:
-          path: /tmp/composer-cache
-          key: ${{ runner.os }}-${{ hashFiles('**/composer.lock') }}
+  #     - name: PHP | Cache Composer dependencies
+  #       uses: actions/cache@v3
+  #       if: ${{ needs.code.outputs.project_language == 'php' }}
+  #       with:
+  #         path: /tmp/composer-cache
+  #         key: ${{ runner.os }}-${{ hashFiles('**/composer.lock') }}
 
-      - name: PHP | Install dependencies
-        uses: php-actions/composer@v6
-        if: ${{ needs.code.outputs.project_language == 'php' }}
-        with:
-          php_version: ${{ inputs.php_version }}
-          version: latest
-          dev: no
-          args: --ignore-platform-reqs
+  #     - name: PHP | Install dependencies
+  #       uses: php-actions/composer@v6
+  #       if: ${{ needs.code.outputs.project_language == 'php' }}
+  #       with:
+  #         php_version: ${{ inputs.php_version }}
+  #         version: latest
+  #         dev: no
+  #         args: --ignore-platform-reqs
 
-      - name: PHP | Static code analysis (Linter)
-        if: ${{ needs.code.outputs.project_language == 'php' }}
-        run: vendor/bin/phplint . --exclude=vendor
+  #     - name: PHP | Static code analysis (Linter)
+  #       if: ${{ needs.code.outputs.project_language == 'php' }}
+  #       run: vendor/bin/phplint . --exclude=vendor
 
-      - name: PHP | Package
-        if: ${{ needs.code.outputs.project_language == 'php' }}
-        run: echo ''
+  #     - name: PHP | Package
+  #       if: ${{ needs.code.outputs.project_language == 'php' }}
+  #       run: echo ''
 
-      ###### Archive artifact
+  #     ###### Archive artifact
 
-      - name: Archive artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: app-artifact
-          path: |
-            target/*.jar
-            package.tgz
-          retention-days: 1
+  #     - name: Archive artifact
+  #       uses: actions/upload-artifact@v3
+  #       with:
+  #         name: app-artifact
+  #         path: |
+  #           target/*.jar
+  #           package.tgz
+  #         retention-days: 1
 
   build_docker:
     name: Build Docker
