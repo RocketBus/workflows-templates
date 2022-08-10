@@ -23,6 +23,10 @@ on:
         type: string
         required: false
         default: ""
+      pre_release:
+        type: boolean
+        required: false
+        default: false
       pre_release_tag:
         type: string
         required: false
@@ -35,7 +39,7 @@ on:
         type: string
         required: false
         default: ""
-      promote_image:
+      promote_version:
         type: boolean
         required: false
         default: false
@@ -46,71 +50,23 @@ on:
         required: true
 
 env:
-  AWS_REGION: us-east-2
+  AWS_REGION: us-east-1
+
+release:
+  name: Release
+  runs-on: live
+  if: ${{ github.ref_name == github.event.repository.default_branch }}
+  steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        prerelease: ${{ inputs.pre_release }}
+        tag_name: ${{ inputs.release_tag }}
 
 jobs:
-  release:
-    name: Release
-    runs-on: live
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-
-      - name: Create Pre-Release
-        uses: softprops/action-gh-release@v1
-        with:
-          prerelease: true
-          tag_name: ${{ inputs.pre_release_tag }}
-
-      - name: Create Release
-        uses: softprops/action-gh-release@v1
-        if: ${{ github.event_name == 'workflow_dispatch' && github.ref_name == github.event.repository.default_branch }}
-        with:
-          prerelease: false
-          tag_name: ${{ inputs.release_tag }}
-
-  publish_artifact:
-    name: Publish artifact
-    runs-on: live
-    steps:
-      - name: Download artifact
-        uses: actions/download-artifact@v3
-        with:
-          name: app-artifact
-
-      ###### Publish Java
-
-      - name: Java | Set up JDK
-        uses: actions/setup-java@v3
-        if: ${{ inputs.project_language == 'java' }}
-        with:
-          java-version: ${{ inputs.jdk_version }}
-          distribution: 'adopt'
-          cache: 'maven'
-
-      - name: Java | Publish
-        if: ${{ inputs.project_language == 'java' }}
-        run: echo ''
-
-      ###### Publish Javascript
-
-      - name: Javascript | Setup Node.js
-        uses: actions/setup-node@v3
-        if: ${{ inputs.project_language == 'javascript' }}
-        with:
-          node-version: ${{ inputs.node_version }}
-          cache: ${{ inputs.node_package_manager }}
-
-      - name: Javascript | Publishapp_version
-        if: ${{ inputs.project_language == 'javascript' }}
-        run: echo ''
-
-      ###### Publish PHP
-
-      - name: PHP | Publish
-        if: ${{ inputs.project_language == 'php' }}
-        run: echo ''
-
   publish_docker:
     name: Publish Docker
     runs-on: live
@@ -137,23 +93,59 @@ jobs:
         uses: aws-actions/amazon-ecr-login@v1
 
       - name: Docker retag
-        if: ${{ inputs.promote_image }}
+        if: ${{ inputs.promote_version }}
         run: |
           MANIFEST=$(aws ecr batch-get-image --repository-name ${{ inputs.image_repository }} --image-ids imageTag=${{ inputs.source_image_tag }} --output json | jq --raw-output --join-output '.images[0].imageManifest')
           aws ecr put-image --repository-name ${{ inputs.image_repository }} --image-tag ${{ inputs.app_version }} --image-manifest "$MANIFEST"
 
       - name: Download artifact
-        if: ${{ !inputs.promote_image }}
+        if: ${{ !inputs.promote_version }}
         uses: actions/download-artifact@v3
         with:
           name: container-image
 
       - name: Docker push
-        if: ${{ !inputs.promote_image }}
+        if: ${{ !inputs.promote_version }}
         run: |
           aws ecr describe-repositories \
             --repository-names ${{ inputs.image_repository }} 2> /dev/null
           
           [[ $? -ne 0 ]] && aws ecr create-repository --repository-name ${{ inputs.image_repository }} --image-scanning-configuration scanOnPush=true
+
+          aws ecr set-repository-policy \
+            --repository-name ${{ inputs.image_repository }} \
+            --policy-text '
+              {
+                "Version": "2012-10-17",
+                "Statement": [
+                  {
+                    "Sid": "CrossAccountContainerRegistry",
+                    "Action": [
+                      "ecr:GetAuthorizationToken",
+                      "ecr:BatchCheckLayerAvailability",
+                      "ecr:GetDownloadUrlForLayer",
+                      "ecr:GetRepositoryPolicy",
+                      "ecr:DescribeRepositories",
+                      "ecr:ListImages",
+                      "ecr:DescribeImages",
+                      "ecr:BatchGetImage",
+                      "ecr:GetLifecyclePolicy",
+                      "ecr:GetLifecyclePolicyPreview",
+                      "ecr:ListTagsForResource",
+                      "ecr:DescribeImageScanFindings"
+                    ],
+                    "Effect": "Allow",
+                    "Principal": {
+                      "AWS": [
+                        "arn:aws:iam::180811438061:root",
+                        "arn:aws:iam::406026015868:root",
+                        "arn:aws:iam::114395709799:root"
+                      ]
+                    }
+                  }
+                ]
+              }
+            '
+
           docker load --input image.tar
           docker push ${{ steps.login_ecr.outputs.registry }}/${{ inputs.image_repository }}:${{ inputs.app_version }}

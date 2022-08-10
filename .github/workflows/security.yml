@@ -11,7 +11,7 @@ on:
         type: boolean
         required: false
         default: false
-      container_image_scanning_disabled:
+      image_scanning_disabled:
         type: boolean
         required: false
         default: false
@@ -52,10 +52,10 @@ jobs:
           SONAR_HOST_URL: "https://sonar.clickbus.net"
           SONAR_TOKEN: ${{ secrets.sonar_token }}
 
-  container_image_scanning:
-    name: Container image scanning
+  image_scanning:
+    name: Docker image scanning
     runs-on: live
-    if: ${{ !inputs.container_image_scanning_disabled }}
+    if: ${{ !inputs.image_scanning_disabled }}
     steps:
       - name: Download artifact
         uses: actions/download-artifact@v3

@@ -3,6 +3,26 @@ name: Build workflow
 on:
   workflow_call:
     inputs:
+      build_artifact_disabled:
+        type: boolean
+        required: false
+        default: true
+      jdk_version:
+        type: string
+        required: false
+        default: "11"
+      node_package_manager:
+        type: string
+        required: false
+        default: 'yarn'
+      node_version:
+        type: string
+        required: false
+        default: "lts/*"
+      php_version:
+        type: string
+        required: false
+        default: "latest"
       build_docker_disabled:
         type: boolean
         required: false
@@ -23,22 +43,6 @@ on:
         type: string
         required: false
         default: ""
-      jdk_version:
-        type: string
-        required: false
-        default: "11"
-      node_package_manager:
-        type: string
-        required: false
-        default: 'yarn'
-      node_version:
-        type: string
-        required: false
-        default: "lts/*"
-      php_version:
-        type: string
-        required: false
-        default: "latest"
     secrets:
       aws_access_key_id:
         required: true
@@ -49,8 +53,6 @@ on:
     outputs:
       image_repository:
         value: ${{ jobs.build_docker.outputs.image_repository }}
-      image_tag:
-        value: ${{ jobs.build_docker.outputs.image_tag }}
       pre_release_tag:
         value: ${{ jobs.code.outputs.preReleaseTag }}
       sem_ver:
@@ -61,7 +63,7 @@ on:
         value: ${{ jobs.code.outputs.project_language }}
 
 env:
-  AWS_REGION: us-east-2
+  AWS_REGION: us-east-1
   MAVEN_OPTS: "-Dhttps.protocols=TLSv1.2- Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=WARN -Djava.awt.headless=true"
   MAVEN_CLI_OPTS: "-B -e -fae -V"
 
@@ -144,6 +146,7 @@ jobs:
   build_artifact:
     name: Build artifact
     runs-on: live
+    if: ${{ !inputs.build_artifact_disabled }}
     needs:
       - code
     steps:
@@ -157,7 +160,7 @@ jobs:
         if: ${{ needs.code.outputs.project_language == 'java' }}
         with:
           java-version: ${{ inputs.jdk_version }}
-          distribution: 'adopt'
+          distribution: 'temurin'
           cache: 'maven'
 
       - name: Java | Static code analysis (Linter)
@@ -189,7 +192,9 @@ jobs:
 
       - name: Javascript | Static code analysis (Linter)
         if: ${{ needs.code.outputs.project_language == 'javascript' }}
-        run: eslint . --ext .js,.jsx,.ts,.tsx
+        run: |
+          [[ ${{ inputs.node_package_manager }} == 'npm' ]] && npm run lint
+          [[ ${{ inputs.node_package_manager }} == 'yarn' ]] && yarn run lint
 
       - name: Javascript | Package
         if: ${{ needs.code.outputs.project_language == 'javascript' }}
@@ -237,13 +242,11 @@ jobs:
   build_docker:
     name: Build Docker
     runs-on: live
+    if: ${{ !inputs.build_docker_disabled }}
     needs:
       - code
     outputs:
-      image_registry: ${{ steps.setup.outputs.image_registry }}
       image_repository: ${{ steps.setup.outputs.image_repository }}
-      image_repository_uri: ${{ steps.setup.outputs.image_repository_uri }}
-      image_tag: ${{ steps.setup.outputs.image_tag }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -252,19 +255,16 @@ jobs:
 
       - name: Set up Docker Context for Buildx
         id: buildx-context
-        if: ${{ !inputs.build_docker_disabled }}
         run: docker context create builders
 
       - name: Set up Docker Buildx
         id: buildx
         uses: docker/setup-buildx-action@v2
-        if: ${{ !inputs.build_docker_disabled }}
         with:
           endpoint: builders
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v1
-        if: ${{ !inputs.build_docker_disabled }}
         with:
           aws-access-key-id: ${{ secrets.aws_access_key_id }}
           aws-secret-access-key: ${{ secrets.aws_secret_access_key }}
@@ -273,11 +273,9 @@ jobs:
       - name: Login to Amazon ECR
         id: login_ecr
         uses: aws-actions/amazon-ecr-login@v1
-        if: ${{ !inputs.build_docker_disabled }}
 
       - name: Setup
         id: setup
-        if: ${{ !inputs.build_docker_disabled }}
         env:
           IMAGE_REGISTRY: ${{ steps.login_ecr.outputs.registry }}
           IMAGE_REPOSITORY: ${{ env.GITHUB_REPOSITORY }}
@@ -285,7 +283,6 @@ jobs:
           echo "::set-output name=image_registry::$IMAGE_REGISTRY"
           echo "::set-output name=image_repository::$IMAGE_REPOSITORY"
           echo "::set-output name=image_repository_uri::${IMAGE_REGISTRY}/${IMAGE_REPOSITORY}"
-          echo "::set-output name=image_tag::${{ needs.code.outputs.sem_ver }}"
 
       - name: Docker meta
         id: meta
@@ -293,17 +290,15 @@ jobs:
         with:
           images: ${{ steps.setup.outputs.image_repository_uri }}
           tags: |
-            type=raw,value=${{ steps.setup.outputs.image_tag }}
+            type=raw,value=${{ needs.code.outputs.sem_ver }}
 
       - name: Static code analysis (Linter)
         uses: hadolint/hadolint-action@v2.0.0
-        if: ${{ !inputs.build_docker_disabled }}
         with:
           dockerfile: ${{ inputs.dockerfile_path }}
       
       - name: Run build
         uses: docker/build-push-action@v3
-        if: ${{ !inputs.build_docker_disabled }}
         with:
           cache-from: type=registry,ref=${{ steps.setup.outputs.image_repository_uri }}:buildcache
           cache-to: type=registry,mode=max,ref=${{ steps.setup.outputs.image_repository_uri }}:buildcache,oci-mediatypes=false
@@ -320,7 +315,6 @@ jobs:
 
       - name: Archive container image
         uses: actions/upload-artifact@v3
-        if: ${{ !inputs.build_docker_disabled }}
         with:
           name: container-image
           path: image.tar
