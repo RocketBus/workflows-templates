@@ -1,8 +1,16 @@
-name: Test workflow
+name: Test stage
 
 on:
   workflow_call:
     inputs:
+      app_version:
+        type: string
+        required: false
+        default: ""
+      project_language:
+        type: string
+        required: false
+        default: ""
       jdk_version:
         type: string
         required: false
@@ -19,22 +27,17 @@ on:
         type: string
         required: false
         default: "latest"
-      project_language:
-        type: string
-        required: false
-        default: ""
       unit_tests_disabled:
         type: boolean
         required: false
         default: false
-      integration_tests_disabled:
+      sonarqube_scanning_disabled:
         type: boolean
         required: false
-        default: true
-
-env:
-  MAVEN_OPTS: "-Dhttps.protocols=TLSv1.2- Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=WARN -Djava.awt.headless=true"
-  MAVEN_CLI_OPTS: "-B -e -fae -V"
+        default: false
+    secrets:
+      maven_settings_file:
+        required: false
 
 jobs:
   unit_tests:
@@ -45,7 +48,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
-      ###### Java dependencies
+      ###### Unit tests Java
+
+      - name: Java | Create settings.xml file
+        if: ${{ secrets.maven_settings_file }}
+        run: echo ${{ secrets.maven_settings_file }} | base64 -d > settings.xml
 
       - name: Java | Set up JDK
         uses: actions/setup-java@v3
@@ -55,15 +62,27 @@ jobs:
           distribution: 'temurin'
           cache: 'maven'
 
-      - name: Java | Compile
-        if: ${{ inputs.project_language == 'java' }}
-        run: mvn $MAVEN_CLI_OPTS compile
-
       - name: Java | Run test
         if: ${{ inputs.project_language == 'java' }}
+        env:
+          MAVEN_OPTS: "-Dhttps.protocols=TLSv1.2- Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=WARN -Djava.awt.headless=true"
+          MAVEN_CLI_OPTS: "-B -e -fae -V -s settings.xml"
         run: mvn $MAVEN_CLI_OPTS test
 
-      ###### Javascript dependencies
+      - name: Java | SonarQube Scan
+        if: ${{ !inputs.sonarqube_scanning_disabled && inputs.project_language == 'java' }}
+        uses: sonarsource/sonarqube-scan-action@master
+        env:
+          SONAR_HOST_URL: "https://sonar.clickbus.net"
+          SONAR_TOKEN: ${{ secrets.sonar_token }}
+        with:
+          args: >
+            -Dsonar.projectKey=${{ env.GITHUB_REPOSITORY }}
+            -Dsonar.projectVersion=${{ inputs.app_version }}
+            -Dsonar.junit.reportPaths=**/target/surefire-reports/TEST-***.xml
+            -Dsonar.coverage.jacoco.xmlReportPaths=**/target/site/jacoco-aggregate/jacoco.xml
+
+      ###### Unit tests Javascript
 
       - name: Javascript | Setup Node.js
         uses: actions/setup-node@v3
@@ -81,10 +100,23 @@ jobs:
       - name: Javascript | Run test
         if: ${{ inputs.project_language == 'javascript' }}
         run: |
-          [[ ${{ inputs.node_package_manager }} == 'npm' ]] && npm run test:unit
-          [[ ${{ inputs.node_package_manager }} == 'yarn' ]] && yarn run test:unit
+          [[ ${{ inputs.node_package_manager }} == 'npm' ]] && npm run test
+          [[ ${{ inputs.node_package_manager }} == 'yarn' ]] && yarn run test
 
-      ###### PHP dependencies
+      - name: Javascript | SonarQube Scan
+        if: ${{ !inputs.sonarqube_scanning_disabled && inputs.project_language == 'javascript' }}
+        uses: sonarsource/sonarqube-scan-action@master
+        env:
+          SONAR_HOST_URL: "https://sonar.clickbus.net"
+          SONAR_TOKEN: ${{ secrets.sonar_token }}
+        with:
+          args: >
+            -Dsonar.projectKey=${{ env.GITHUB_REPOSITORY }}
+            -Dsonar.projectVersion=${{ inputs.app_version }}
+            -Dsonar.testExecutionReportPaths=junit.xml
+            -Dsonar.javascript.lcov.reportPaths=coverage/cobertura-coverage.xml
+
+      ###### Unit tests PHP
 
       - name: PHP | Cache Composer dependencies
         uses: actions/cache@v3
@@ -106,89 +138,26 @@ jobs:
         if: ${{ inputs.project_language == 'php' }}
         run: vendor/bin/phpunit tests/unit --colors=never --coverage-text --coverage-clover=phpunit.clover-coverage.xml --log-junit=phpunit.xml
 
-      - name: Archive test reports
-        uses: actions/upload-artifact@v3
+      - name: PHP | SonarQube Scan
+        if: ${{ !inputs.sonarqube_scanning_disabled && inputs.project_language == 'php' }}
+        uses: sonarsource/sonarqube-scan-action@master
+        env:
+          SONAR_HOST_URL: "https://sonar.clickbus.net"
+          SONAR_TOKEN: ${{ secrets.sonar_token }}
         with:
-          name: unit-tests-reports
-          path: |
-            phpunit.clover-coverage.xml
-            phpunit.xml
-          retention-days: 1
+          args: >
+            -Dsonar.projectKey=${{ env.GITHUB_REPOSITORY }}
+            -Dsonar.projectVersion=${{ inputs.app_version }}
+            -Dsonar.php.tests.reportPath=phpunit.xml
+            -Dsonar.php.coverage.reportPaths=phpunit.clover-coverage.xml
 
-  integration_tests:
-    name: Integration tests
-    runs-on: live
-    if: ${{ !inputs.integration_tests_disabled }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
+      ###### Quality Gate
 
-      ###### Java dependencies
-
-      - name: Java | Set up JDK
-        uses: actions/setup-java@v3
-        if: ${{ inputs.project_language == 'java' }}
-        with:
-          java-version: ${{ inputs.jdk_version }}
-          distribution: 'temurin'
-          cache: 'maven'
-
-      - name: Java | Compile
-        if: ${{ inputs.project_language == 'java' }}
-        run: mvn $MAVEN_CLI_OPTS compile
-
-      - name: Java | Run test
-        if: ${{ inputs.project_language == 'java' }}
-        run: mvn $MAVEN_CLI_OPTS integration-tests
-
-      ###### Javascript dependencies
-
-      - name: Javascript | Setup Node.js
-        uses: actions/setup-node@v3
-        if: ${{ inputs.project_language == 'javascript' }}
-        with:
-          node-version: ${{ inputs.node_version }}
-          cache: ${{ inputs.node_package_manager }}
-
-      - name: Javascript | Install dependencies
-        if: ${{ inputs.project_language == 'javascript' }}
-        run: |
-          [[ ${{ inputs.node_package_manager }} == 'npm' ]] && npm ci --prefer-offline --ignore-scripts
-          [[ ${{ inputs.node_package_manager }} == 'yarn' ]] && yarn install --frozen-lockfile --ignore-scripts
-
-      - name: Javascript | Run test
-        if: ${{ inputs.project_language == 'javascript' }}
-        run: |
-          [[ ${{ inputs.node_package_manager }} == 'npm' ]] && npm run test:integration
-          [[ ${{ inputs.node_package_manager }} == 'yarn' ]] && yarn run test:integration
-
-      ###### PHP dependencies
-
-      - name: PHP | Cache Composer dependencies
-        uses: actions/cache@v3
-        if: ${{ inputs.project_language == 'php' }}
-        with:
-          path: /tmp/composer-cache
-          key: ${{ runner.os }}-${{ hashFiles('**/composer.lock') }}
-
-      - name: PHP | Install dependencies
-        uses: php-actions/composer@v6
-        if: ${{ inputs.project_language == 'php' }}
-        with:
-          php_version: ${{ inputs.php_version }}
-          version: latest
-          dev: no
-          args: --ignore-platform-reqs
-
-      - name: PHP | Run test
-        if: ${{ inputs.project_language == 'php' }}
-        run: vendor/bin/phpunit tests/integration --colors=never --coverage-text --coverage-clover=phpunit.clover-coverage.xml --log-junit=phpunit.xml
-
-      - name: Archive test reports
-        uses: actions/upload-artifact@v3
-        with:
-          name: unit-tests-reports
-          path: |
-            phpunit.clover-coverage.xml
-            phpunit.xml
-          retention-days: 1
+      - name: SonarQube Quality Gate
+        id: sonarqube-quality-gate-check
+        if: ${{ !inputs.sonarqube_scanning_disabled }}
+        uses: sonarsource/sonarqube-quality-gate-action@master
+        timeout-minutes: 5
+        env:
+          SONAR_HOST_URL: "https://sonar.clickbus.net"
+          SONAR_TOKEN: ${{ secrets.sonar_token }}

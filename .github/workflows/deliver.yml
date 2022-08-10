@@ -3,35 +3,7 @@ name: Deliver workflow
 on:
   workflow_call:
     inputs:
-      jdk_version:
-        type: string
-        required: false
-        default: "11"
-      node_package_manager:
-        type: string
-        required: false
-        default: 'yarn'
-      node_version:
-        type: string
-        required: false
-        default: "lts/*"
-      php_version:
-        type: string
-        required: false
-        default: "latest"
-      project_language:
-        type: string
-        required: false
-        default: ""
-      pre_release:
-        type: boolean
-        required: false
-        default: false
-      pre_release_tag:
-        type: string
-        required: false
-        default: ""
-      release_tag:
+      app_version:
         type: string
         required: false
         default: ""
@@ -39,10 +11,6 @@ on:
         type: string
         required: false
         default: ""
-      promote_version:
-        type: boolean
-        required: false
-        default: false
     secrets:
       aws_access_key_id:
         required: true
@@ -57,15 +25,10 @@ jobs:
     name: Release
     runs-on: live
     if: ${{ github.ref_name == github.event.repository.default_branch }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
-          prerelease: ${{ inputs.pre_release }}
-          tag_name: ${{ inputs.release_tag }}
+          tag_name: ${{ inputs.app_version }}
 
   publish_docker:
     name: Publish Docker
@@ -92,20 +55,12 @@ jobs:
         id: login_ecr
         uses: aws-actions/amazon-ecr-login@v1
 
-      - name: Docker retag
-        if: ${{ inputs.promote_version }}
-        run: |
-          MANIFEST=$(aws ecr batch-get-image --repository-name ${{ inputs.image_repository }} --image-ids imageTag=${{ inputs.source_image_tag }} --output json | jq --raw-output --join-output '.images[0].imageManifest')
-          aws ecr put-image --repository-name ${{ inputs.image_repository }} --image-tag ${{ inputs.app_version }} --image-manifest "$MANIFEST"
-
       - name: Download artifact
-        if: ${{ !inputs.promote_version }}
         uses: actions/download-artifact@v3
         with:
           name: container-image
 
       - name: Docker push
-        if: ${{ !inputs.promote_version }}
         run: |
           aws ecr describe-repositories \
             --repository-names ${{ inputs.image_repository }} 2> /dev/null

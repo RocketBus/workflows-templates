@@ -1,4 +1,4 @@
-name: Kubernetes Deployment
+name: Deploy stage
 
 on:
   workflow_call:
@@ -7,13 +7,9 @@ on:
         type: string
         required: false
         default: ""
-      image_tag:
+      app_version:
         type: string
         required: true
-      destroy:
-        type: boolean
-        required: false
-        default: false
     secrets:
       aws_access_key_id:
         required: true
@@ -24,8 +20,8 @@ env:
   ENV: ${{ inputs.env }}
 
 jobs:
-  deploy:
-    name: Deploy
+  kubernetes:
+    name: Kubernetes
     runs-on: live
     environment: ${{ inputs.env }}
     steps:
@@ -82,7 +78,7 @@ jobs:
 
       - name: Helm upgrade
         run: |
-          IMAGE_TAG=${{ inputs.image_tag }}
+          IMAGE_TAG=${{ inputs.app_version }}
           RELEASE_NAME=${GITHUB_REPOSITORY#*/}
           NAMESPACE=${RELEASE_NAME}
           CHART_PATH=charts/${RELEASE_NAME}

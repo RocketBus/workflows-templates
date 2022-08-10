@@ -1,4 +1,4 @@
-name: DAST workflow
+name: Dynamic Application Security Test
 
 on:
   workflow_call:
@@ -9,10 +9,9 @@ on:
         default: ""
 
 jobs:
-  dynamic_application_security_test:
+  dast:
     name: DAST
     runs-on: live
-    if: ${{ !inputs.dast_disabled }}
     steps:
       - name: ZAP Scan
         uses: zaproxy/action-baseline@v0.7.0
