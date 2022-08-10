@@ -51,6 +51,8 @@ on:
       gitversion_config:
         required: false
     outputs:
+      image_repository_uri:
+        value: ${{ jobs.build_docker.outputs.image_repository_uri }}
       image_repository:
         value: ${{ jobs.build_docker.outputs.image_repository }}
       pre_release_tag:
@@ -248,6 +250,7 @@ jobs:
     needs:
       - code
     outputs:
+      image_repository_uri: ${{ steps.setup.outputs.image_repository_uri }}
       image_repository: ${{ steps.setup.outputs.image_repository }}
     steps:
       - name: Checkout
