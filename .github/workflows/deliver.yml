@@ -63,5 +63,42 @@ jobs:
 
       - name: Docker push
         run: |
+          aws ecr describe-repositories --repository-names ${{ inputs.image_repository }} 2> /dev/null || aws ecr create-repository --repository-name ${{ inputs.image_repository }} --image-scanning-configuration scanOnPush=true
+
+          aws ecr set-repository-policy \
+            --repository-name ${{ inputs.image_repository }} \
+            --policy-text '
+              {
+                "Version": "2012-10-17",
+                "Statement": [
+                  {
+                    "Sid": "CrossAccountContainerRegistry",
+                    "Action": [
+                      "ecr:GetAuthorizationToken",
+                      "ecr:BatchCheckLayerAvailability",
+                      "ecr:GetDownloadUrlForLayer",
+                      "ecr:GetRepositoryPolicy",
+                      "ecr:DescribeRepositories",
+                      "ecr:ListImages",
+                      "ecr:DescribeImages",
+                      "ecr:BatchGetImage",
+                      "ecr:GetLifecyclePolicy",
+                      "ecr:GetLifecyclePolicyPreview",
+                      "ecr:ListTagsForResource",
+                      "ecr:DescribeImageScanFindings"
+                    ],
+                    "Effect": "Allow",
+                    "Principal": {
+                      "AWS": [
+                        "arn:aws:iam::180811438061:root",
+                        "arn:aws:iam::406026015868:root",
+                        "arn:aws:iam::114395709799:root"
+                      ]
+                    }
+                  }
+                ]
+              }
+            '
+
           docker load --input image.tar
           docker push ${{ steps.login_ecr.outputs.registry }}/${{ inputs.image_repository }}:${{ inputs.app_version }}

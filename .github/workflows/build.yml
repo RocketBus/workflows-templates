@@ -198,51 +198,12 @@ jobs:
         uses: hadolint/hadolint-action@v2.0.0
         with:
           dockerfile: ${{ inputs.dockerfile_path }}
-
-      - name: Create ECR repository
-        run: |
-          aws ecr describe-repositories --repository-names ${{ steps.setup.outputs.image_repository }} 2> /dev/null || aws ecr create-repository --repository-name ${{ steps.setup.outputs.image_repository }} --image-scanning-configuration scanOnPush=true
-
-          aws ecr set-repository-policy \
-            --repository-name ${{ steps.setup.outputs.image_repository }} \
-            --policy-text '
-              {
-                "Version": "2012-10-17",
-                "Statement": [
-                  {
-                    "Sid": "CrossAccountContainerRegistry",
-                    "Action": [
-                      "ecr:GetAuthorizationToken",
-                      "ecr:BatchCheckLayerAvailability",
-                      "ecr:GetDownloadUrlForLayer",
-                      "ecr:GetRepositoryPolicy",
-                      "ecr:DescribeRepositories",
-                      "ecr:ListImages",
-                      "ecr:DescribeImages",
-                      "ecr:BatchGetImage",
-                      "ecr:GetLifecyclePolicy",
-                      "ecr:GetLifecyclePolicyPreview",
-                      "ecr:ListTagsForResource",
-                      "ecr:DescribeImageScanFindings"
-                    ],
-                    "Effect": "Allow",
-                    "Principal": {
-                      "AWS": [
-                        "arn:aws:iam::180811438061:root",
-                        "arn:aws:iam::406026015868:root",
-                        "arn:aws:iam::114395709799:root"
-                      ]
-                    }
-                  }
-                ]
-              }
-            '
       
       - name: Run build
         uses: docker/build-push-action@v3
         with:
-          cache-from: type=registry,ref=${{ steps.setup.outputs.image_repository_uri }}:buildcache
-          cache-to: type=registry,mode=max,ref=${{ steps.setup.outputs.image_repository_uri }}:buildcache,oci-mediatypes=false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
           context: ${{ inputs.docker_context }}
           file: ${{ inputs.dockerfile_path }}
           target: ${{ inputs.docker_target }}
