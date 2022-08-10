@@ -134,7 +134,7 @@ jobs:
         if: ${{ inputs.project_language == 'java' }}
         with:
           java-version: ${{ inputs.jdk_version }}
-          distribution: 'adopt'
+          distribution: 'temurin'
           cache: 'maven'
 
       - name: Java | Compile
@@ -212,7 +212,7 @@ jobs:
         if: ${{ inputs.project_language == 'java' }}
         with:
           java-version: ${{ inputs.jdk_version }}
-          distribution: 'adopt'
+          distribution: 'temurin'
           cache: 'maven'
 
       - name: Java | Compile

@@ -15,14 +15,6 @@ on:
         type: boolean
         required: false
         default: false
-      dast_disabled:
-        type: boolean
-        required: false
-        default: false
-      app_url:
-        type: string
-        required: false
-        default: ""
     secrets:
       sonar_token:
         required: true
@@ -71,13 +63,3 @@ jobs:
           image: ${{ inputs.docker_image }}
           path: .
           fail-build: true
-
-  dynamic_application_security_test:
-    name: DAST
-    runs-on: live
-    if: ${{ !inputs.dast_disabled }}
-    steps:
-      - name: ZAP Scan
-        uses: zaproxy/action-baseline@v0.7.0
-        with:
-          target: ${{ inputs.app_url }}
