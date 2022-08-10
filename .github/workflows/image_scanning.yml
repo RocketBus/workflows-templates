@@ -13,26 +13,19 @@ jobs:
     name: Docker image scanning
     runs-on: live
     steps:
-      - name: Set up Docker Context for Buildx
-        id: buildx-context
-        run: docker context create builders
-
-      - name: Set up Docker Buildx
-        id: buildx
-        uses: docker/setup-buildx-action@v2
-        with:
-          endpoint: builders
-
       - name: Download artifact
         uses: actions/download-artifact@v3
         with:
           name: container-image
 
       - name: Load image
-        run: docker load --input image.tar
+        run: |
+          docker load --input image.tar
+          docker images
+          docker tag ${{ inputs.docker_image }} localbuild/testimage:latest
 
       - name: Scan image
         uses: anchore/scan-action@v3
         with:
-          image: ${{ inputs.docker_image }}
+          image: localbuild/testimage:latest
           fail-build: true
