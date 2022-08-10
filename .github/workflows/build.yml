@@ -52,7 +52,7 @@ on:
         required: true
       aws_secret_access_key:
         required: true
-      maven_settings_file:
+      maven_settings:
         required: false
     outputs:
       image_repository_uri:
@@ -75,7 +75,7 @@ jobs:
       ###### Build Java
 
       - name: Java | Create settings.xml file
-        run: echo ${{ secrets.maven_settings_file }} > settings.xml
+        run: echo ${{ secrets.maven_settings }} > settings.xml
 
       - name: Java | Set up JDK
         uses: actions/setup-java@v3

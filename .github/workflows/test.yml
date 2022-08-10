@@ -36,7 +36,7 @@ on:
         required: false
         default: false
     secrets:
-      maven_settings_file:
+      maven_settings:
         required: false
       sonar_token:
         required: true
@@ -53,7 +53,7 @@ jobs:
       ###### Unit tests Java
 
       - name: Java | Create settings.xml file
-        run: echo ${{ secrets.maven_settings_file }} > settings.xml
+        run: echo ${{ secrets.maven_settings }} > settings.xml
 
       - name: Java | Set up JDK
         uses: actions/setup-java@v3

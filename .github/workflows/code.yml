@@ -26,7 +26,7 @@ on:
     secrets:
       gitversion_config:
         required: false
-      maven_settings_file:
+      maven_settings:
         required: false
     outputs:
       pre_release_tag:
@@ -131,7 +131,7 @@ jobs:
       ###### Lint Java
 
       - name: Create settings.xml file
-        run: echo ${{ secrets.maven_settings_file }} > settings.xml
+        run: echo ${{ secrets.maven_settings }} > settings.xml
 
       - name: Java | Set up JDK
         uses: actions/setup-java@v3
