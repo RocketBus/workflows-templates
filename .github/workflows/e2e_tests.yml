@@ -48,7 +48,7 @@ jobs:
         if: ${{ inputs.project_language == 'java' }}
         env:
           MAVEN_OPTS: "-Dhttps.protocols=TLSv1.2 -Djava.awt.headless=true"
-          MAVEN_CLI_OPTS: "-B -e -fae -V -s settings.xml"
+          MAVEN_CLI_OPTS: "-B -e -fae -V"
         run: mvn $MAVEN_CLI_OPTS e2e-tests
 
       ###### Javascript dependencies

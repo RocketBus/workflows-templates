@@ -121,7 +121,7 @@ jobs:
     runs-on: live
     env:
       MAVEN_OPTS: "-Dhttps.protocols=TLSv1.2 -Djava.awt.headless=true"
-      MAVEN_CLI_OPTS: "-B -e -fae -V -s settings.xml"
+      MAVEN_CLI_OPTS: "-B -e -fae -V"
     needs:
       - prepare
     steps:
