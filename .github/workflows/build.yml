@@ -219,7 +219,7 @@ jobs:
         with:
           image: ${{ steps.setup.outputs.image_repository_uri }}:${{ inputs.app_version }}
           severity-cutoff: medium
-          fail-build: true
+          fail-build: false
 
       ###### Archive container image
 
