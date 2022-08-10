@@ -38,6 +38,8 @@ on:
     secrets:
       maven_settings_file:
         required: false
+      sonar_token:
+        required: true
 
 jobs:
   unit_tests:

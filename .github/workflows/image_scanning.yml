@@ -7,9 +7,6 @@ on:
         type: string
         required: false
         default: ""
-    secrets:
-      sonar_token:
-        required: true
 
 jobs:
   image_scanning:
