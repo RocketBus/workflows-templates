@@ -64,7 +64,6 @@ jobs:
           versionSpec: '5.x'
 
       - name: Create GitVersion configuration file
-        if: ${{ secrets.gitversion_config }}
         run: |
           echo ${{ secrets.gitversion_config }} | base64 -d > GitVersion.yml
 
@@ -129,7 +128,6 @@ jobs:
       ###### Lint Java
 
       - name: Create settings.xml file
-        if: ${{ secrets.maven_settings_file }}
         run: echo ${{ secrets.maven_settings_file }} | base64 -d > settings.xml
 
       - name: Java | Set up JDK

@@ -75,7 +75,6 @@ jobs:
       ###### Build Java
 
       - name: Java | Create settings.xml file
-        if: ${{ secrets.maven_settings_file }}
         run: echo ${{ secrets.maven_settings_file }} | base64 -d > settings.xml
 
       - name: Java | Set up JDK
