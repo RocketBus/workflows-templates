@@ -13,16 +13,17 @@ jobs:
     name: Docker image scanning
     runs-on: live
     steps:
-      - name: Download artifact
-        uses: actions/download-artifact@v3
-        with:
-          name: container-image
-
-      - name: Scan image
+      - name: Install Grype
         env:
           GRYPE_VERSION: v0.44.0
         run: |
           echo "Installing Grype $GRYPE_VERSION"
           curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sh -s -- $GRYPE_VERSION
 
-          ./bin/grype docker-archive:image.tar --scope all-layers --fail-on medium --only-fixed
+      - name: Download artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: container-image
+
+      - name: Scan image
+        run: ./bin/grype docker-archive:image.tar --scope all-layers --fail-on low --only-fixed
