@@ -3,6 +3,10 @@ name: Kubernetes Deployment
 on:
   workflow_call:
     inputs:
+      env:
+        type: string
+        required: false
+        default: ""
       image_tag:
         type: string
         required: true
@@ -15,6 +19,9 @@ on:
         required: true
       aws_secret_access_key:
         required: true
+
+env:
+  ENV: ${{ inputs.env }}
 
 jobs:
   deploy:
