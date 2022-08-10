@@ -125,6 +125,9 @@ jobs:
     needs:
       - prepare
     steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
       ###### Lint Java
 
       - name: Create settings.xml file
