@@ -179,8 +179,9 @@ jobs:
         id: setup
         env:
           IMAGE_REGISTRY: ${{ steps.login_ecr.outputs.registry }}
-          IMAGE_REPOSITORY: ${{ env.GITHUB_REPOSITORY }}
         run: |
+          IMAGE_REPOSITORY=${GITHUB_REPOSITORY#*/}
+
           echo "::set-output name=image_registry::$IMAGE_REGISTRY"
           echo "::set-output name=image_repository::$IMAGE_REPOSITORY"
           echo "::set-output name=image_repository_uri::${IMAGE_REGISTRY}/${IMAGE_REPOSITORY}"
