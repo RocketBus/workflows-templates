@@ -93,7 +93,9 @@ jobs:
           versionSpec: '5.x'
 
       - name: Create GitVersion configuration file
-        run: echo ${{ secrets.gitversion_config }} | base64 -d > GitVersion.yml
+        run: |
+          echo ${{ secrets.gitversion_config }} | base64 -d > GitVersion.yml
+          cat GitVersion.yml
 
       - name: Determine version
         id: gitversion
