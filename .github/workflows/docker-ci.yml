@@ -122,7 +122,7 @@ jobs:
           IMAGE_REPOSITORY=${GITHUB_REPOSITORY#*/}
           IMAGET_TAG=${{ needs.code.outputs.semver }}-${{ needs.code.outputs.short_sha }}
 
-          if [[ ${{ inputs.promote_version }} ]]; then
+          if [[ -n ${{ inputs.promote_version }} ]]; then
             PREVIOUS_IMAGE_TAG=${{ needs.code.outputs.semver }}-${{ needs.code.outputs.short_sha }}
             IMAGE_TAG=${{ needs.code.outputs.semver }}
           fi
