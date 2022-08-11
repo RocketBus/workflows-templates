@@ -19,6 +19,10 @@ on:
         type: string
         required: false
         default: ""
+      scan_severity_cutoff:
+        type: string
+        required: false
+        default: medium
     secrets:
       gitversion_config:
         required: true
@@ -188,7 +192,7 @@ jobs:
               }
             '
       
-      - name: Docker build
+      - name: Docker build and push
         uses: docker/build-push-action@v3
         if: ${{ (github.event_name == 'pull_request' && github.event.action != 'closed') || (github.event_name == 'push' && github.ref_type == 'branch') }}
         with:
@@ -200,18 +204,22 @@ jobs:
           build-args: ${{ inputs.docker_build_args }}
           labels: ${{ steps.meta.outputs.labels }}
           tags: ${{ steps.meta.outputs.tags }}
-          load: true
-          outputs: type=docker,dest=image.tar
+          push: true
 
       - name: Scan image
-        uses: anchore/scan-action@v3
         if: ${{ (github.event_name == 'pull_request' && github.event.action != 'closed') || (github.event_name == 'push' && github.ref_type == 'branch') }}
-        with:
-          image: ${{ steps.meta.outputs.tags }}
-          severity-cutoff: medium
-          fail-build: ${{ github.ref_name == github.event.repository.default_branch }}
+        run: |
+          aws ecr wait image-scan-complete --repository-name ${{ steps.image_properties.outputs.image_repository }} --image-id imageTag=${{ steps.image_properties.outputs.image_tag }}
+          if [[ $? -eq 0 ]]; then
+            SEVERITY_LEVEL=${{ inputs.severity_cutoff }}
+            SEVERITY_LEVEL=${SEVERITY_LEVEL^^}
+            SCAN_FINDINGS=$(aws ecr describe-image-scan-findings --repository-name ${{ steps.image_properties.outputs.image_repository }} --image-id imageTag=$IMAGE_TAG --query imageScanFindings.findingSeverityCounts.$SEVERITY_LEVEL)
 
-      - name: Docker push
-        run: docker push ${{ steps.meta.outputs.tags }}
+            if [[ $SCAN_FINDINGS -gt 0 ]]; then
+              aws ecr describe-image-scan-findings --repository-name ${{ steps.image_properties.outputs.image_repository }} --image-id imageTag=$IMAGE_TAG --query imageScanFindings.findings[?severity=='MEDIUM'] --output table
+              aws ecr batch-delete-image --repository-name ${{ steps.image_properties.outputs.image_repository }} --image-ids imageTag=${{ steps.image_properties.outputs.image_tag }}
+              exit 1
+            fi
+          fi
     outputs:
       image_tag: ${{ steps.image_properties.outputs.image_tag }}
