@@ -7,6 +7,14 @@ on:
         type: string
         required: false
         default: 11
+      lint_disabled:
+        type: boolean
+        required: false
+        default: false
+      unit_tests_disabled:
+        type: boolean
+        required: false
+        default: false
     secrets:
       gitversion_config:
         required: true
@@ -79,6 +87,7 @@ jobs:
         run: echo ${{ secrets.maven_settings }} | base64 -d > settings.xml
 
       - name: Static code analysis (Linter)
+        if: ${{ !inputs.lint_disabled }}
         run: ./mvnw $MAVEN_CLI_OPTS checkstyle:check
     outputs:
       project_name: ${{ steps.project_settings.outputs.project_name }}
@@ -118,7 +127,7 @@ jobs:
   unit_tests:
     name: Unit tests
     runs-on: live
-    if: ${{ (github.event_name == 'pull_request' && github.event.action != 'closed') || (github.event_name == 'push' && github.ref_type == 'branch') }}
+    if: ${{ !inputs.unit_tests_disabled && (github.event_name == 'pull_request' && github.event.action != 'closed') || (github.event_name == 'push' && github.ref_type == 'branch') }}
     needs:
       - code
     steps:
