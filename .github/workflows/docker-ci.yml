@@ -211,13 +211,14 @@ jobs:
         run: |
           aws ecr wait image-scan-complete --repository-name ${{ steps.image_properties.outputs.image_repository }} --image-id imageTag=${{ steps.image_properties.outputs.image_tag }}
           if [[ $? -eq 0 ]]; then
-            SEVERITY_LEVEL=${{ inputs.severity_cutoff }}
+            SEVERITY_LEVEL=${{ inputs.scan_severity_cutoff }}
             SEVERITY_LEVEL=${SEVERITY_LEVEL^^}
             SCAN_FINDINGS=$(aws ecr describe-image-scan-findings --repository-name ${{ steps.image_properties.outputs.image_repository }} --image-id imageTag=$IMAGE_TAG --query imageScanFindings.findingSeverityCounts.$SEVERITY_LEVEL)
 
             if [[ $SCAN_FINDINGS -gt 0 ]]; then
               aws ecr describe-image-scan-findings --repository-name ${{ steps.image_properties.outputs.image_repository }} --image-id imageTag=$IMAGE_TAG --query imageScanFindings.findings[?severity=='MEDIUM'] --output table
               aws ecr batch-delete-image --repository-name ${{ steps.image_properties.outputs.image_repository }} --image-ids imageTag=${{ steps.image_properties.outputs.image_tag }}
+              echo "::error ::Failed minimum severity level. Found vulnerabilities with level ${SEVERITY_LEVEL} or higher"
               exit 1
             fi
           fi
