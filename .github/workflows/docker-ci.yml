@@ -121,8 +121,9 @@ jobs:
           IMAGE_REGISTRY=${{ steps.login_ecr.outputs.registry }}
           IMAGE_REPOSITORY=${GITHUB_REPOSITORY#*/}
           IMAGET_TAG=${{ needs.code.outputs.semver }}-${{ needs.code.outputs.short_sha }}
+          PROMOTE_VERSION=${{ inputs.promote_version }}
 
-          if [[ -n ${{ inputs.promote_version }} ]]; then
+          if [[ -n ${PROMOTE_VERSION} ]]; then
             PREVIOUS_IMAGE_TAG=${{ needs.code.outputs.semver }}-${{ needs.code.outputs.short_sha }}
             IMAGE_TAG=${{ needs.code.outputs.semver }}
           fi
