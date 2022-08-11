@@ -22,6 +22,10 @@ on:
     secrets:
       gitversion_config:
         required: true
+      aws_access_key_id:
+        required: true
+      aws_secret_access_key:
+        required: true
     outputs:
       image_tag:
         value: ${{ jobs.build.outputs.image_tag }}
