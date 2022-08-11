@@ -209,7 +209,10 @@ jobs:
       - name: Scan image
         if: ${{ (github.event_name == 'pull_request' && github.event.action != 'closed') || (github.event_name == 'push' && github.ref_type == 'branch') }}
         run: |
-          aws ecr wait image-scan-complete --repository-name ${{ steps.image_properties.outputs.image_repository }} --image-id imageTag=${{ steps.image_properties.outputs.image_tag }}
+          IMAGE_TAG=${{ steps.image_properties.outputs.image_tag }}
+
+          aws ecr wait image-scan-complete --repository-name ${{ steps.image_properties.outputs.image_repository }} --image-id imageTag=$IMAGE_TAG
+
           if [[ $? -eq 0 ]]; then
             SEVERITY_LEVEL=${{ inputs.scan_severity_cutoff }}
             SEVERITY_LEVEL=${SEVERITY_LEVEL^^}
@@ -217,7 +220,7 @@ jobs:
 
             if [[ $SCAN_FINDINGS -gt 0 ]]; then
               aws ecr describe-image-scan-findings --repository-name ${{ steps.image_properties.outputs.image_repository }} --image-id imageTag=$IMAGE_TAG --query imageScanFindings.findings[?severity=='MEDIUM'] --output table
-              aws ecr batch-delete-image --repository-name ${{ steps.image_properties.outputs.image_repository }} --image-ids imageTag=${{ steps.image_properties.outputs.image_tag }}
+              aws ecr batch-delete-image --repository-name ${{ steps.image_properties.outputs.image_repository }} --image-ids imageTag=$IMAGE_TAG
               echo "::error title=Image Scanning::Failed minimum severity level. Found vulnerabilities with level ${SEVERITY_LEVEL} or higher"
               exit 1
             fi
