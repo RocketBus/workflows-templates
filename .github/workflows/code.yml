@@ -19,6 +19,10 @@ on:
         type: string
         required: false
         default: "latest"
+      build_docker_disabled:
+        type: boolean
+        required: false
+        default: false
       dockerfile_path:
         type: string
         required: false
@@ -121,8 +125,8 @@ jobs:
 
   lint:
     name: Lint
-    if: ${{ !inputs.lint_disabled }}
     runs-on: live
+    if: ${{ !inputs.lint_disabled }}
     env:
       MAVEN_OPTS: "-Dhttps.protocols=TLSv1.2 -Djava.awt.headless=true"
       MAVEN_CLI_OPTS: "-B -e -fae -V"
@@ -196,5 +200,6 @@ jobs:
 
       - name: Docker | Static code analysis (Linter)
         uses: hadolint/hadolint-action@v2.0.0
+        if: ${{ !inputs.build_docker_disabled }}
         with:
           dockerfile: ${{ inputs.dockerfile_path }}

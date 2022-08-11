@@ -1,0 +1,210 @@
+name: Continuous Integration Docker
+
+on:
+  workflow_call:
+    inputs:
+      docker_context:
+        type: string
+        required: false
+        default: .
+      dockerfile_path:
+        type: string
+        required: false
+        default: Dockerfile
+      docker_target:
+        type: string
+        required: false
+        default: ""
+      docker_build_args:
+        type: string
+        required: false
+        default: ""
+    secrets:
+      gitversion_config:
+        required: true
+    outputs:
+      image_tag:
+        value: ${{ jobs.build.outputs.image_tag }}
+
+env:
+  AWS_REGION: us-east-1
+
+jobs:
+  code:
+    name: Code
+    runs-on: live
+    if: ${{ (github.event_name == 'pull_request' && github.event.action != 'closed') || (github.event_name == 'push' && github.ref_type == 'branch') || (github.event_name == 'workflow_dispatch' && github.ref_name == github.event.repository.default_branch) }}
+    outputs:
+      semver: ${{ steps.gitversion.outputs.semVer }}
+      short_sha: ${{ steps.gitversion.outputs.shortSha }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      ###### Install tools
+
+      - name: Setup dotnet
+        uses: actions/setup-dotnet@v2
+        with:
+          dotnet-version: '6.0.x'
+        
+      - name: Install GitVersion
+        uses: gittools/actions/gitversion/setup@v0.9.7
+        with:
+          versionSpec: '5.x'
+
+      ###### Determine version
+
+      - name: Create GitVersion configuration file
+        run: echo ${{ secrets.gitversion_config }} | base64 -d > GitVersion.yml
+
+      - name: Determine version
+        id: gitversion
+        uses: gittools/actions/gitversion/execute@v0.9.7
+        with:
+          useConfigFile: true
+
+      ###### Lint Dockerfile
+
+      - name: Static code analysis (Linter)
+        uses: hadolint/hadolint-action@v2.0.0
+        with:
+          dockerfile: ${{ inputs.dockerfile_path }}
+
+  build:
+    name: Build and Push
+    runs-on: live
+    needs:
+      - code
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Download artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: app-artifact
+
+      ###### Build Docker
+
+      - name: Set up Docker Context for Buildx
+        id: buildx-context
+        run: docker context create builders
+
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v2
+        with:
+          endpoint: builders
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.aws_access_key_id }}
+          aws-secret-access-key: ${{ secrets.aws_secret_access_key }}
+          aws-region: ${{ env.AWS_REGION }}
+          mask-aws-account-id: false
+
+      - name: Login to Amazon ECR
+        id: login_ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Determine image properties
+        id: image_properties
+        run: |
+          IMAGE_REGISTRY=${{ steps.login_ecr.outputs.registry }}
+          IMAGE_REPOSITORY=${GITHUB_REPOSITORY#*/}
+          IMAGET_TAG=${{ needs.code.outputs.semver }}-${{ needs.code.outputs.short_sha }}
+
+          if [[ ${{ inputs.promote_version }} ]]; then
+            PREVIOUS_IMAGE_TAG=${{ needs.code.outputs.semver }}-${{ needs.code.outputs.short_sha }}
+            IMAGE_TAG=${{ needs.code.outputs.semver }}
+          fi
+
+          echo "::set-output name=image_registry::$IMAGE_REGISTRY"
+          echo "::set-output name=image_repository::$IMAGE_REPOSITORY"
+          echo "::set-output name=image_repository_uri::${IMAGE_REGISTRY}/${IMAGE_REPOSITORY}"
+          echo "::set-output name=previous_image_tag::${PREVIOUS_IMAGE_TAG}"
+          echo "::set-output name=image_tag::${IMAGE_TAG}"
+
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v4
+        with:
+          images: ${{ steps.image_properties.outputs.image_repository_uri }}
+          tags: |
+            type=raw,value=${{ steps.image_properties.outputs.image_tag }}
+
+      - name: Docker retag
+        if: ${{ (github.event_name == 'workflow_dispatch' && github.ref_name == github.event.repository.default_branch) && inputs.promote_version) }}
+        run: |
+          MANIFEST=$(aws ecr batch-get-image --repository-name ${{ steps.image_properties.outputs.image_repository }} --image-ids imageTag=${{ steps.image_properties.outputs.previous_image_tag }} --output json | jq --raw-output --join-output '.images[0].imageManifest')
+          aws ecr put-image --repository-name ${{ steps.image_properties.outputs.image_repository }} --image-tag ${{ steps.image_properties.outputs.image_tag }} --image-manifest "$MANIFEST"
+
+      - name: Create ECR repository
+        if: ${{ (github.event_name == 'pull_request' && github.event.action != 'closed') || (github.event_name == 'push' && github.ref_type == 'branch') }}
+        run: |
+          aws ecr describe-repositories --repository-names ${{ steps.image_properties.outputs.image_repository }} 2> /dev/null || aws ecr create-repository --repository-name ${{ steps.image_properties.outputs.image_repository }} --image-scanning-configuration scanOnPush=true
+
+          aws ecr set-repository-policy \
+            --repository-name ${{ steps.image_properties.outputs.image_repository }} \
+            --policy-text '
+              {
+                "Version": "2012-10-17",
+                "Statement": [
+                  {
+                    "Sid": "CrossAccountContainerRegistry",
+                    "Action": [
+                      "ecr:GetAuthorizationToken",
+                      "ecr:BatchCheckLayerAvailability",
+                      "ecr:GetDownloadUrlForLayer",
+                      "ecr:GetRepositoryPolicy",
+                      "ecr:DescribeRepositories",
+                      "ecr:ListImages",
+                      "ecr:DescribeImages",
+                      "ecr:BatchGetImage",
+                      "ecr:GetLifecyclePolicy",
+                      "ecr:GetLifecyclePolicyPreview",
+                      "ecr:ListTagsForResource",
+                      "ecr:DescribeImageScanFindings"
+                    ],
+                    "Effect": "Allow",
+                    "Principal": {
+                      "AWS": [
+                        "arn:aws:iam::180811438061:root",
+                        "arn:aws:iam::406026015868:root",
+                        "arn:aws:iam::114395709799:root"
+                      ]
+                    }
+                  }
+                ]
+              }
+            '
+      
+      - name: Docker build and push
+        uses: docker/build-push-action@v3
+        if: ${{ (github.event_name == 'pull_request' && github.event.action != 'closed') || (github.event_name == 'push' && github.ref_type == 'branch') }}
+        with:
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          context: ${{ inputs.docker_context }}
+          file: ${{ inputs.dockerfile_path }}
+          target: ${{ inputs.docker_target }}
+          build-args: ${{ inputs.docker_build_args }}
+          labels: ${{ steps.meta.outputs.labels }}
+          tags: ${{ steps.meta.outputs.tags }}
+          push: true
+          load: true
+          outputs: type=docker,dest=image.tar
+
+      - name: Scan image
+        uses: anchore/scan-action@v3
+        if: ${{ (github.event_name == 'pull_request' && github.event.action != 'closed') || (github.event_name == 'push' && github.ref_type == 'branch') }}
+        with:
+          image: ${{ steps.meta.outputs.tags }}
+          severity-cutoff: medium
+          fail-build: ${{ github.ref_name == github.event.repository.default_branch }}
+    outputs:
+      image_tag: ${{ steps.image_properties.outputs.image_tag }}

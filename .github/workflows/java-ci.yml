@@ -1,0 +1,158 @@
+name: Continuous Integration Java
+
+on:
+  workflow_call:
+    inputs:
+      jdk_version:
+        type: string
+        required: false
+        default: 11
+    secrets:
+      gitversion_config:
+        required: true
+      maven_settings:
+        required: true
+      sonar_token:
+        required: true
+    outputs:
+      project_name:
+        value: ${{ jobs.code.outputs.project_name }}
+      project_version:
+        value: ${{ jobs.code.outputs.project_version }}
+
+env:
+  MAVEN_CLI_OPTS: "-B -e -fae -V"
+  MAVEN_OPTS: "-Dhttps.protocols=TLSv1.2 -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=WARN -Dorg.slf4j.simpleLogger.showDateTime=true -Djava.awt.headless=true"
+
+jobs:
+  code:
+    name: Code
+    runs-on: live
+    if: ${{ (github.event_name == 'pull_request' && github.event.action != 'closed') || (github.event_name == 'push' && github.ref_type == 'branch') || ((github.event_name == 'workflow_dispatch' && github.ref_name == github.event.repository.default_branch) && !inputs.promote_version) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      ###### Install tools
+
+      - name: Setup dotnet
+        uses: actions/setup-dotnet@v2
+        with:
+          dotnet-version: '6.0.x'
+        
+      - name: Install GitVersion
+        uses: gittools/actions/gitversion/setup@v0.9.7
+        with:
+          versionSpec: '5.x'
+
+      - name: Set up JDK
+        uses: actions/setup-java@v3
+        with:
+          java-version: ${{ inputs.jdk_version }}
+          distribution: 'temurin'
+          cache: 'maven'
+
+      ###### Project settings
+
+      - name: Create GitVersion configuration file
+        run: echo ${{ secrets.gitversion_config }} | base64 -d > GitVersion.yml
+
+      - name: Determine version
+        id: gitversion
+        uses: gittools/actions/gitversion/execute@v0.9.7
+        with:
+          useConfigFile: true
+
+      - name: Define project settings
+        id: project_settings
+        env:
+          PROJECT_VERSION: ${{ steps.gitversion.outputs.semVer }}
+        run: |
+          echo "::set-output name=project_name::${GITHUB_REPOSITORY#*/}"
+          echo "::set-output name=project_version::${PROJECT_VERSION}"
+
+      ###### Lint Java
+
+      - name: Create settings.xml file
+        run: echo ${{ secrets.maven_settings }} | base64 -d > settings.xml
+
+      - name: Static code analysis (Linter)
+        run: ./mvnw $MAVEN_CLI_OPTS checkstyle:check
+    outputs:
+      project_name: ${{ steps.project_settings.outputs.project_name }}
+      project_version: ${{ steps.project_settings.outputs.project_version }}
+
+  build:
+    name: Build
+    runs-on: live
+    needs:
+      - code
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Set up JDK
+        uses: actions/setup-java@v3
+        with:
+          java-version: ${{ inputs.jdk_version }}
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Create settings.xml file
+        run: echo ${{ secrets.maven_settings }} | base64 -d > settings.xml
+
+      - name: Package
+        run: ./mvnw $MAVEN_CLI_OPTS package -Dmaven.test.skip=true
+
+      - name: Archive artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: app-artifact
+          path: |
+            **/target/*.jar
+            **/target/*.war
+          retention-days: 1
+
+  unit_tests:
+    name: Unit tests
+    runs-on: live
+    if: ${{ (github.event_name == 'pull_request' && github.event.action != 'closed') || (github.event_name == 'push' && github.ref_type == 'branch') }}
+    needs:
+      - code
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Create settings.xml file
+        run: echo ${{ secrets.maven_settings }} | base64 -d > settings.xml
+
+      - name: Set up JDK
+        uses: actions/setup-java@v3
+        with:
+          java-version: ${{ inputs.jdk_version }}
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Run tests
+        run: ./mvnw $MAVEN_CLI_OPTS test
+
+      - name: SonarQube Scan
+        uses: sonarsource/sonarqube-scan-action@master
+        if: ${{ github.ref_name == github.event.repository.default_branch }}
+        env:
+          SONAR_HOST_URL: "https://sonar.clickbus.net"
+          SONAR_TOKEN: ${{ secrets.sonar_token }}
+        with:
+          args: >
+            -Dsonar.projectKey=${{ needs.code.outputs.project_name }}
+
+      - name: SonarQube Quality Gate
+        id: sonarqube-quality-gate-check
+        uses: sonarsource/sonarqube-quality-gate-action@master
+        if: ${{ github.ref_name == github.event.repository.default_branch }}
+        timeout-minutes: 5
+        env:
+          SONAR_HOST_URL: "https://sonar.clickbus.net"
+          SONAR_TOKEN: ${{ secrets.sonar_token }}
