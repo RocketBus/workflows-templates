@@ -188,7 +188,7 @@ jobs:
               }
             '
       
-      - name: Docker build and push
+      - name: Docker build
         uses: docker/build-push-action@v3
         if: ${{ (github.event_name == 'pull_request' && github.event.action != 'closed') || (github.event_name == 'push' && github.ref_type == 'branch') }}
         with:
@@ -200,7 +200,6 @@ jobs:
           build-args: ${{ inputs.docker_build_args }}
           labels: ${{ steps.meta.outputs.labels }}
           tags: ${{ steps.meta.outputs.tags }}
-          push: true
           load: true
           outputs: type=docker,dest=image.tar
 
@@ -211,5 +210,8 @@ jobs:
           image: ${{ steps.meta.outputs.tags }}
           severity-cutoff: medium
           fail-build: ${{ github.ref_name == github.event.repository.default_branch }}
+
+      - name: Docker push
+        run: docker push ${{ steps.meta.outputs.tags }}
     outputs:
       image_tag: ${{ steps.image_properties.outputs.image_tag }}
