@@ -215,7 +215,7 @@ jobs:
         run: |
           echo "Installing Grype $GRYPE_VERSION"
           curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sh -s -- $GRYPE_VERSION
-          ./bin/grype docker-archive:image.tar -q --only-fixed
+          ./bin/grype ${{ steps.setup.outputs.image_repository_uri }}:${{ inputs.app_version }} -q --only-fixed
 
       ###### Archive container image
 
