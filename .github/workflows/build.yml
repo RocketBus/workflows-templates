@@ -210,17 +210,12 @@ jobs:
           outputs: type=docker,dest=image.tar
 
       - name: Scan image
-        uses: anchore/scan-action@v3
-        with:
-          image: ${{ steps.setup.outputs.image_repository_uri }}:${{ inputs.app_version }}
-          severity-cutoff: medium
-          fail-build: true
-
-      - name: Upload Anchore scan SARIF report
-        if: success() || failure()
-        uses: github/codeql-action/upload-sarif@v2
-        with:
-          sarif_file: ${{ steps.scan.outputs.sarif }}
+        env:
+          GRYPE_VERSION: v0.44.0
+        run: |
+          echo "Installing Grype $GRYPE_VERSION"
+          curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sh -s -- $GRYPE_VERSION
+          ./bin/grype docker-archive:image.tar --scope all-layers --only-fixed
 
       ###### Archive container image
 
