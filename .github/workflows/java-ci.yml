@@ -20,6 +20,8 @@ on:
         required: true
       maven_settings:
         required: true
+      nexus_password:
+        required: true
       sonar_token:
         required: true
     outputs:
@@ -31,6 +33,7 @@ on:
 env:
   MAVEN_CLI_OPTS: "-B -e -fae -V -s settings.xml"
   MAVEN_OPTS: "-Dhttps.protocols=TLSv1.2 -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=WARN -Dorg.slf4j.simpleLogger.showDateTime=true -Djava.awt.headless=true"
+  NEXUSPASS: ${{ secrets.nexus_password }}
 
 jobs:
   code:
