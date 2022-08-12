@@ -34,7 +34,7 @@ env:
   MAVEN_CLI_OPTS: "-B -e -fae -V -s settings.xml"
   MAVEN_OPTS: "-Dhttps.protocols=TLSv1.2 -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=WARN -Dorg.slf4j.simpleLogger.showDateTime=true -Djava.awt.headless=true"
   SONAR_URL: "https://sonar.clickbus.net"
-  SONAR_TOKEN: ${{ secrets.sonar_token }}
+  SONAR_LOGIN: ${{ secrets.sonar_token }}
   NEXUSPASS: ${{ secrets.nexus_password }}
 
 jobs:
