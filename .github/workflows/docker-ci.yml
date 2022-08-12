@@ -3,6 +3,10 @@ name: Continuous Integration Docker
 on:
   workflow_call:
     inputs:
+      promote_version:
+        type: string
+        required: false
+        default: true
       docker_context:
         type: string
         required: false
@@ -82,7 +86,7 @@ jobs:
           dockerfile: ${{ inputs.dockerfile_path }}
 
   build:
-    name: Build and Push
+    name: Build
     runs-on: live
     needs:
       - code
@@ -125,7 +129,7 @@ jobs:
           IMAGE_REGISTRY=${{ steps.login_ecr.outputs.registry }}
           IMAGE_REPOSITORY=${GITHUB_REPOSITORY#*/}
           IMAGE_TAG=${{ needs.code.outputs.semver }}-${{ needs.code.outputs.short_sha }}
-          PROMOTE_VERSION=${{ inputs.promote_version }}
+          PROMOTE_VERSION=${{ (github.event_name == 'workflow_dispatch' && github.ref_name == github.event.repository.default_branch) && inputs.promote_version }}
 
           if [[ -n ${PROMOTE_VERSION} ]]; then
             PREVIOUS_IMAGE_TAG=${{ needs.code.outputs.semver }}-${{ needs.code.outputs.short_sha }}

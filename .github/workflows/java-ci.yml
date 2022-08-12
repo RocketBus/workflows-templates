@@ -29,14 +29,14 @@ on:
         value: ${{ jobs.code.outputs.project_version }}
 
 env:
-  MAVEN_CLI_OPTS: "-B -e -fae -V"
+  MAVEN_CLI_OPTS: "-B -e -fae -V -s settings.xml"
   MAVEN_OPTS: "-Dhttps.protocols=TLSv1.2 -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=WARN -Dorg.slf4j.simpleLogger.showDateTime=true -Djava.awt.headless=true"
 
 jobs:
   code:
     name: Code
     runs-on: live
-    if: ${{ (github.event_name == 'pull_request' && github.event.action != 'closed') || (github.event_name == 'push' && github.ref_type == 'branch') || ((github.event_name == 'workflow_dispatch' && github.ref_name == github.event.repository.default_branch) && !inputs.promote_version) }}
+    if: ${{ (github.event_name == 'pull_request' && github.event.action != 'closed') || (github.event_name == 'push' && github.ref_type == 'branch') }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3

@@ -1,13 +1,9 @@
-name: Deploy stage
+name: Continuous Deployment Kubernetes
 
 on:
   workflow_call:
     inputs:
-      env:
-        type: string
-        required: false
-        default: ""
-      app_version:
+      image_tag:
         type: string
         required: true
     secrets:
@@ -78,7 +74,7 @@ jobs:
 
       - name: Helm upgrade
         run: |
-          IMAGE_TAG=${{ inputs.app_version }}
+          IMAGE_TAG=${{ inputs.image_tag }}
           RELEASE_NAME=${GITHUB_REPOSITORY#*/}
           NAMESPACE=${RELEASE_NAME}
           CHART_PATH=charts/${RELEASE_NAME}
