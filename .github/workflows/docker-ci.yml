@@ -220,7 +220,7 @@ jobs:
 
             if [[ $SCAN_FINDINGS -gt 0 ]]; then
               echo "## Vulnerability summary :shield:" >> $GITHUB_STEP_SUMMARY
-              aws ecr describe-image-scan-findings --repository-name ${{ steps.image_properties.outputs.image_repository }} --image-id imageTag=$IMAGE_TAG --query imageScanFindings.findings[?severity=='MEDIUM'].{Name: name, Severity: severity, Package: attributes[?key=='package_name'].value | join('', @), Version: attributes[?key=='package_version'].value | join('', @)}" --output table | sed s/'+'/'|'/g | tail -n +4 | head -n -1 >> $GITHUB_STEP_SUMMARY
+              aws ecr describe-image-scan-findings --repository-name ${{ steps.image_properties.outputs.image_repository }} --image-id imageTag=$IMAGE_TAG --query "imageScanFindings.findings[?severity=='MEDIUM'].{Name: name, Severity: severity, Package: attributes[?key=='package_name'].value | join('', @), Version: attributes[?key=='package_version'].value | join('', @)}" --output table | sed s/'+'/'|'/g | tail -n +4 | head -n -1 >> $GITHUB_STEP_SUMMARY
               aws ecr batch-delete-image --repository-name ${{ steps.image_properties.outputs.image_repository }} --image-ids imageTag=$IMAGE_TAG
               echo "::error title=Image Scanning::Failed minimum severity level. Found vulnerabilities with level ${SEVERITY_LEVEL} or higher"
               exit 1
