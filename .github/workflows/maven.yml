@@ -62,8 +62,7 @@ jobs:
         run: echo ${{ secrets.maven_settings }} | base64 -d > ~/.m2/settings.xml
 
       - name: lint code
-        if: ${{ !inputs.lint_code_disabled }}
-        run: ./mvnw $MAVEN_CLI_OPTS checkstyle:check
+        run: ./mvnw $MAVEN_CLI_OPTS checkstyle:check -DfailOnViolation=${{ !inputs.lint_code_disabled }}
 
   build:
     name: build
