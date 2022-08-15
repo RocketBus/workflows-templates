@@ -29,11 +29,13 @@ jobs:
         with:
           node-version: latest
 
-      - name: lint commit
+      - name: install commitlint
         run: |
           npm install -g @commitlint/cli @commitlint/config-conventional
           echo "module.exports = {extends: ['@commitlint/config-conventional']}" > commitlint.config.js
-          echo ${{ github.event.head_commit.message }} | commitlint
+
+      - name: lint commit
+        run: echo ${{ github.event.head_commit.message }} | commitlint
 
   set_project_properties:
     name: set project properties
