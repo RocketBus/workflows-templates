@@ -176,14 +176,14 @@ jobs:
           versionSpec: '5.x'
 
       - name: create GitVersion.yml
-        run: echo ${{ secrets.gitversion_config }} | base64 -d > ~/GitVersion.yml
+        run: echo ${{ secrets.gitversion_config }} | base64 -d > /tmp/GitVersion.yml
 
       - name: determine next version
         id: gitversion_bump
         uses: gittools/actions/gitversion/execute@v0.9.7
         with:
           useConfigFile: true
-          configFilePath: ~/GitVersion.yml
+          configFilePath: /tmp/GitVersion.yml
 
       - name: bump version
         run: |

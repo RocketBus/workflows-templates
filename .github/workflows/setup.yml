@@ -55,14 +55,14 @@ jobs:
           versionSpec: '5.x'
 
       - name: create GitVersion.yml
-        run: echo ${{ secrets.gitversion_config }} | base64 -d > ~/GitVersion.yml
+        run: echo ${{ secrets.gitversion_config }} | base64 -d > /tmp/GitVersion.yml
 
       - name: determine code version
         id: gitversion
         uses: gittools/actions/gitversion/execute@v0.9.7
         with:
           useConfigFile: true
-          configFilePath: ~/GitVersion.yml
+          configFilePath: /tmp/GitVersion.yml
 
       - name: project settings
         id: project_settings
