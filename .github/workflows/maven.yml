@@ -13,10 +13,6 @@ on:
         type: string
         required: false
         default: 11
-      lint_code_disabled:
-        type: boolean
-        required: false
-        default: false
       unit_tests_disabled:
         type: boolean
         required: false
@@ -62,7 +58,7 @@ jobs:
         run: echo ${{ secrets.maven_settings }} | base64 -d > ~/.m2/settings.xml
 
       - name: lint code
-        run: ./mvnw $MAVEN_CLI_OPTS checkstyle:check -DfailOnViolation=${{ !inputs.lint_code_disabled }}
+        run: ./mvnw $MAVEN_CLI_OPTS checkstyle:check -DfailOnViolation=false
 
   build:
     name: build
