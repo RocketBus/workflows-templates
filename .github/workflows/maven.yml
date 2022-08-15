@@ -58,7 +58,9 @@ jobs:
         run: echo ${{ secrets.maven_settings }} | base64 -d > ~/.m2/settings.xml
 
       - name: lint code
-        run: ./mvnw $MAVEN_CLI_OPTS checkstyle:check -DfailOnViolation=false
+        run: ./mvnw $MAVEN_CLI_OPTS checkstyle:check
+        ### TEMPORÁRIO
+        continue-on-error: true
 
   build:
     name: build
