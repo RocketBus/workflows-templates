@@ -28,11 +28,11 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: latest
-          cache: yarn
+          cache: npm
 
       - name: lint commit
         run: |
-          yarn add @commitlint/cli @commitlint/config-conventional
+          npm install @commitlint/cli @commitlint/config-conventional
           echo "module.exports = {extends: ['@commitlint/config-conventional']}" > commitlint.config.js
           echo ${{ github.event.head_commit.message }} | commitlint
 
