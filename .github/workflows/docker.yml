@@ -3,10 +3,12 @@ name: Continuous Integration Docker
 on:
   workflow_call:
     inputs:
-      promote_version:
+      project_name:
         type: string
-        required: false
-        default: true
+        required: true
+      project_version:
+        type: string
+        required: true
       docker_context:
         type: string
         required: false
@@ -27,91 +29,59 @@ on:
         type: string
         required: false
         default: medium
+      scan_fail_build:
+        type: boolean
+        required: false
+        default: true
     secrets:
-      gitversion_config:
-        required: true
       aws_access_key_id:
         required: true
       aws_secret_access_key:
         required: true
-    outputs:
-      image_tag:
-        value: ${{ jobs.build.outputs.image_tag }}
 
 env:
   AWS_REGION: us-east-1
 
 jobs:
   code:
-    name: Code
+    name: code
     runs-on: live
-    if: ${{ (github.event_name == 'pull_request' && github.event.action != 'closed') || (github.event_name == 'push' && github.ref_type == 'branch') || (github.event_name == 'workflow_dispatch' && github.ref_name == github.event.repository.default_branch) }}
-    outputs:
-      semver: ${{ steps.gitversion.outputs.semVer }}
-      short_sha: ${{ steps.gitversion.outputs.shortSha }}
+    if: ${{ (github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'branch') }}
     steps:
-      - name: Checkout
+      - name: checkout
         uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
 
-      ###### Install tools
-
-      - name: Setup dotnet
-        uses: actions/setup-dotnet@v2
-        with:
-          dotnet-version: '6.0.x'
-        
-      - name: Install GitVersion
-        uses: gittools/actions/gitversion/setup@v0.9.7
-        with:
-          versionSpec: '5.x'
-
-      ###### Determine version
-
-      - name: Create GitVersion configuration file
-        run: echo ${{ secrets.gitversion_config }} | base64 -d > GitVersion.yml
-
-      - name: Determine version
-        id: gitversion
-        uses: gittools/actions/gitversion/execute@v0.9.7
-        with:
-          useConfigFile: true
-
-      ###### Lint Dockerfile
-
-      - name: Static code analysis (Linter)
+      - name: lint dockerfile
         uses: hadolint/hadolint-action@v2.0.0
         with:
           dockerfile: ${{ inputs.dockerfile_path }}
 
   build:
-    name: Build
+    name: build
     runs-on: live
+    if: ${{ (github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'branch') || (github.event_name == 'push' && github.ref_type == 'tag') }}
     needs:
       - code
     steps:
-      - name: Checkout
+      - name: checkout
         uses: actions/checkout@v3
 
-      - name: Download artifact
+      - name: download artifact
         uses: actions/download-artifact@v3
         with:
           name: app-artifact
 
-      ###### Build Docker
-
-      - name: Set up Docker Context for Buildx
+      - name: setup Docker context for Buildx
         id: buildx-context
         run: docker context create builders
 
-      - name: Set up Docker Buildx
+      - name: setup Docker Buildx
         id: buildx
         uses: docker/setup-buildx-action@v2
         with:
           endpoint: builders
 
-      - name: Configure AWS credentials
+      - name: configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
           aws-access-key-id: ${{ secrets.aws_access_key_id }}
@@ -119,47 +89,38 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
           mask-aws-account-id: false
 
-      - name: Login to Amazon ECR
+      - name: login to Amazon ECR
         id: login_ecr
         uses: aws-actions/amazon-ecr-login@v1
 
-      - name: Determine image properties
+      - name: set image properties
         id: image_properties
         run: |
           IMAGE_REGISTRY=${{ steps.login_ecr.outputs.registry }}
-          IMAGE_REPOSITORY=${GITHUB_REPOSITORY#*/}
-          IMAGE_TAG=${{ needs.code.outputs.semver }}-${{ needs.code.outputs.short_sha }}
-          PROMOTE_VERSION=${{ (github.event_name == 'workflow_dispatch' && github.ref_name == github.event.repository.default_branch) && inputs.promote_version }}
+          IMAGE_REPOSITORY=${{ inputs.project_name }}
+          IMAGE_TAG=${{ inputs.project_version }}-${GITHUB_SHA::7}
 
-          if [[ -n ${PROMOTE_VERSION} ]]; then
-            PREVIOUS_IMAGE_TAG=${{ needs.code.outputs.semver }}-${{ needs.code.outputs.short_sha }}
-            IMAGE_TAG=${{ needs.code.outputs.semver }}
+          if [[ ${{ github.event_name == 'push' && github.ref_type == 'tag' }} ]]; then
+            IMAGE_TAG=${{ inputs.project_version }}
           fi
 
           echo "::set-output name=image_registry::$IMAGE_REGISTRY"
           echo "::set-output name=image_repository::$IMAGE_REPOSITORY"
           echo "::set-output name=image_repository_uri::${IMAGE_REGISTRY}/${IMAGE_REPOSITORY}"
-          echo "::set-output name=previous_image_tag::${PREVIOUS_IMAGE_TAG}"
           echo "::set-output name=image_tag::${IMAGE_TAG}"
 
-      - name: Docker meta
-        id: meta
+      - name: docker metadata
+        id: docker_metadata
         uses: docker/metadata-action@v4
         with:
-          images: ${{ steps.image_properties.outputs.image_repository_uri }}
+          images: ${{ steps.image_properties.outputs.image_registry }}/${{ steps.image_properties.outputs.image_repository }}
           tags: |
             type=raw,value=${{ steps.image_properties.outputs.image_tag }}
 
-      - name: Docker retag
-        if: ${{ (github.event_name == 'workflow_dispatch' && github.ref_name == github.event.repository.default_branch) && inputs.promote_version }}
+      - name: setup ECR repository
         run: |
-          MANIFEST=$(aws ecr batch-get-image --repository-name ${{ steps.image_properties.outputs.image_repository }} --image-ids imageTag=${{ steps.image_properties.outputs.previous_image_tag }} --output json | jq --raw-output --join-output '.images[0].imageManifest')
-          aws ecr put-image --repository-name ${{ steps.image_properties.outputs.image_repository }} --image-tag ${{ steps.image_properties.outputs.image_tag }} --image-manifest "$MANIFEST"
-
-      - name: Create ECR repository
-        if: ${{ (github.event_name == 'pull_request' && github.event.action != 'closed') || (github.event_name == 'push' && github.ref_type == 'branch') }}
-        run: |
-          aws ecr describe-repositories --repository-names ${{ steps.image_properties.outputs.image_repository }} 2> /dev/null || aws ecr create-repository --repository-name ${{ steps.image_properties.outputs.image_repository }} --image-scanning-configuration scanOnPush=true
+          aws ecr describe-repositories --repository-names ${{ steps.image_properties.outputs.image_repository }} 2> /dev/null || \
+            aws ecr create-repository --repository-name ${{ steps.image_properties.outputs.image_repository }} --image-scanning-configuration scanOnPush=true
 
           aws ecr set-repository-policy \
             --repository-name ${{ steps.image_properties.outputs.image_repository }} \
@@ -168,7 +129,7 @@ jobs:
                 "Version": "2012-10-17",
                 "Statement": [
                   {
-                    "Sid": "CrossAccountContainerRegistry",
+                    "Sid": "AllowPull",
                     "Action": [
                       "ecr:GetAuthorizationToken",
                       "ecr:BatchCheckLayerAvailability",
@@ -196,9 +157,8 @@ jobs:
               }
             '
       
-      - name: Docker build and push
+      - name: docker build and push
         uses: docker/build-push-action@v3
-        if: ${{ (github.event_name == 'pull_request' && github.event.action != 'closed') || (github.event_name == 'push' && github.ref_type == 'branch') }}
         with:
           cache-from: type=gha
           cache-to: type=gha,mode=max
@@ -206,12 +166,12 @@ jobs:
           file: ${{ inputs.dockerfile_path }}
           target: ${{ inputs.docker_target }}
           build-args: ${{ inputs.docker_build_args }}
-          labels: ${{ steps.meta.outputs.labels }}
-          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.docker_metadata.outputs.labels }}
+          tags: ${{ steps.docker_metadata.outputs.tags }}
           push: true
 
-      - name: Scan image
-        if: ${{ (github.event_name == 'pull_request' && github.event.action != 'closed') || (github.event_name == 'push' && github.ref_type == 'branch') }}
+      - name: scan image
+        if: ${{ (github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'branch') }}
         run: |
           IMAGE_TAG=${{ steps.image_properties.outputs.image_tag }}
 
@@ -225,10 +185,13 @@ jobs:
             if [[ $SCAN_FINDINGS -gt 0 ]]; then
               echo "## Vulnerability summary :shield:" >> $GITHUB_STEP_SUMMARY
               aws ecr describe-image-scan-findings --repository-name ${{ steps.image_properties.outputs.image_repository }} --image-id imageTag=$IMAGE_TAG --query "imageScanFindings.findings[?severity=='MEDIUM'].{Name: name, Severity: severity, Package: attributes[?key=='package_name'].value | join('', @), Version: attributes[?key=='package_version'].value | join('', @)}" --output table | sed s/'+'/'|'/g | tail -n +4 | head -n -1 >> $GITHUB_STEP_SUMMARY
-              aws ecr batch-delete-image --repository-name ${{ steps.image_properties.outputs.image_repository }} --image-ids imageTag=$IMAGE_TAG
-              echo "::error title=Image Scanning::Failed minimum severity level. Found vulnerabilities with level ${SEVERITY_LEVEL} or higher"
-              exit 1
+
+              if [[ ${{ inputs.scan_fail_build }} ]]; then
+                aws ecr batch-delete-image --repository-name ${{ steps.image_properties.outputs.image_repository }} --image-ids imageTag=$IMAGE_TAG
+                echo "::error title=Image Scanning::Failed minimum severity level. Found vulnerabilities with level ${SEVERITY_LEVEL} or higher"
+                exit 1
+              else
+                echo "::warning title=Image Scanning::Warning minimum severity level. Found vulnerabilities with level ${SEVERITY_LEVEL} or higher"
+              fi
             fi
           fi
-    outputs:
-      image_tag: ${{ steps.image_properties.outputs.image_tag }}

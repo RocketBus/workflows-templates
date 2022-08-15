@@ -1,0 +1,74 @@
+name: Setup Workflow
+
+on:
+  workflow_call:
+    secrets:
+      gitversion_config:
+        required: true
+    outputs:
+      project_name:
+        value: ${{ jobs.set_project_properties.outputs.project_name }}
+      project_version:
+        value: ${{ jobs.set_project_properties.outputs.project_version }}
+      short_sha:
+        value: ${{ jobs.set_project_properties.outputs.short_sha }}
+
+jobs:
+  lint_commit:
+    name: lint commit
+    runs-on: live
+    if: ${{ github.ref_name == github.event.repository.default_branch }}
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: latest
+          cache: yarn
+
+      - name: lint commit
+        run: |
+          yarn add @commitlint/cli @commitlint/config-conventional
+          echo "module.exports = {extends: ['@commitlint/config-conventional']}" > commitlint.config.js
+          echo ${{ github.event.head_commit.message }} | commitlint
+
+  set_project_properties:
+    name: set project properties
+    runs-on: live
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: setup .NET cli
+        uses: actions/setup-dotnet@v2
+        with:
+          dotnet-version: '6.0.x'
+        
+      - name: setup GitVersion
+        uses: gittools/actions/gitversion/setup@v0.9.7
+        with:
+          versionSpec: '5.x'
+
+      - name: create GitVersion.yml
+        run: echo ${{ secrets.gitversion_config }} | base64 -d > ~/GitVersion.yml
+
+      - name: determine code version
+        id: gitversion
+        uses: gittools/actions/gitversion/execute@v0.9.7
+        with:
+          useConfigFile: true
+          configFilePath: ~/GitVersion.yml
+
+      - name: project settings
+        id: project_settings
+        run: echo "::set-output name=project_name::${GITHUB_REPOSITORY#*/}"
+    outputs:
+      project_name: ${{ steps.project_settings.outputs.project_name }}
+      project_version: ${{ steps.gitversion.outputs.semVer }}
+      short_sha: ${{ steps.gitversion.outputs.shortSha }}

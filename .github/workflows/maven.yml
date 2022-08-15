@@ -1,0 +1,206 @@
+name: Continuous Integration Java
+
+on:
+  workflow_call:
+    inputs:
+      project_name:
+        type: string
+        required: true
+      project_version:
+        type: string
+        required: true
+      jdk_version:
+        type: string
+        required: false
+        default: 11
+      lint_code_disabled:
+        type: boolean
+        required: false
+        default: false
+      unit_tests_disabled:
+        type: boolean
+        required: false
+        default: false
+    secrets:
+      maven_settings:
+        required: true
+      nexus_username:
+        required: true
+      nexus_password:
+        required: true
+      sonar_token:
+        required: true
+
+env:
+  MAVEN_CLI_OPTS: "-B -e -fae -V"
+  MAVEN_OPTS: "-Dhttps.protocols=TLSv1.2 -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=WARN -Dorg.slf4j.simpleLogger.showDateTime=true -Djava.awt.headless=true"
+  NEXUS_USERNAME: ${{ secrets.nexus_username }}
+  NEXUS_PASSWORD: ${{ secrets.nexus_password }}
+  SONAR_HOST_URL: "https://sonar.clickbus.net"
+  SONAR_TOKEN: ${{ secrets.sonar_token }}
+
+jobs:
+  code:
+    name: code
+    runs-on: live
+    if: ${{ (github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'branch') }}
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: setup JDK
+        uses: actions/setup-java@v3
+        with:
+          java-version: ${{ inputs.jdk_version }}
+          distribution: 'temurin'
+          cache: 'maven'
+          overwrite-settings: false
+
+      - name: create settings.xml
+        run: echo ${{ secrets.maven_settings }} | base64 -d > ~/.m2/settings.xml
+
+      - name: lint code
+        if: ${{ !inputs.lint_code_disabled }}
+        run: ./mvnw $MAVEN_CLI_OPTS checkstyle:check
+
+  build:
+    name: build
+    runs-on: live
+    if: ${{ (github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'branch') || (github.event_name == 'push' && github.ref_type == 'tag') }}
+    needs:
+      - code
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: setup JDK
+        uses: actions/setup-java@v3
+        with:
+          java-version: ${{ inputs.jdk_version }}
+          distribution: 'temurin'
+          cache: 'maven'
+          overwrite-settings: false
+
+      - name: create settings.xml
+        run: echo ${{ secrets.maven_settings }} | base64 -d > ~/.m2/settings.xml
+
+      - name: build artifact
+        run: ./mvnw $MAVEN_CLI_OPTS package -Dmaven.test.skip=true
+
+      - name: archive artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: app-artifact
+          path: |
+            **/target/*.jar
+            **/target/*.war
+
+  unit_tests:
+    name: unit tests
+    runs-on: live
+    if: ${{ !inputs.unit_tests_disabled && ((github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'branch')) }}
+    needs:
+      - code
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: setup JDK
+        uses: actions/setup-java@v3
+        with:
+          java-version: ${{ inputs.jdk_version }}
+          distribution: 'temurin'
+          cache: 'maven'
+          overwrite-settings: false
+
+      - name: create settings.xml
+        run: echo ${{ secrets.maven_settings }} | base64 -d > ~/.m2/settings.xml
+
+      - name: run tests
+        run: ./mvnw $MAVEN_CLI_OPTS verify
+
+      - name: sonarqube scan
+        uses: sonarsource/sonarqube-scan-action@master
+        if: ${{ github.ref_name == github.event.repository.default_branch }}
+        args: >
+          -Dsonar.binaries=**/target/classes
+
+      - name: sonarqube quality gate
+        uses: sonarsource/sonarqube-quality-gate-action@master
+        if: ${{ github.ref_name == github.event.repository.default_branch }}
+        timeout-minutes: 5
+
+  release:
+    name: release
+    runs-on: live
+    if: ${{ github.event_name == 'workflow_dispatch' && github.ref_name == github.event.repository.default_branch }}
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: setup JDK
+        uses: actions/setup-java@v3
+        with:
+          java-version: ${{ inputs.jdk_version }}
+          distribution: 'temurin'
+          cache: 'maven'
+          overwrite-settings: false
+
+      - name: create settings.xml
+        run: echo ${{ secrets.maven_settings }} | base64 -d > ~/.m2/settings.xml
+
+      - name: release prepare
+        run: |
+          ./mvnw $MAVEN_CLI_OPTS versions:set -DremoveSnapshot
+          ./mvnw $MAVEN_CLI_OPTS versions:commit
+          git config user.email "github.actions@clickbus.com"
+          git config user.name "Github Actions"
+          git add .
+          git commit -m "[skip ci] release ${{ inputs.project_version }}"
+          git push
+          git tag v${{ inputs.project_version }}
+          git push --tags
+
+      - name: setup .NET cli
+        uses: actions/setup-dotnet@v2
+        with:
+          dotnet-version: '6.0.x'
+        
+      - name: setup GitVersion
+        uses: gittools/actions/gitversion/setup@v0.9.7
+        with:
+          versionSpec: '5.x'
+
+      - name: create GitVersion.yml
+        run: echo ${{ secrets.gitversion_config }} | base64 -d > ~/GitVersion.yml
+
+      - name: determine next version
+        id: gitversion_bump
+        uses: gittools/actions/gitversion/execute@v0.9.7
+        with:
+          useConfigFile: true
+          configFilePath: ~/GitVersion.yml
+
+      - name: bump version
+        run: |
+          ./mvnw $MAVEN_CLI_OPTS versions:set -DnewVersion=${{ steps.gitversion_bump.outputs.semVer }}-SNAPSHOT
+          ./mvnw $MAVEN_CLI_OPTS versions:set-property -Dproperty=revision -DnewVersion=${{ steps.gitversion_bump.outputs.semVer }}-SNAPSHOT
+          ./mvnw $MAVEN_CLI_OPTS versions:commit
+          git config user.email "github.actions@clickbus.com"
+          git config user.name "Github Actions"
+          git add .
+          git commit -m "[skip ci] bump version"
+          git push
+
+      - name: create github release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ steps.gitversion_prepare.outputs.semVer }}
