@@ -123,8 +123,9 @@ jobs:
       - name: sonarqube scan
         uses: sonarsource/sonarqube-scan-action@master
         if: ${{ github.ref_name == github.event.repository.default_branch }}
-        args: >
-          -Dsonar.binaries=**/target/classes
+        with:
+          args: >
+            -Dsonar.binaries=**/target/classes
 
       - name: sonarqube quality gate
         uses: sonarsource/sonarqube-quality-gate-action@master
