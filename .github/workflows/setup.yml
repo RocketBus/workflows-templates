@@ -28,7 +28,6 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: latest
-          cache: npm
 
       - name: lint commit
         run: |
