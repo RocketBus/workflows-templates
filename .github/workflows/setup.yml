@@ -20,7 +20,7 @@ jobs:
 
       - name: setup Node.js
         uses: actions/setup-node@v3
-        if: ${{ github.ref_name == github.event.repository.default_branch }}
+        if: ${{ (github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || github.ref_name == github.event.repository.default_branch }}
         with:
           node-version: latest
 
