@@ -4,15 +4,14 @@ on:
   workflow_call:
     outputs:
       project_name:
-        value: ${{ jobs.set_project_properties.outputs.project_name }}
+        value: ${{ jobs.code.outputs.project_name }}
       gitversion:
-        value: ${{ jobs.set_project_properties.outputs.gitversion }}
+        value: ${{ jobs.code.outputs.gitversion }}
 
 jobs:
-  lint_commit:
-    name: lint commit
+  project_properties:
+    name: project properties
     runs-on: live
-    if: ${{ github.ref_name == github.event.repository.default_branch }}
     steps:
       - name: checkout
         uses: actions/checkout@v3
@@ -21,25 +20,19 @@ jobs:
 
       - name: setup Node.js
         uses: actions/setup-node@v3
+        if: ${{ github.ref_name == github.event.repository.default_branch }}
         with:
           node-version: latest
 
       - name: install commitlint
+        if: ${{ github.ref_name == github.event.repository.default_branch }}
         run: |
           npm install -g @commitlint/cli @commitlint/config-conventional
           echo "module.exports = {extends: ['@commitlint/config-conventional']}" > commitlint.config.js
 
       - name: lint commit
+        if: ${{ github.ref_name == github.event.repository.default_branch }}
         run: echo ${{ github.event.head_commit.message }} | commitlint
-
-  set_project_properties:
-    name: set project properties
-    runs-on: live
-    steps:
-      - name: checkout
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
 
       - name: setup .NET cli
         uses: actions/setup-dotnet@v2

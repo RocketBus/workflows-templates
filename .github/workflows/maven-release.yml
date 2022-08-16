@@ -52,7 +52,7 @@ jobs:
           git config user.email "github.actions@clickbus.com"
           git config user.name "Github Actions"
           git add .
-          git commit -m "release $RELEASE_VERSION"
+          git commit -m "[skip ci] release v$RELEASE_VERSION"
           git push
           git tag v$RELEASE_VERSION
           git push --tags
