@@ -177,25 +177,48 @@ jobs:
       - name: scan image
         if: ${{ (github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'branch') }}
         run: |
+          IMAGE_REPOSITORY=${{ steps.image_properties.outputs.image_repository }}
           IMAGE_TAG=${{ steps.image_properties.outputs.image_tag }}
 
-          aws ecr wait image-scan-complete --repository-name ${{ steps.image_properties.outputs.image_repository }} --image-id imageTag=$IMAGE_TAG
+          aws ecr wait image-scan-complete --repository-name $IMAGE_REPOSITORY --image-id imageTag=$IMAGE_TAG
 
           if [[ $? -eq 0 ]]; then
-            SEVERITY_LEVEL=${{ inputs.scan_severity_cutoff }}
-            SEVERITY_LEVEL=${SEVERITY_LEVEL^^}
-            SCAN_FINDINGS=$(aws ecr describe-image-scan-findings --repository-name ${{ steps.image_properties.outputs.image_repository }} --image-id imageTag=$IMAGE_TAG --query imageScanFindings.findingSeverityCounts.$SEVERITY_LEVEL)
+            SEVERITY_CUTOFF=${{ inputs.scan_severity_cutoff }}
+            SEVERITY_CUTOFF=${SEVERITY_CUTOFF^^}
 
-            if [[ $SCAN_FINDINGS -gt 0 ]]; then
+            SCAN_FINDINGS=$(aws ecr describe-image-scan-findings --repository-name $IMAGE_REPOSITORY --image-id imageTag=$IMAGE_TAG --query imageScanFindings.findingSeverityCounts)
+
+            case $SEVERITY_CUTOFF in
+              CRITICAL)
+                SCAN_FINDINGS_COUNT=$(echo $SCAN_FINDINGS | jq -r '[.CRITICAL, .HIGH, .MEDIUM, .LOW, .INFORMATIONAL, .UNDEFINED] | add')
+              ;;
+              HIGH)
+                SCAN_FINDINGS_COUNT=$(echo $SCAN_FINDINGS | jq -r '[.HIGH, .MEDIUM, .LOW, .INFORMATIONAL, .UNDEFINED] | add')
+              ;;
+              MEDIUM)
+                SCAN_FINDINGS_COUNT=$(echo $SCAN_FINDINGS | jq -r '[.MEDIUM, .LOW, .INFORMATIONAL, .UNDEFINED] | add')
+              ;;
+              LOW)
+                SCAN_FINDINGS_COUNT=$(echo $SCAN_FINDINGS | jq -r '[.LOW, .INFORMATIONAL, .UNDEFINED] | add')
+              ;;
+              INFORMATIONAL)
+                SCAN_FINDINGS_COUNT=$(echo $SCAN_FINDINGS | jq -r '[.INFORMATIONAL, .UNDEFINED] | add')
+              ;;
+              UNDEFINED)
+                SCAN_FINDINGS_COUNT=$(echo $SCAN_FINDINGS | jq -r '[.UNDEFINED] | add')
+              ;;
+            esac
+
+            if [[ $SCAN_FINDINGS_COUNT -gt 0 ]]; then
               echo "## Vulnerability summary :shield:" >> $GITHUB_STEP_SUMMARY
-              aws ecr describe-image-scan-findings --repository-name ${{ steps.image_properties.outputs.image_repository }} --image-id imageTag=$IMAGE_TAG --query "imageScanFindings.findings[?severity=='MEDIUM'].{Name: name, Severity: severity, Package: attributes[?key=='package_name'].value | join('', @), Version: attributes[?key=='package_version'].value | join('', @)}" --output table | sed s/'+'/'|'/g | tail -n +4 | head -n -1 >> $GITHUB_STEP_SUMMARY
+              aws ecr describe-image-scan-findings --repository-name $IMAGE_REPOSITORY --image-id imageTag=$IMAGE_TAG --query "imageScanFindings.findings[].{Name: name, Severity: severity, Package: join(':', [attributes[?key=='package_name'].value | join('', @), attributes[?key=='package_version'].value | join('', @)])}" --output table | sed s/'+'/'|'/g | tail -n +4 | head -n -1 >> $GITHUB_STEP_SUMMARY
 
               if [[ ${{ inputs.scan_fail_build }} ]]; then
-                aws ecr batch-delete-image --repository-name ${{ steps.image_properties.outputs.image_repository }} --image-ids imageTag=$IMAGE_TAG
-                echo "::error title=Image Scanning::Failed minimum severity level. Found vulnerabilities with level ${SEVERITY_LEVEL} or higher"
+                aws ecr batch-delete-image --repository-name $IMAGE_REPOSITORY --image-ids imageTag=$IMAGE_TAG
+                echo "::error title=scan image::Failed minimum severity level. Found vulnerabilities with level ${SEVERITY_CUTOFF,,} or higher"
                 exit 1
               else
-                echo "::warning title=Image Scanning::Warning minimum severity level. Found vulnerabilities with level ${SEVERITY_LEVEL} or higher"
+                echo "::warning title=scan image::Warning minimum severity level. Found vulnerabilities with level ${SEVERITY_CUTOFF,,} or higher"
               fi
             fi
           fi
