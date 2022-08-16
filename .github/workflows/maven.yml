@@ -95,23 +95,15 @@ jobs:
       - name: create settings.xml
         run: echo ${{ secrets.maven_settings }} | base64 -d > ~/.m2/settings.xml
 
-      - name: build artifact
+      - name: compile
         run: |
-          ./mvnw $MAVEN_CLI_OPTS package -Dmaven.test.skip=true
+          ./mvnw $MAVEN_CLI_OPTS compile
 
-      - name: archive artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: app-artifact
-          path: |
-            **/target/*.jar
-            **/target/*.war
-
-  unit_tests:
-    name: unit tests
+  tests:
+    name: tests
     runs-on: live
     needs:
-      - code
+      - build
     steps:
       - name: checkout
         uses: actions/checkout@v3
@@ -143,3 +135,37 @@ jobs:
         uses: sonarsource/sonarqube-quality-gate-action@master
         if: ${{ github.ref_name == github.event.repository.default_branch }}
         timeout-minutes: 5
+
+  package:
+    name: package
+    runs-on: live
+    needs:
+      - build
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: setup JDK
+        uses: actions/setup-java@v3
+        with:
+          java-version: ${{ inputs.jdk_version }}
+          distribution: 'temurin'
+          cache: 'maven'
+          overwrite-settings: false
+
+      - name: create settings.xml
+        run: echo ${{ secrets.maven_settings }} | base64 -d > ~/.m2/settings.xml
+
+      - name: build artifact
+        run: |
+          ./mvnw $MAVEN_CLI_OPTS package -Dmaven.test.skip=true
+
+      - name: archive artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: app-artifact
+          path: |
+            **/target/*.jar
+            **/target/*.war
