@@ -28,7 +28,7 @@ on:
       scan_severity_cutoff:
         type: string
         required: false
-        default: medium
+        default: high
       scan_fail_build:
         type: boolean
         required: false
@@ -205,7 +205,7 @@ jobs:
               echo "## Vulnerability summary :shield:" >> $GITHUB_STEP_SUMMARY
               aws ecr describe-image-scan-findings --repository-name $IMAGE_REPOSITORY --image-id imageTag=$IMAGE_TAG --query "imageScanFindings.findings[].{Name: name, Severity: severity, Package: join(':', [attributes[?key=='package_name'].value | join('', @), attributes[?key=='package_version'].value | join('', @)])}" --output table | sed s/'+'/'|'/g | tail -n +4 | head -n -1 >> $GITHUB_STEP_SUMMARY
 
-              if [[ ${{ inputs.scan_fail_build }} ]]; then
+              if ${{ inputs.scan_fail_build }}; then
                 aws ecr batch-delete-image --repository-name $IMAGE_REPOSITORY --image-ids imageTag=$IMAGE_TAG
                 echo "::error title=image scanning::Failed minimum severity level. Found vulnerabilities with level ${SEVERITY_CUTOFF,,} or higher"
                 exit 1
