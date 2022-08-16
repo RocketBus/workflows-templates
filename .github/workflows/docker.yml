@@ -166,7 +166,7 @@ jobs:
           tags: ${{ steps.docker_metadata.outputs.tags }}
           push: true
 
-      - name: scan image
+      - name: image scanning
         if: ${{ (github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'branch') }}
         run: |
           IMAGE_REPOSITORY=${{ steps.image_properties.outputs.image_repository }}
@@ -207,10 +207,10 @@ jobs:
 
               if [[ ${{ inputs.scan_fail_build }} ]]; then
                 aws ecr batch-delete-image --repository-name $IMAGE_REPOSITORY --image-ids imageTag=$IMAGE_TAG
-                echo "::error title=scan image::Failed minimum severity level. Found vulnerabilities with level ${SEVERITY_CUTOFF,,} or higher"
+                echo "::error title=image scanning::Failed minimum severity level. Found vulnerabilities with level ${SEVERITY_CUTOFF,,} or higher"
                 exit 1
               else
-                echo "::warning title=scan image::Warning minimum severity level. Found vulnerabilities with level ${SEVERITY_CUTOFF,,} or higher"
+                echo "::warning title=image scanning::Warning minimum severity level. Found vulnerabilities with level ${SEVERITY_CUTOFF,,} or higher"
               fi
             fi
           fi
