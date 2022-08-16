@@ -197,7 +197,7 @@ jobs:
   cleanup_pr:
     name: cleanup PR
     runs-on: live
-    if: ${{ (github.event_name == 'pull_request' && github.event.action == 'closed' }}
+    if: ${{ github.event_name == 'pull_request' && github.event.action == 'closed' }}
     env:
       ENV: dev
       AWS_ACCOUNT_ID: 180811438061
