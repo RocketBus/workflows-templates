@@ -68,9 +68,13 @@ jobs:
           git push
 
       - name: lint code
-        run: ./mvnw $MAVEN_CLI_OPTS checkstyle:check
-        ### TEMPORÁRIO
-        continue-on-error: true
+        run: |
+          ./mvnw $MAVEN_CLI_OPTS checkstyle:check || CHECKSTYLE_FAIL=true
+
+          #### TEMPORARIO
+          if [[ -n $CHECKSTYLE_FAIL ]]; then
+            echo "::warning title=lint code::Warning You have Checkstyle violations"
+          fi
 
   tests:
     name: tests
