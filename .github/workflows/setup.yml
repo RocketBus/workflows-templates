@@ -31,9 +31,9 @@ jobs:
           echo "module.exports = {extends: ['@commitlint/config-conventional']}" > commitlint.config.js
 
           if [[ ${{ github.event_name }} == 'pull_request' ]]; then
-            echo ${{ github.event.pull_request.title }} | commitlint
+            echo "${{ github.event.pull_request.title }}" | commitlint
           else
-            echo ${{ github.event.head_commit.message }} | commitlint
+            echo "${{ github.event.head_commit.message }}" | commitlint
           fi
 
       - name: setup .NET cli
