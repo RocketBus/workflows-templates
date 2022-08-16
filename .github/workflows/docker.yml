@@ -1,4 +1,4 @@
-name: Continuous Integration Docker
+name: Container CI with Docker
 
 on:
   workflow_call:
@@ -6,7 +6,7 @@ on:
       project_name:
         type: string
         required: true
-      project_version:
+      gitversion:
         type: string
         required: true
       docker_context:
@@ -38,6 +38,9 @@ on:
         required: true
       aws_secret_access_key:
         required: true
+    outputs:
+      image_tag:
+        value: ${{ jobs.build.outputs.image_tag }}
 
 env:
   AWS_REGION: us-east-1
@@ -60,8 +63,6 @@ jobs:
     name: build
     runs-on: live
     if: ${{ (github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'branch') || (github.event_name == 'push' && github.ref_type == 'tag') }}
-    needs:
-      - code
     steps:
       - name: checkout
         uses: actions/checkout@v3
@@ -98,10 +99,10 @@ jobs:
         run: |
           IMAGE_REGISTRY=${{ steps.login_ecr.outputs.registry }}
           IMAGE_REPOSITORY=${{ inputs.project_name }}
-          IMAGE_TAG=${{ inputs.project_version }}-${GITHUB_SHA::7}
+          IMAGE_TAG=$(echo ${{ inputs.gitversion }} | jq -r '(.MajorMinorPatch + "-" + (.EscapedBranchName) + "." + (.ShortSha | tostring))')
 
           if [[ ${{ github.event_name == 'push' && github.ref_type == 'tag' }} ]]; then
-            IMAGE_TAG=${{ inputs.project_version }}
+            IMAGE_TAG=${{ github.ref_name }}
           fi
 
           echo "::set-output name=image_registry::$IMAGE_REGISTRY"
@@ -156,7 +157,7 @@ jobs:
                 ]
               }
             '
-      
+
       - name: docker build and push
         uses: docker/build-push-action@v3
         with:
@@ -195,3 +196,5 @@ jobs:
               fi
             fi
           fi
+    outputs:
+      image_tag: ${{ steps.image_properties.outputs.image_tag }}

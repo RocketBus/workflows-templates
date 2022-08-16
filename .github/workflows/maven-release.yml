@@ -1,0 +1,64 @@
+name: Maven release
+
+on:
+  workflow_call:
+    inputs:
+      gitversion:
+        type: string
+        required: true
+      jdk_version:
+        type: string
+        required: false
+        default: 11
+    secrets:
+      maven_settings:
+        required: true
+      nexus_username:
+        required: true
+      nexus_password:
+        required: true
+
+env:
+  MAVEN_CLI_OPTS: "-B -e -fae -V"
+  MAVEN_OPTS: "-Dhttps.protocols=TLSv1.2 -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=WARN -Dorg.slf4j.simpleLogger.showDateTime=true -Djava.awt.headless=true"
+  NEXUS_USERNAME: ${{ secrets.nexus_username }}
+  NEXUS_PASSWORD: ${{ secrets.nexus_password }}
+
+jobs:
+  release:
+    name: release
+    runs-on: live
+    if: ${{ github.event_name == 'workflow_dispatch' && github.ref_name == github.event.repository.default_branch }}
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: setup JDK
+        uses: actions/setup-java@v3
+        with:
+          java-version: ${{ inputs.jdk_version }}
+          distribution: 'temurin'
+          cache: 'maven'
+          overwrite-settings: false
+
+      - name: create settings.xml
+        run: echo ${{ secrets.maven_settings }} | base64 -d > ~/.m2/settings.xml
+
+      - name: release prepare
+        run: |
+          ./mvnw $MAVEN_CLI_OPTS versions:set -DremoveSnapshot
+          ./mvnw $MAVEN_CLI_OPTS versions:commit
+          git config user.email "github.actions@clickbus.com"
+          git config user.name "Github Actions"
+          git add .
+          git commit -m "release ${{ inputs.project_version }}"
+          git push
+          git tag v${{ inputs.project_version }}
+          git push --tags
+
+      - name: create github release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ inputs.project_version }}
