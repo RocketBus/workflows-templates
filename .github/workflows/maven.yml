@@ -72,32 +72,6 @@ jobs:
         ### TEMPORÁRIO
         continue-on-error: true
 
-  build:
-    name: build
-    runs-on: live
-    if: ${{ always() && (needs.code.result == 'success' || (needs.code.result == 'skipped' && (github.event_name == 'push' && github.ref_type == 'tag'))) }}
-    needs:
-      - code
-    steps:
-      - name: checkout
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-
-      - name: setup JDK
-        uses: actions/setup-java@v3
-        with:
-          java-version: ${{ inputs.jdk_version }}
-          distribution: 'temurin'
-          cache: 'maven'
-          overwrite-settings: false
-
-      - name: create settings.xml
-        run: echo ${{ secrets.maven_settings }} | base64 -d > ~/.m2/settings.xml
-
-      - name: compile
-        run: ./mvnw $MAVEN_CLI_OPTS compile
-
   tests:
     name: tests
     runs-on: live
@@ -157,7 +131,7 @@ jobs:
       - name: create settings.xml
         run: echo ${{ secrets.maven_settings }} | base64 -d > ~/.m2/settings.xml
 
-      - name: build artifact
+      - name: package artifact
         run: ./mvnw $MAVEN_CLI_OPTS package -Dmaven.test.skip=true
 
       - name: archive artifact
