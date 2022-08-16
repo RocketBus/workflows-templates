@@ -44,7 +44,7 @@ jobs:
           echo "::set-output name=eks_cluster::$EKS_CLUSTER"
 
           RELEASE_NAME=${GITHUB_REPOSITORY#*/}
-          echo RELEASE_NAME=$RELEASE >> $GITHUB_ENV
+          echo RELEASE_NAME=$RELEASE_NAME >> $GITHUB_ENV
           echo NAMESPACE=$RELEASE_NAME >> $GITHUB_ENV
           echo CHART_PATH=charts/$RELEASE_NAME >> $GITHUB_ENV
 
