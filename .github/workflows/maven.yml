@@ -73,7 +73,7 @@ jobs:
 
           #### TEMPORARIO
           if [[ -n $CHECKSTYLE_FAIL ]]; then
-            echo "::warning title=lint code::Warning You have Checkstyle violations"
+            echo "::warning title=lint code::You have Checkstyle violations!"
           fi
 
   tests:
