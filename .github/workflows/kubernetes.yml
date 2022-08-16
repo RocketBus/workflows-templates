@@ -18,7 +18,7 @@ on:
 jobs:
   deploy:
     name: deploy
-    runs-on: live
+    runs-on: ${{ inputs.environment }}
     environment: ${{ inputs.environment }}
     env:
       ENV: ${{ inputs.environment }}
