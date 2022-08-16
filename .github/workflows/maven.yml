@@ -80,7 +80,7 @@ jobs:
     name: tests
     runs-on: live
     needs:
-      - build
+      - code
     steps:
       - name: checkout
         uses: actions/checkout@v3
@@ -116,8 +116,6 @@ jobs:
   package:
     name: package
     runs-on: live
-    needs:
-      - build
     steps:
       - name: checkout
         uses: actions/checkout@v3
