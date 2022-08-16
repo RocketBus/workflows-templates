@@ -55,6 +55,7 @@ jobs:
         run: echo ${{ secrets.maven_settings }} | base64 -d > ~/.m2/settings.xml
 
       - name: bump version
+        if: ${{ github.event_name == 'push' && github.ref_type == 'branch' }}
         run: |
           MAJOR_MINOR_PATCH=${{ fromJson(inputs.gitversion).MajorMinorPatch }}
           ./mvnw $MAVEN_CLI_OPTS org.codehaus.mojo:versions-maven-plugin:2.11.0:set -DnewVersion=${MAJOR_MINOR_PATCH}-SNAPSHOT
