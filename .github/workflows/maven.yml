@@ -116,6 +116,9 @@ jobs:
   package:
     name: package
     runs-on: live
+    if: ${{ always() && (needs.code.result == 'success' || (needs.code.result == 'skipped' && (github.event_name == 'push' && github.ref_type == 'tag'))) }}
+    needs:
+      - code
     steps:
       - name: checkout
         uses: actions/checkout@v3
