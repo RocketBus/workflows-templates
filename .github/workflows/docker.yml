@@ -104,7 +104,7 @@ jobs:
           SHORT_SHA=${{ fromJson(inputs.gitversion).ShortSha }}
           IMAGE_TAG="${MAJOR_MINOR_PATCH}-${ESCAPED_BRANCH_NAME}.${SHORT_SHA}"
 
-          if [[ ${{ github.event_name == 'push' && github.ref_type == 'tag' }} ]]; then
+          if ${{ github.event_name == 'push' && github.ref_type == 'tag' }}; then
             IMAGE_TAG=${{ github.ref_name }}
           fi
 
