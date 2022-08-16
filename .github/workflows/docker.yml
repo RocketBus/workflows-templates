@@ -115,8 +115,12 @@ jobs:
 
       - name: setup ECR repository
         run: |
-          aws ecr describe-repositories --repository-names ${{ steps.image_properties.outputs.image_repository }} 2> /dev/null || \
-            aws ecr create-repository --repository-name ${{ steps.image_properties.outputs.image_repository }} --image-scanning-configuration scanOnPush=true
+          aws ecr describe-repositories \
+            --repository-names ${{ steps.image_properties.outputs.image_repository }} 2> /dev/null || \
+          aws ecr create-repository \
+            --repository-name ${{ steps.image_properties.outputs.image_repository }} \
+            --image-tag-mutability IMMUTABLE \
+            --image-scanning-configuration scanOnPush=true 
 
           aws ecr set-repository-policy \
             --repository-name ${{ steps.image_properties.outputs.image_repository }} \
