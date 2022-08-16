@@ -3,9 +3,6 @@ name: Maven release
 on:
   workflow_call:
     inputs:
-      gitversion:
-        type: string
-        required: true
       jdk_version:
         type: string
         required: false
@@ -47,18 +44,22 @@ jobs:
         run: echo ${{ secrets.maven_settings }} | base64 -d > ~/.m2/settings.xml
 
       - name: release prepare
+        id: release_prepare
         run: |
           ./mvnw $MAVEN_CLI_OPTS versions:set -DremoveSnapshot
           ./mvnw $MAVEN_CLI_OPTS versions:commit
+          RELEASE_VERSION=$(./mvnw maven-help-plugin:evaluate -Dexpression=project.version -q -DforceStdout)
           git config user.email "github.actions@clickbus.com"
           git config user.name "Github Actions"
           git add .
-          git commit -m "release ${{ tag }}"
+          git commit -m "release $RELEASE_VERSION"
           git push
-          git tag v${{ tag }}
+          git tag v$RELEASE_VERSION
           git push --tags
+
+          echo "::set-output name=release_version::$RELEASE_VERSION"
 
       - name: create github release
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: v${{ inputs.project_version }}
+          tag_name: v${{ steps.release_prepare.outputs.release_version }}

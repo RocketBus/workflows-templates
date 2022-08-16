@@ -56,7 +56,7 @@ jobs:
 
       - name: bump version
         run: |
-          MAJOR_MINOR_PATCH=$(echo ${{ inputs.gitversion }} | jq -r '.MajorMinorPatch')
+          MAJOR_MINOR_PATCH=${{ fromJson(inputs.gitversion).MajorMinorPatch }}
           ./mvnw $MAVEN_CLI_OPTS versions:set -DnewVersion=${MAJOR_MINOR_PATCH}-SNAPSHOT
           ./mvnw $MAVEN_CLI_OPTS versions:set-property -Dproperty=revision -DnewVersion=${MAJOR_MINOR_PATCH}-SNAPSHOT
           ./mvnw $MAVEN_CLI_OPTS versions:commit
@@ -74,7 +74,9 @@ jobs:
   build:
     name: build
     runs-on: live
-    if: ${{ (github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'branch') || (github.event_name == 'push' && github.ref_type == 'tag') }}
+    if: ${{ always() && (needs.code.result == 'success' || (needs.code.result == 'skipped && (github.event_name == 'push' && github.ref_type == 'tag')) }}
+    needs:
+      - code
     steps:
       - name: checkout
         uses: actions/checkout@v3
@@ -107,7 +109,8 @@ jobs:
   unit_tests:
     name: unit tests
     runs-on: live
-    if: ${{ !inputs.unit_tests_disabled && ((github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'branch')) }}
+    needs:
+      - code
     steps:
       - name: checkout
         uses: actions/checkout@v3
