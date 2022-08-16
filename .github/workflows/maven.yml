@@ -96,8 +96,7 @@ jobs:
         run: echo ${{ secrets.maven_settings }} | base64 -d > ~/.m2/settings.xml
 
       - name: compile
-        run: |
-          ./mvnw $MAVEN_CLI_OPTS compile
+        run: ./mvnw $MAVEN_CLI_OPTS compile
 
   tests:
     name: tests
@@ -159,8 +158,7 @@ jobs:
         run: echo ${{ secrets.maven_settings }} | base64 -d > ~/.m2/settings.xml
 
       - name: build artifact
-        run: |
-          ./mvnw $MAVEN_CLI_OPTS package -Dmaven.test.skip=true
+        run: ./mvnw $MAVEN_CLI_OPTS package -Dmaven.test.skip=true
 
       - name: archive artifact
         uses: actions/upload-artifact@v3
