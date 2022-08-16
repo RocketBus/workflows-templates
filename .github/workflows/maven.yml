@@ -79,6 +79,7 @@ jobs:
   tests:
     name: tests
     runs-on: live
+    if: ${{ !inputs.unit_tests_disabled }}
     needs:
       - code
     steps:
