@@ -28,7 +28,7 @@ on:
       scan_severity_cutoff:
         type: string
         required: false
-        default: high
+        default: informational
       scan_fail_build:
         type: boolean
         required: false
