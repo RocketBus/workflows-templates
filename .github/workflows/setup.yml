@@ -65,7 +65,7 @@ jobs:
         id: project_settings
         run: |
           echo "::set-output name=project_name::${GITHUB_REPOSITORY#*/}"
-          echo "::set-output name=gitversion::{\"MajorMinorPatch\": "\${GITVERSION_MAJORMINORPATCH}\", \"EscapedBranchName\": \"${GITVERSION_ESCAPEDBRANCHNAME}\", \"ShortSha\": \"${GITVERSION_SHORTSHA}\"}"
+          echo "::set-output name=gitversion::{\"MajorMinorPatch\": \"${GITVERSION_MAJORMINORPATCH}\", \"EscapedBranchName\": \"${GITVERSION_ESCAPEDBRANCHNAME}\", \"ShortSha\": \"${GITVERSION_SHORTSHA}\"}"
     outputs:
       project_name: ${{ steps.project_settings.outputs.project_name }}
       gitversion: ${{ fromJson(steps.project_settings.outputs.gitversion) }}
