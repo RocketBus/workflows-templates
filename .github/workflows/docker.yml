@@ -99,7 +99,7 @@ jobs:
         run: |
           IMAGE_REGISTRY=${{ steps.login_ecr.outputs.registry }}
           IMAGE_REPOSITORY=${{ inputs.project_name }}
-          IMAGE_TAG=$(echo ${{ inputs.gitversion }} | jq -r '(.MajorMinorPatch + "-" + (.EscapedBranchName) + "." + (.ShortSha | tostring))')
+          IMAGE_TAG=${{ fromJson(inputs.gitversion).MajorMinorPatch }}-${{ fromJson(inputs.gitversion).MajorMinorPatch }}.${{ fromJson(inputs.gitversion).ShortSha }}
 
           if [[ ${{ github.event_name == 'push' && github.ref_type == 'tag' }} ]]; then
             IMAGE_TAG=${{ github.ref_name }}

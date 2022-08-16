@@ -57,9 +57,9 @@ jobs:
       - name: bump version
         run: |
           MAJOR_MINOR_PATCH=${{ fromJson(inputs.gitversion).MajorMinorPatch }}
-          ./mvnw $MAVEN_CLI_OPTS versions:set -DnewVersion=${MAJOR_MINOR_PATCH}-SNAPSHOT
-          ./mvnw $MAVEN_CLI_OPTS versions:set-property -Dproperty=revision -DnewVersion=${MAJOR_MINOR_PATCH}-SNAPSHOT
-          ./mvnw $MAVEN_CLI_OPTS versions:commit
+          ./mvnw $MAVEN_CLI_OPTS org.codehaus.mojo:versions-maven-plugin:2.11.0:set -DnewVersion=${MAJOR_MINOR_PATCH}-SNAPSHOT
+          ./mvnw $MAVEN_CLI_OPTS org.codehaus.mojo:versions-maven-plugin:2.11.0:set-property -Dproperty=revision -DnewVersion=${MAJOR_MINOR_PATCH}-SNAPSHOT
+          ./mvnw $MAVEN_CLI_OPTS org.codehaus.mojo:versions-maven-plugin:2.11.0:commit
           git config user.email "github.actions@clickbus.com"
           git config user.name "Github Actions"
           git add .

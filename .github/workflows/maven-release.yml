@@ -46,8 +46,8 @@ jobs:
       - name: release prepare
         id: release_prepare
         run: |
-          ./mvnw $MAVEN_CLI_OPTS versions:set -DremoveSnapshot
-          ./mvnw $MAVEN_CLI_OPTS versions:commit
+          ./mvnw $MAVEN_CLI_OPTS org.codehaus.mojo:versions-maven-plugin:2.11.0:set -DremoveSnapshot
+          ./mvnw $MAVEN_CLI_OPTS org.codehaus.mojo:versions-maven-plugin:2.11.0:commit
           RELEASE_VERSION=$(./mvnw maven-help-plugin:evaluate -Dexpression=project.version -q -DforceStdout)
           git config user.email "github.actions@clickbus.com"
           git config user.name "Github Actions"
