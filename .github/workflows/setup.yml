@@ -68,4 +68,4 @@ jobs:
           echo "::set-output name=gitversion::{\"MajorMinorPatch\": \"${GITVERSION_MAJORMINORPATCH}\", \"EscapedBranchName\": \"${GITVERSION_ESCAPEDBRANCHNAME}\", \"ShortSha\": \"${GITVERSION_SHORTSHA}\"}"
     outputs:
       project_name: ${{ steps.project_settings.outputs.project_name }}
-      gitversion: ${{ fromJson(steps.project_settings.outputs.gitversion) }}
+      gitversion: ${{ steps.project_settings.outputs.gitversion }}
