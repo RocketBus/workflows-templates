@@ -65,7 +65,7 @@ jobs:
         id: project_settings
         run: |
           echo "::set-output name=project_name::${GITHUB_REPOSITORY#*/}"
-          echo "::set-output name=gitversion::${{ fromJson(steps.gitversion.outputs) }}"
+          echo "::set-output name=gitversion::${{ steps.gitversion.outputs }}"
     outputs:
       project_name: ${{ steps.project_settings.outputs.project_name }}
       gitversion: ${{ steps.project_settings.outputs.gitversion }}
