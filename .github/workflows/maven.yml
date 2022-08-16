@@ -74,7 +74,7 @@ jobs:
   build:
     name: build
     runs-on: live
-    if: ${{ always() && (needs.code.result == 'success' || (needs.code.result == 'skipped && (github.event_name == 'push' && github.ref_type == 'tag')) }}
+    if: ${{ always() && (needs.code.result == 'success' || (needs.code.result == 'skipped && (github.event_name == 'push' && github.ref_type == 'tag'))) }}
     needs:
       - code
     steps:
