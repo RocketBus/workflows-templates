@@ -99,7 +99,9 @@ jobs:
         run: |
           IMAGE_REGISTRY=${{ steps.login_ecr.outputs.registry }}
           IMAGE_REPOSITORY=${{ inputs.project_name }}
-          echo ${{ inputs.gitversion }}
+          MAJOR_MINOR_PATCH=${{ fromJson(inputs.gitversion).MajorMinorPatch }}
+          ESCAPED_BRANCH_NAME=${{ fromJson(inputs.gitversion).EscapedBranchName }}
+          SHORT_SHA=${{ fromJson(inputs.gitversion).ShortSha }}
           IMAGE_TAG="${MAJOR_MINOR_PATCH}-${ESCAPED_BRANCH_NAME}.${SHORT_SHA}"
 
           if [[ ${{ github.event_name == 'push' && github.ref_type == 'tag' }} ]]; then
@@ -109,7 +111,7 @@ jobs:
           echo "::set-output name=image_registry::$IMAGE_REGISTRY"
           echo "::set-output name=image_repository::$IMAGE_REPOSITORY"
           echo "::set-output name=image_repository_uri::${IMAGE_REGISTRY}/${IMAGE_REPOSITORY}"
-          echo "::set-output name=image_tag::${IMAGE_TAG}"
+          echo "::set-output name=image_tag::$IMAGE_TAG"
 
       - name: docker metadata
         id: docker_metadata

@@ -4,9 +4,9 @@ on:
   workflow_call:
     outputs:
       project_name:
-        value: ${{ jobs.code.outputs.project_name }}
+        value: ${{ jobs.project_properties.outputs.project_name }}
       gitversion:
-        value: ${{ jobs.code.outputs.gitversion }}
+        value: ${{ jobs.project_properties.outputs.gitversion }}
 
 jobs:
   project_properties:
@@ -54,11 +54,11 @@ jobs:
             /overrideconfig minor-version-bump-message="^(feat)(\\([\\w\\s-]*\\))?:"
             /overrideconfig patch-version-bump-message="^(build|chore|ci|docs|fix|perf|refactor|revert|style|test)(\\([\\w\\s-]*\\))?:"
 
-      - name: project settings
-        id: project_settings
+      - name: setup project properties
+        id: project_properties
         run: |
           echo "::set-output name=project_name::${GITHUB_REPOSITORY#*/}"
           echo "::set-output name=gitversion::{\"MajorMinorPatch\": \"${GITVERSION_MAJORMINORPATCH}\", \"EscapedBranchName\": \"${GITVERSION_ESCAPEDBRANCHNAME}\", \"ShortSha\": \"${GITVERSION_SHORTSHA}\"}"
     outputs:
-      project_name: ${{ steps.project_settings.outputs.project_name }}
-      gitversion: ${{ steps.project_settings.outputs.gitversion }}
+      project_name: ${{ steps.project_properties.outputs.project_name }}
+      gitversion: ${{ steps.project_properties.outputs.gitversion }}
