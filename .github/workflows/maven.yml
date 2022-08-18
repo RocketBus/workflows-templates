@@ -10,7 +10,7 @@ on:
         type: string
         required: false
         default: 11
-      unit_tests_disabled:
+      tests_disabled:
         type: boolean
         required: false
         default: false
@@ -79,7 +79,7 @@ jobs:
   tests:
     name: tests
     runs-on: live
-    if: ${{ !inputs.unit_tests_disabled }}
+    if: ${{ !inputs.tests_disabled }}
     needs:
       - code
     steps:
