@@ -10,7 +10,11 @@ on:
         type: string
         required: false
         default: 11
-      tests_disabled:
+      integration_tests_disabled:
+        type: boolean
+        required: false
+        default: true
+      package_disabled:
         type: boolean
         required: false
         default: false
@@ -21,8 +25,6 @@ on:
         required: true
       nexus_password:
         required: true
-      sonar_token:
-        required: true
 
 env:
   MAVEN_CLI_OPTS: "-B -e -fae -ntp -V"
@@ -30,13 +32,46 @@ env:
   NEXUS_USERNAME: ${{ secrets.nexus_username }}
   NEXUS_PASSWORD: ${{ secrets.nexus_password }}
   SONAR_HOST_URL: "https://sonar.clickbus.net"
-  SONAR_TOKEN: ${{ secrets.sonar_token }}
 
 jobs:
   code:
     name: code
-    runs-on: live
-    if: ${{ (github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'branch') }}
+    runs-on: ${{ inputs.runs_on }}
+    if: ${{ github.event_name == 'push' && github.ref_type == 'branch' }}
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: setup JDK
+        uses: actions/setup-java@v3
+        with:
+          java-version: ${{ inputs.jdk_version }}
+          distribution: 'temurin'
+          cache: 'maven'
+          overwrite-settings: false
+
+      - name: create settings.xml
+        run: echo ${{ secrets.maven_settings }} | base64 -d > ~/.m2/settings.xml
+
+      - name: bump version
+        run: |
+          MAJOR_MINOR_PATCH=$(echo ${{ inputs.gitversion }} | jq -r '.MajorMinorPatch')
+          ./mvnw $MAVEN_CLI_OPTS org.codehaus.mojo:versions-maven-plugin:2.11.0:set -DnewVersion=${MAJOR_MINOR_PATCH}-SNAPSHOT
+          ./mvnw $MAVEN_CLI_OPTS org.codehaus.mojo:versions-maven-plugin:2.11.0:set-property -Dproperty=revision -DnewVersion=${MAJOR_MINOR_PATCH}-SNAPSHOT
+          ./mvnw $MAVEN_CLI_OPTS org.codehaus.mojo:versions-maven-plugin:2.11.0:commit
+          git config user.email "github-actions@clickbus.com"
+          git config user.name "Github Actions"
+          git commit -a -m "[skip ci] bump version"
+          git push
+
+  lint:
+    name: lint
+    runs-on: ${{ inputs.runs_on }}
+    if: ${{ always() && (needs.code.result == 'success' || needs.code.result == 'skipped') && ((github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'branch')) }}
+    needs:
+      - code
     steps:
       - name: checkout
         uses: actions/checkout@v3
@@ -57,29 +92,22 @@ jobs:
       - name: bump version
         if: ${{ github.event_name == 'push' && github.ref_type == 'branch' }}
         run: |
-          MAJOR_MINOR_PATCH=${{ fromJson(inputs.gitversion).MajorMinorPatch }}
+          MAJOR_MINOR_PATCH=$(echo ${{ inputs.gitversion }} | jq -r '.MajorMinorPatch')
           ./mvnw $MAVEN_CLI_OPTS org.codehaus.mojo:versions-maven-plugin:2.11.0:set -DnewVersion=${MAJOR_MINOR_PATCH}-SNAPSHOT
           ./mvnw $MAVEN_CLI_OPTS org.codehaus.mojo:versions-maven-plugin:2.11.0:set-property -Dproperty=revision -DnewVersion=${MAJOR_MINOR_PATCH}-SNAPSHOT
           ./mvnw $MAVEN_CLI_OPTS org.codehaus.mojo:versions-maven-plugin:2.11.0:commit
-          git config user.email "github.actions@clickbus.com"
+          git config user.email "github-actions@clickbus.com"
           git config user.name "Github Actions"
-          git add .
-          git commit -m "[skip ci] bump version" || true
+          git commit -a -m "[skip ci] bump version"
           git push
 
       - name: lint code
-        run: |
-          ./mvnw $MAVEN_CLI_OPTS checkstyle:check || CHECKSTYLE_FAIL=true
+        run: ./mvnw $MAVEN_CLI_OPTS clean checkstyle:check -Dcheckstyle.config.location=google_checks.xml
 
-          #### TEMPORARIO
-          if [[ -n $CHECKSTYLE_FAIL ]]; then
-            echo "::warning title=lint code::You have Checkstyle violations!"
-          fi
-
-  tests:
-    name: tests
-    runs-on: live
-    if: ${{ !inputs.tests_disabled }}
+  unit_tests:
+    name: unit tests
+    runs-on: ${{ inputs.runs_on }}
+    if: ${{ always() && (needs.code.result == 'success' || needs.code.result == 'skipped') && ((github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'branch')) }}
     needs:
       - code
     steps:
@@ -99,25 +127,67 @@ jobs:
       - name: create settings.xml
         run: echo ${{ secrets.maven_settings }} | base64 -d > ~/.m2/settings.xml
 
-      - name: run tests
-        run: ./mvnw $MAVEN_CLI_OPTS verify
+      - name: execute unit tests
+        run: ./mvnw $MAVEN_CLI_OPTS clean test -DskipITs=true
 
+      - name: archive unit tests report
+        uses: actions/upload-artifact@v3
+        with:
+          name: unit-tests-report
+          path: |
+            **/target/surefire-reports/TEST-***.xml
+            **/target/site/jacoco-aggregate/jacoco.xml
+
+  integration_tests:
+    name: integration tests
+    runs-on: ${{ inputs.runs_on }}
+    if: ${{ always() && (needs.code.result == 'success' || needs.code.result == 'skipped') && ((github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'branch')) }}
+    needs:
+      - code
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: setup JDK
+        uses: actions/setup-java@v3
+        with:
+          java-version: ${{ inputs.jdk_version }}
+          distribution: 'temurin'
+          cache: 'maven'
+          overwrite-settings: false
+
+      - name: create settings.xml
+        run: echo ${{ secrets.maven_settings }} | base64 -d > ~/.m2/settings.xml
+
+      - name: execute integration tests
+        run: ./mvnw $MAVEN_CLI_OPTS clean integration-test -DskipUTs
+
+  sonarqube:
+    name: sonarqube
+    runs-on: ${{ inputs.runs_on }}
+    if: ${{ always() && (needs.code.result == 'success' || needs.code.result == 'skipped') && github.ref_name == github.event.repository.default_branch }}
+    needs:
+      - code
+      - unit_tests
+    steps:
       - name: sonarqube scan
         uses: sonarsource/sonarqube-scan-action@master
-        if: ${{ github.ref_name == github.event.repository.default_branch }}
         with:
           args: >
             -Dsonar.binaries=**/target/classes
+            -Dsonar.junit.reportPaths=**/target/surefire-reports/TESTS-*.xml
+            -Dsonar.coverage.jacoco.xmlReportPaths=**/target/site/jacoco-aggregate/jacoco.xml
 
-      - name: sonarqube quality gate
+      - name: sonarqube quality gate check
         uses: sonarsource/sonarqube-quality-gate-action@master
-        if: ${{ github.ref_name == github.event.repository.default_branch }}
         timeout-minutes: 5
 
   package:
     name: package
-    runs-on: live
-    if: ${{ always() && (needs.code.result == 'success' || (needs.code.result == 'skipped' && (github.event_name == 'push' && github.ref_type == 'tag'))) }}
+    runs-on: ${{ inputs.runs_on }}
+    if: ${{ always() && !inputs.package_disabled && (needs.code.result == 'success' || needs.code.result == 'skipped') && ((github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'branch') || (github.event_name == 'push' && github.ref_type == 'tag')) }}
     needs:
       - code
     steps:
@@ -138,7 +208,7 @@ jobs:
         run: echo ${{ secrets.maven_settings }} | base64 -d > ~/.m2/settings.xml
 
       - name: package artifact
-        run: ./mvnw $MAVEN_CLI_OPTS package -Dmaven.test.skip=true
+        run: ./mvnw $MAVEN_CLI_OPTS clean package -Dmaven.test.skip=true 
 
       - name: archive artifact
         uses: actions/upload-artifact@v3

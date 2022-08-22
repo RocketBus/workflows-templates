@@ -24,7 +24,7 @@ env:
 jobs:
   release:
     name: release
-    runs-on: live
+    runs-on: ${{ inputs.runs_on }}
     if: ${{ github.event_name == 'workflow_dispatch' && github.ref_name == github.event.repository.default_branch }}
     steps:
       - name: checkout
@@ -49,10 +49,9 @@ jobs:
           ./mvnw $MAVEN_CLI_OPTS org.codehaus.mojo:versions-maven-plugin:2.11.0:set -DremoveSnapshot
           ./mvnw $MAVEN_CLI_OPTS org.codehaus.mojo:versions-maven-plugin:2.11.0:commit
           RELEASE_VERSION=$(./mvnw maven-help-plugin:evaluate -Dexpression=project.version -q -DforceStdout)
-          git config user.email "github.actions@clickbus.com"
+          git config user.email "github-actions@clickbus.com"
           git config user.name "Github Actions"
-          git add .
-          git commit -m "[skip ci] release v$RELEASE_VERSION"
+          git commit -a -m "[skip ci] release v$RELEASE_VERSION"
           git push
           git tag v$RELEASE_VERSION
           git push --tags

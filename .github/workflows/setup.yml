@@ -11,7 +11,7 @@ on:
 jobs:
   lint_commit:
     name: lint commit
-    runs-on: live
+    runs-on: ${{ inputs.runs_on }}
     if: ${{ (github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || github.ref_name == github.event.repository.default_branch }}
     steps:
       - name: checkout
@@ -39,7 +39,7 @@ jobs:
 
   project_properties:
     name: project properties
-    runs-on: live
+    runs-on: ${{ inputs.runs_on }}
     if: ${{ (github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'branch') || (github.event_name == 'push' && github.ref_type == 'tag') }}
     steps:
       - name: checkout
@@ -66,6 +66,41 @@ jobs:
             /overrideconfig major-version-bump-message="^(build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test)(\\([\\w\\s-]*\\))?(!:|:.*\\n\\n((.+\\n)+\\n)?BREAKING CHANGE:\\s.+)"
             /overrideconfig minor-version-bump-message="^(feat)(\\([\\w\\s-]*\\))?:"
             /overrideconfig patch-version-bump-message="^(build|chore|ci|docs|fix|perf|refactor|revert|style|test)(\\([\\w\\s-]*\\))?:"
+
+      - name: Display GitVersion outputs
+        run: |
+          echo "Major: ${{ steps.gitversion.outputs.major }}"
+          echo "Minor: ${{ steps.gitversion.outputs.minor }}"
+          echo "Patch: ${{ steps.gitversion.outputs.patch }}"
+          echo "PreReleaseTag: ${{ steps.gitversion.outputs.preReleaseTag }}"
+          echo "PreReleaseTagWithDash: ${{ steps.gitversion.outputs.preReleaseTagWithDash }}"
+          echo "PreReleaseLabel: ${{ steps.gitversion.outputs.preReleaseLabel }}"
+          echo "PreReleaseNumber: ${{ steps.gitversion.outputs.preReleaseNumber }}"
+          echo "WeightedPreReleaseNumber: ${{ steps.gitversion.outputs.weightedPreReleaseNumber }}"
+          echo "BuildMetaData: ${{ steps.gitversion.outputs.buildMetaData }}"
+          echo "BuildMetaDataPadded: ${{ steps.gitversion.outputs.buildMetaDataPadded }}"
+          echo "FullBuildMetaData: ${{ steps.gitversion.outputs.fullBuildMetaData }}"
+          echo "MajorMinorPatch: ${{ steps.gitversion.outputs.majorMinorPatch }}"
+          echo "SemVer: ${{ steps.gitversion.outputs.semVer }}"
+          echo "LegacySemVer: ${{ steps.gitversion.outputs.legacySemVer }}"
+          echo "LegacySemVerPadded: ${{ steps.gitversion.outputs.legacySemVerPadded }}"
+          echo "AssemblySemVer: ${{ steps.gitversion.outputs.assemblySemVer }}"
+          echo "AssemblySemFileVer: ${{ steps.gitversion.outputs.assemblySemFileVer }}"
+          echo "FullSemVer: ${{ steps.gitversion.outputs.fullSemVer }}"
+          echo "InformationalVersion: ${{ steps.gitversion.outputs.informationalVersion }}"
+          echo "BranchName: ${{ steps.gitversion.outputs.branchName }}"
+          echo "EscapedBranchName: ${{ steps.gitversion.outputs.escapedBranchName }}"
+          echo "Sha: ${{ steps.gitversion.outputs.sha }}"
+          echo "ShortSha: ${{ steps.gitversion.outputs.shortSha }}"
+          echo "NuGetVersionV2: ${{ steps.gitversion.outputs.nuGetVersionV2 }}"
+          echo "NuGetVersion: ${{ steps.gitversion.outputs.nuGetVersion }}"
+          echo "NuGetPreReleaseTagV2: ${{ steps.gitversion.outputs.nuGetPreReleaseTagV2 }}"
+          echo "NuGetPreReleaseTag: ${{ steps.gitversion.outputs.nuGetPreReleaseTag }}"
+          echo "VersionSourceSha: ${{ steps.gitversion.outputs.versionSourceSha }}"
+          echo "CommitsSinceVersionSource: ${{ steps.gitversion.outputs.commitsSinceVersionSource }}"
+          echo "CommitsSinceVersionSourcePadded: ${{ steps.gitversion.outputs.commitsSinceVersionSourcePadded }}"
+          echo "UncommittedChanges: ${{ steps.gitversion.outputs.uncommittedChanges }}"
+          echo "CommitDate: ${{ steps.gitversion.outputs.commitDate }}"
 
       - name: setup project properties
         id: project_properties

@@ -6,9 +6,6 @@ on:
       project_name:
         type: string
         required: true
-      gitversion:
-        type: string
-        required: true
       docker_context:
         type: string
         required: false
@@ -44,11 +41,12 @@ on:
 
 env:
   AWS_REGION: us-east-1
+  IMAGE_REPOSITORY: ${{ inputs.project_name }}
 
 jobs:
   build:
     name: build
-    runs-on: live
+    runs-on: ${{ inputs.runs_on }}
     if: ${{ (github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'branch') || (github.event_name == 'push' && github.ref_type == 'tag') }}
     steps:
       - name: checkout
@@ -86,32 +84,24 @@ jobs:
         id: login_ecr
         uses: aws-actions/amazon-ecr-login@v1
 
-      - name: set image properties
-        id: image_properties
-        run: |
-          IMAGE_REGISTRY=${{ steps.login_ecr.outputs.registry }}
-          IMAGE_REPOSITORY=${{ inputs.project_name }}
-          MAJOR_MINOR_PATCH=${{ fromJson(inputs.gitversion).MajorMinorPatch }}
-          ESCAPED_BRANCH_NAME=${{ fromJson(inputs.gitversion).EscapedBranchName }}
-          SHORT_SHA=${{ fromJson(inputs.gitversion).ShortSha }}
-          IMAGE_TAG="${MAJOR_MINOR_PATCH}-${ESCAPED_BRANCH_NAME}.${SHORT_SHA}"
-
-          if ${{ github.event_name == 'push' && github.ref_type == 'tag' }}; then
-            IMAGE_TAG=${{ github.ref_name }}
-          fi
-
-          echo "::set-output name=image_registry::$IMAGE_REGISTRY"
-          echo "::set-output name=image_repository::$IMAGE_REPOSITORY"
-          echo "::set-output name=image_repository_uri::${IMAGE_REGISTRY}/${IMAGE_REPOSITORY}"
-          echo "::set-output name=image_tag::$IMAGE_TAG"
-
       - name: docker metadata
         id: docker_metadata
         uses: docker/metadata-action@v4
         with:
-          images: ${{ steps.image_properties.outputs.image_registry }}/${{ steps.image_properties.outputs.image_repository }}
+          images: ${{ steps.login_ecr.outputs.registry }}/$IMAGE_REPOSITORY
           tags: |
-            type=raw,value=${{ steps.image_properties.outputs.image_tag }}
+            type=ref,suffix=-{{sha}},event=branch
+            type=ref,prefix=pr-,suffix=-{{sha}},event=pr
+            type=semver,pattern={{version}}
+
+      - name: set image properties
+        id: image_properties
+        run: |
+          IMAGE_TAGS=(${{ steps.meta.outputs.tags }})
+          IMAGE_TAG=${IMAGE_TAGS[0]}
+
+          echo "::set-output name=image_repository::$IMAGE_REPOSITORY"
+          echo "::set-output name=image_tag::$IMAGE_TAG"
 
       - name: setup ECR repository
         run: |
@@ -119,7 +109,6 @@ jobs:
             --repository-names ${{ steps.image_properties.outputs.image_repository }} 2> /dev/null || \
           aws ecr create-repository \
             --repository-name ${{ steps.image_properties.outputs.image_repository }} \
-            --image-tag-mutability IMMUTABLE \
             --image-scanning-configuration scanOnPush=true 
 
           aws ecr set-repository-policy \
@@ -169,12 +158,20 @@ jobs:
           labels: ${{ steps.docker_metadata.outputs.labels }}
           tags: ${{ steps.docker_metadata.outputs.tags }}
           push: true
+    outputs:
+      image_repository: ${{ steps.image_properties.outputs.image_repository }}
+      image_tag: ${{ steps.image_properties.outputs.image_tag }}
 
-      - name: image scanning
-        if: ${{ (github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'branch') }}
+  image_scan:
+    name: image scan
+    runs-on: ${{ inputs.runs_on }}
+    needs:
+      - build
+    steps:
+      - name: check image scan finds
         run: |
-          IMAGE_REPOSITORY=${{ steps.image_properties.outputs.image_repository }}
-          IMAGE_TAG=${{ steps.image_properties.outputs.image_tag }}
+          IMAGE_REPOSITORY=${{ needs.build.outputs.image_repository }}
+          IMAGE_TAG=${{ needs.build.outputs.image_tag }}
 
           aws ecr wait image-scan-complete --repository-name $IMAGE_REPOSITORY --image-id imageTag=$IMAGE_TAG
 
@@ -211,12 +208,10 @@ jobs:
             if [[ $SCAN_FINDINGS_COUNT -gt 0 ]]; then
               if ${{ inputs.scan_fail_build }}; then
                 aws ecr batch-delete-image --repository-name $IMAGE_REPOSITORY --image-ids imageTag=$IMAGE_TAG
-                echo "::error title=image scanning::Failed minimum severity level. Found vulnerabilities with level ${SEVERITY_CUTOFF,,} or higher"
+                echo "::error title=image scan::Failed minimum severity level. Found vulnerabilities with level ${SEVERITY_CUTOFF,,} or higher"
                 exit 1
               else
-                echo "::warning title=image scanning::Warning minimum severity level. Found vulnerabilities with level ${SEVERITY_CUTOFF,,} or higher"
+                echo "::warning title=image scan::Warning minimum severity level. Found vulnerabilities with level ${SEVERITY_CUTOFF,,} or higher"
               fi
             fi
           fi
-    outputs:
-      image_tag: ${{ steps.image_properties.outputs.image_tag }}
