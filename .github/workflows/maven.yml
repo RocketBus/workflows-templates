@@ -136,7 +136,7 @@ jobs:
           name: unit-tests-report
           path: |
             **/target/surefire-reports/TEST-***.xml
-            **/target/site/jacoco-aggregate/jacoco.xml
+            **/target/site/jacoco/jacoco.xml
 
   integration_tests:
     name: integration tests
@@ -172,13 +172,13 @@ jobs:
       - code
       - unit_tests
     steps:
-      - name: sonarqube scan
-        uses: sonarsource/sonarqube-scan-action@master
+      - name: download unit tests report
+        uses: actions/download-artifact@v3
         with:
-          args: >
-            -Dsonar.binaries=**/target/classes
-            -Dsonar.junit.reportPaths=**/target/surefire-reports/TESTS-*.xml
-            -Dsonar.coverage.jacoco.xmlReportPaths=**/target/site/jacoco-aggregate/jacoco.xml
+          name: unit-tests-report
+
+      - name: sonarqube scan
+        run: ./mvnw $MAVEN_CLI_OPTS verify sonar:sonar -Dmaven.test.skip
 
       - name: sonarqube quality gate check
         uses: sonarsource/sonarqube-quality-gate-action@master
