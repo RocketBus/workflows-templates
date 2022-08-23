@@ -15,7 +15,7 @@ on:
         default: false
       allow_manual_dispatch:
         type: boolean
-        required: false
+        required: true
         default: false
     secrets:
       aws_access_key_id:
