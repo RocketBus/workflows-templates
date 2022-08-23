@@ -125,21 +125,8 @@ jobs:
         if: ${{ ! inputs.destroy && inputs.allow_manual_dispatch }}
         run: |
           ECR_REPOSITORY=${{steps.env.outputs.base_image_tag}}
-
-          echo "Manual Helm upgrade! ################################ 1"
-          # echo ${{ steps.env.outputs.base_image_tag }}
-          echo $ECR_REPOSITORY
-          echo $IMAGE_TAGS
-          echo "Manual Helm upgrade! ################################ 2"
-          echo ${GITHUB_SHA}
-          echo ${GITHUB_SHA:0:7}
-          echo ${{ inputs.tag_version }}
-          echo "Tag: "
-          echo ${GITHUB_REF}
           IMAGE_TAG=$(echo $GITHUB_REF | sed 's/refs\/tags\/v//')
-          echo ${IMAGE_TAG}
-          echo "Manual Helm upgrade! ################################ 3"
-
+          
           if [[ !(${IMAGE_TAG} =~ [0-9]+\.[0-9]+\.[0-9]+$) ]]; then
             echo "O deploy manual precisa ser feito a partir de uma tag"
             exit 1
