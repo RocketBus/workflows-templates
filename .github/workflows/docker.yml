@@ -41,7 +41,6 @@ on:
 
 env:
   AWS_REGION: us-east-1
-  IMAGE_REPOSITORY: ${{ inputs.project_name }}
 
 jobs:
   build:
@@ -88,7 +87,7 @@ jobs:
         id: docker_metadata
         uses: docker/metadata-action@v4
         with:
-          images: ${{ steps.login_ecr.outputs.registry }}/$IMAGE_REPOSITORY
+          images: ${{ steps.login_ecr.outputs.registry }}/${{ inputs.project_name }}
           tags: |
             type=ref,suffix=-{{sha}},event=branch
             type=ref,prefix=pr-,suffix=-{{sha}},event=pr
@@ -97,6 +96,7 @@ jobs:
       - name: set image properties
         id: image_properties
         run: |
+          IMAGE_REPOSITORY=${{ inputs.project_name }}
           IMAGE_TAGS=(${{ steps.meta.outputs.tags }})
           IMAGE_TAG=${IMAGE_TAGS[0]}
 
