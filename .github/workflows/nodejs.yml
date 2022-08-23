@@ -1,0 +1,144 @@
+name: Node.js CI
+
+on:
+  workflow_call:
+    inputs:
+      gitversion:
+        type: string
+        required: true
+      node_package_manager:
+        type: string
+        required: false
+        default: yarn
+      node_version:
+        type: string
+        required: false
+        default: 11
+      package_disabled:
+        type: boolean
+        required: false
+        default: false
+    secrets:
+      sonar_token:
+        required: true
+
+env:
+  SONAR_HOST_URL: "https://sonar.clickbus.net"
+  SONAR_TOKEN: ${{ secrets.sonar_token }}
+
+jobs:
+  lint:
+    name: lint
+    runs-on: live
+    if: ${{ (github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'branch') }}
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
+
+      - name: setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ inputs.node_version }}
+          cache: ${{ inputs.node_package_manager }}
+
+      - name: install dependencies
+        run: |
+          [[ ${{ inputs.node_package_manager }} == 'npm' ]] && npm ci --prefer-offline --ignore-scripts
+          [[ ${{ inputs.node_package_manager }} == 'yarn' ]] && yarn install --frozen-lockfile --ignore-scripts
+
+      - name: lint code
+        run: |
+          [[ ${{ inputs.node_package_manager }} == 'npm' ]] && npm run lint
+          [[ ${{ inputs.node_package_manager }} == 'yarn' ]] && yarn run lint
+
+  unit_tests:
+    name: unit tests
+    runs-on: live
+    if: ${{ always() && (needs.code.result == 'success' || needs.code.result == 'skipped') && ((github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'branch')) }}
+    needs:
+      - code
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
+
+      - name: setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ inputs.node_version }}
+          cache: ${{ inputs.node_package_manager }}
+
+      - name: install dependencies
+        run: |
+          [[ ${{ inputs.node_package_manager }} == 'npm' ]] && npm ci --prefer-offline --ignore-scripts
+          [[ ${{ inputs.node_package_manager }} == 'yarn' ]] && yarn install --frozen-lockfile --ignore-scripts
+
+      - name: execute unit tests
+        run: |
+          [[ ${{ inputs.node_package_manager }} == 'npm' ]] && npm run test
+          [[ ${{ inputs.node_package_manager }} == 'yarn' ]] && yarn run test
+
+      - name: archive unit tests report
+        uses: actions/upload-artifact@v3
+        with:
+          name: unit-tests-report
+          path: |
+            junit.xml
+            coverage/cobertura-coverage.xml
+
+  sonarqube:
+    name: sonarqube
+    runs-on: live
+    if: ${{ always() && (needs.code.result == 'success' || needs.code.result == 'skipped') && github.ref_name == github.event.repository.default_branch }}
+    needs:
+      - code
+      - unit_tests
+    steps:
+      - name: download unit tests report
+        uses: actions/download-artifact@v3
+        with:
+          name: unit-tests-report
+
+      - name: sonarqube scan
+        uses: sonarsource/sonarqube-scan-action@master
+        with:
+          args: >
+            -Dsonar.testExecutionReportPaths=junit.xml
+            -Dsonar.javascript.lcov.reportPaths=coverage/cobertura-coverage.xml
+
+      - name: sonarqube quality gate check
+        uses: sonarsource/sonarqube-quality-gate-action@master
+        timeout-minutes: 5
+
+  package:
+    name: package
+    runs-on: live
+    if: ${{ always() && !inputs.package_disabled && (needs.code.result == 'success' || needs.code.result == 'skipped') && ((github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'branch') || (github.event_name == 'push' && github.ref_type == 'tag')) }}
+    needs:
+      - code
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
+
+      - name: setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ inputs.node_version }}
+          cache: ${{ inputs.node_package_manager }}
+
+      - name: install dependencies
+        run: |
+          [[ ${{ inputs.node_package_manager }} == 'npm' ]] && npm ci --prefer-offline --ignore-scripts
+          [[ ${{ inputs.node_package_manager }} == 'yarn' ]] && yarn install --frozen-lockfile --ignore-scripts
+
+      - name: package artifact
+        run: |
+          [[ ${{ inputs.node_package_manager }} == 'npm' ]] && npm run build
+          [[ ${{ inputs.node_package_manager }} == 'yarn' ]] && yarn run build
+
+      - name: archive artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: app-artifact
+          path: |
+            dist/
+            build/

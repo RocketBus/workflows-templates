@@ -4,15 +4,15 @@ on:
   workflow_call:
     outputs:
       project_name:
-        value: ${{ jobs.project_properties.outputs.project_name }}
+        value: ${{ jobs.preflight_checklist.outputs.project_name }}
       gitversion:
-        value: ${{ jobs.project_properties.outputs.gitversion }}
+        value: ${{ jobs.preflight_checklist.outputs.gitversion }}
 
 jobs:
-  lint_commit:
-    name: lint commit
-    runs-on: ${{ inputs.runs_on }}
-    if: ${{ (github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || github.ref_name == github.event.repository.default_branch }}
+  preflight_checklist:
+    name: preflight checklist
+    runs-on: live
+    if: ${{ (github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'branch') || (github.event_name == 'push' && github.ref_type == 'tag') || github.event_name == 'workflow_dispatch' }}
     steps:
       - name: checkout
         uses: actions/checkout@v3
@@ -21,31 +21,19 @@ jobs:
 
       - name: setup Node.js
         uses: actions/setup-node@v3
+        if: ${{ github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize') }}
         with:
           node-version: latest
 
       - name: install commitlint
+        if: ${{ github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize') }}
         run: |
           npm install -g @commitlint/cli @commitlint/config-conventional
           echo "module.exports = {extends: ['@commitlint/config-conventional']}" > commitlint.config.js
 
       - name: lint commit message
-        run: |
-          if [[ ${{ github.event_name }} == 'pull_request' ]]; then
-            echo "${{ github.event.pull_request.title }}" | commitlint
-          else
-            echo "${{ github.event.head_commit.message }}" | commitlint
-          fi
-
-  project_properties:
-    name: project properties
-    runs-on: ${{ inputs.runs_on }}
-    if: ${{ (github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'branch') || (github.event_name == 'push' && github.ref_type == 'tag') }}
-    steps:
-      - name: checkout
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
+        if: ${{ github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize') }}
+        run: echo "${{ github.event.pull_request.title }}" | commitlint
 
       - name: setup .NET cli
         uses: actions/setup-dotnet@v2

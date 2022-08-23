@@ -1,0 +1,58 @@
+name: Node.js release
+
+on:
+  workflow_call:
+    inputs:
+      gitversion:
+        type: string
+        required: true
+      node_package_manager:
+        type: string
+        required: false
+        default: yarn
+      node_version:
+        type: string
+        required: false
+        default: 11
+
+jobs:
+  release:
+    name: release
+    runs-on: live
+    if: ${{ github.event_name == 'workflow_dispatch' && github.ref_name == github.event.repository.default_branch }}
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
+
+      - name: setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ inputs.node_version }}
+          cache: ${{ inputs.node_package_manager }}
+
+      - name: release prepare
+        id: release_prepare
+        run: |
+          RELEASE_VERSION=$(echo ${{ inputs.gitversion }} | jq -r '.MajorMinorPatch')
+          git config user.email "github-actions@clickbus.com"
+          git config user.name "Github Actions"
+          git commit -a -m "[skip ci] release v$RELEASE_VERSION"
+          git push
+          git tag v$RELEASE_VERSION
+          git push --tags
+
+          echo "::set-output name=release_version::$RELEASE_VERSION"
+
+      - name: create github release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ steps.release_prepare.outputs.release_version }}
+
+      - name: bump version
+        run: |
+          [[ ${{ inputs.node_package_manager }} == 'npm' ]] && npm version patch --no-git-tag-version
+          [[ ${{ inputs.node_package_manager }} == 'yarn' ]] && yarn version --patch --no-git-tag-version
+          git config user.email "github-actions@clickbus.com"
+          git config user.name "Github Actions"
+          git commit -a -m "[skip ci] bump version"
+          git push
