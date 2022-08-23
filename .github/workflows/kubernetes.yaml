@@ -136,6 +136,8 @@ jobs:
           echo ${GITHUB_SHA}
           echo ${GITHUB_SHA:0:7}
           echo ${{ inputs.tag_version }}
+          echo "Tag: "
+          echo ${GITHUB_REF}
           echo "Manual Helm upgrade! ################################ 3"
           # if [[ ${{inputs.tag_version}} =~ v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
           #   ECR_REPOSITORY=${IMAGE_TAGS[0]%:*}
