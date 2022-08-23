@@ -53,6 +53,7 @@ jobs:
           echo "::set-output name=eks_cluster::${EKS_CLUSTER}"
 
           ECR_REGISTRY=${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
+          ECR_REPOSITORY=${GITHUB_REPOSITORY#*/}
           BASE_IMAGE_TAG=${ECR_REGISTRY}/${ECR_REPOSITORY}
           echo "::set-output name=base_image_tag::${BASE_IMAGE_TAG}"
 
