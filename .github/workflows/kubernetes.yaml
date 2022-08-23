@@ -123,18 +123,17 @@ jobs:
           ECR_REPOSITORY=${IMAGE_TAGS[0]%:*}
           IMAGE_TAG=${IMAGE_TAGS[0]#*:}
 
-          echo "Manual Helm upgrade!"
-
+          echo "Manual Helm upgrade! ################################ 1"
+          echo $IMAGE_TAGS
+          echo $ECR_REPOSITORY
+          echo $IMAGE_TAG
+          echo ${{ inputs.tag_version }}
+          echo "Manual Helm upgrade! ################################ 2"
           if [[ ${{inputs.tag_version}} =~ v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            IMAGE_TAGS=(${{ inputs.image_tags }})
             ECR_REPOSITORY=${IMAGE_TAGS[0]%:*}
             RAW_IMAGE_TAG=${{inputs.tag_version}}
             echo $RAW_IMAGE_TAG
             IMAGE_TAG=$(echo $RAW_IMAGE_TAG | sed 's/v//')
-          else
-            IMAGE_TAGS=(${{ inputs.image_tags }})
-            ECR_REPOSITORY=${IMAGE_TAGS[0]%:*}
-            IMAGE_TAG=${IMAGE_TAGS[0]#*:}
           fi
           echo $IMAGE_TAG
 
