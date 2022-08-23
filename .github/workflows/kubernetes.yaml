@@ -8,7 +8,7 @@ on:
         required: true
       image_tags:
         type: string
-        required: true
+        required: false
       destroy:
         type: boolean
         required: false
@@ -124,9 +124,7 @@ jobs:
       - name: Manual Helm upgrade
         if: ${{ ! inputs.destroy && inputs.allow_manual_dispatch }}
         run: |
-          IMAGE_TAGS=(${{ inputs.image_tags }})
           ECR_REPOSITORY=${{steps.env.outputs.base_image_tag}}
-          # IMAGE_TAG=${IMAGE_TAGS[0]#*:}
 
           echo "Manual Helm upgrade! ################################ 1"
           # echo ${{ steps.env.outputs.base_image_tag }}
@@ -141,32 +139,27 @@ jobs:
           IMAGE_TAG=$(echo $GITHUB_REF | sed 's/refs\/tags\/v//')
           echo ${IMAGE_TAG}
           echo "Manual Helm upgrade! ################################ 3"
+
           if [[ !(${IMAGE_TAG} =~ [0-9]+\.[0-9]+\.[0-9]+$) ]]; then
-            # ECR_REPOSITORY=${IMAGE_TAGS[0]%:*}
-            # RAW_IMAGE_TAG=${{inputs.tag_version}}
-            # echo $RAW_IMAGE_TAG
-            # IMAGE_TAG=$(echo $RAW_IMAGE_TAG | sed 's/refs\/tags\/v//')
-            echo "Errou"
+            echo "O deploy manual precisa ser feito a partir de uma tag"
             exit 1
           fi
-          echo ${IMAGE_TAG}
-          # exit 1
 
-          # RELEASE_NAME=${GITHUB_REPOSITORY#*/}
-          # NAMESPACE=${RELEASE_NAME}
-          # CHART_PATH=charts/${RELEASE_NAME}
+          RELEASE_NAME=${GITHUB_REPOSITORY#*/}
+          NAMESPACE=${RELEASE_NAME}
+          CHART_PATH=charts/${RELEASE_NAME}
 
-          # aws eks update-kubeconfig --name ${{ steps.env.outputs.eks_cluster }}
+          aws eks update-kubeconfig --name ${{ steps.env.outputs.eks_cluster }}
 
-          # if [[ -f ${CHART_PATH}/environments/${ENV}/secrets.yaml ]]; then
-          #   HELM_ARGS="--values secrets://${CHART_PATH}/environments/${ENV}/secrets.yaml"
-          # fi
+          if [[ -f ${CHART_PATH}/environments/${ENV}/secrets.yaml ]]; then
+            HELM_ARGS="--values secrets://${CHART_PATH}/environments/${ENV}/secrets.yaml"
+          fi
 
-          # helm upgrade \
-          #   --install ${RELEASE_NAME} ${CHART_PATH} \
-          #   --create-namespace --namespace ${NAMESPACE} \
-          #   --values ${CHART_PATH}/environments/${ENV}/values.yaml ${HELM_ARGS} \
-          #   --set image.repository=${ECR_REPOSITORY} --set image.tag=${IMAGE_TAG}
+          helm upgrade \
+            --install ${RELEASE_NAME} ${CHART_PATH} \
+            --create-namespace --namespace ${NAMESPACE} \
+            --values ${CHART_PATH}/environments/${ENV}/values.yaml ${HELM_ARGS} \
+            --set image.repository=${ECR_REPOSITORY} --set image.tag=${IMAGE_TAG}
 
   destroy:
     if: ${{ inputs.destroy }}
