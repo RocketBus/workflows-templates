@@ -138,12 +138,14 @@ jobs:
           echo ${{ inputs.tag_version }}
           echo "Tag: "
           echo ${GITHUB_REF}
+          IMAGE_TAG=$(echo $GITHUB_REF | sed 's/refs\/tags\/v//')
+          echo ${IMAGE_TAG}
           echo "Manual Helm upgrade! ################################ 3"
           # if [[ ${{inputs.tag_version}} =~ v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
           #   ECR_REPOSITORY=${IMAGE_TAGS[0]%:*}
           #   RAW_IMAGE_TAG=${{inputs.tag_version}}
           #   echo $RAW_IMAGE_TAG
-          #   IMAGE_TAG=$(echo $RAW_IMAGE_TAG | sed 's/v//')
+          #   IMAGE_TAG=$(echo $RAW_IMAGE_TAG | sed 's/refs\/tags\/v//')
           # fi
           # echo $IMAGE_TAG
 
