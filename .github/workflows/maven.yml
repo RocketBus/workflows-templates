@@ -40,7 +40,7 @@ jobs:
   code:
     name: code
     runs-on: live
-    if: ${{ github.event_name == 'push' && github.ref_type == 'branch' }}
+    if: ${{ github.ref_name == github.event.repository.default_branch }}
     steps:
       - name: checkout
         uses: actions/checkout@v3
@@ -129,31 +129,31 @@ jobs:
             **/target/surefire-reports/TEST-***.xml
             **/target/site/jacoco/jacoco.xml
 
-  # integration_tests:
-  #   name: integration tests
-  #   runs-on: live
-  #   if: ${{ always() && (needs.code.result == 'success' || needs.code.result == 'skipped') && ((github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'branch')) }}
-  #   needs:
-  #     - code
-  #   steps:
-  #     - name: checkout
-  #       uses: actions/checkout@v3
-  #       with:
-  #         fetch-depth: 0
+  integration_tests:
+    name: integration tests
+    runs-on: live
+    if: ${{ always() && (needs.code.result == 'success' || needs.code.result == 'skipped') && ((github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'branch')) }}
+    needs:
+      - code
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
 
-  #     - name: setup JDK
-  #       uses: actions/setup-java@v3
-  #       with:
-  #         java-version: ${{ inputs.jdk_version }}
-  #         distribution: 'temurin'
-  #         cache: 'maven'
-  #         overwrite-settings: false
+      - name: setup JDK
+        uses: actions/setup-java@v3
+        with:
+          java-version: ${{ inputs.jdk_version }}
+          distribution: 'temurin'
+          cache: 'maven'
+          overwrite-settings: false
 
-  #     - name: create settings.xml
-  #       run: echo ${{ secrets.maven_settings }} | base64 -d > ~/.m2/settings.xml
+      - name: create settings.xml
+        run: echo ${{ secrets.maven_settings }} | base64 -d > ~/.m2/settings.xml
 
-  #     - name: execute integration tests
-  #       run: ./mvnw $MAVEN_CLI_OPTS clean integration-test -DskipUTs
+      - name: execute integration tests
+        run: ./mvnw $MAVEN_CLI_OPTS clean integration-test -DskipUTs || true
 
   sonarqube:
     name: sonarqube
