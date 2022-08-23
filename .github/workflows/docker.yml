@@ -97,7 +97,7 @@ jobs:
         id: image_properties
         run: |
           IMAGE_REPOSITORY=${{ inputs.project_name }}
-          IMAGE_TAGS=(${{ steps.meta.outputs.tags }})
+          IMAGE_TAGS=(${{ steps.docker_metadata.outputs.tags }})
           IMAGE_TAG=${IMAGE_TAGS[0]}
 
           echo "::set-output name=image_repository::$IMAGE_REPOSITORY"
