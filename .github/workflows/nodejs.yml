@@ -85,6 +85,32 @@ jobs:
             junit.xml
             coverage/cobertura-coverage.xml
 
+  integration_tests:
+    name: integration tests
+    runs-on: live
+    if: ${{ always() && (needs.code.result == 'success' || needs.code.result == 'skipped') && ((github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'branch')) }}
+    needs:
+      - code
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
+
+      - name: setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ inputs.node_version }}
+          cache: ${{ inputs.node_package_manager }}
+
+      - name: install dependencies
+        run: |
+          [[ ${{ inputs.node_package_manager }} == 'npm' ]] && npm ci --prefer-offline --ignore-scripts
+          [[ ${{ inputs.node_package_manager }} == 'yarn' ]] && yarn install --frozen-lockfile --ignore-scripts
+
+      - name: execute integration tests
+        run: |
+          [[ ${{ inputs.node_package_manager }} == 'npm' ]] && npm run test:integration
+          [[ ${{ inputs.node_package_manager }} == 'yarn' ]] && yarn run test:integration
+
   sonarqube:
     name: sonarqube
     runs-on: live

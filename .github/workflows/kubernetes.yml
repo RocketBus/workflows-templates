@@ -97,8 +97,51 @@ jobs:
             --values ${CHART_PATH}/environments/${ENV}/values.yaml \
             --set image.tag=${{ inputs.image_tag }} $HELM_ARGS
 
+  cleanup:
+    name: cleanup
+    runs-on: ${{ inputs.environment }}
+    if: ${{ github.event_name == 'pull_request' && github.event.action == 'closed' }}
+    env:
+      ENV: ${{ inputs.environment }}
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
+
+      - name: set job properties
+        id: job_properties
+        run: |
+          declare -A AWS_ACCOUNTS_IDS AWS_REGIONS EKS_CLUSTERS
+          
+          AWS_ACCOUNTS_IDS=([dev]=180811438061 [stg]=406026015868 [live]=114395709799)
+          AWS_REGIONS=([dev]=us-east-2 [stg]=us-east-2 [live]=us-east-2)
+          EKS_CLUSTERS=([dev]=k8s-dev-85c52b0e [stg]=k8s-stg-7a1d63f9 [live]=k8s-live-620f830f)
+
+          AWS_ACCOUNT_ID=${AWS_ACCOUNTS_IDS[$ENV]}
+          AWS_REGION=${AWS_REGIONS[$ENV]}
+          EKS_CLUSTER=${EKS_CLUSTERS[$ENV]}
+
+          echo "::set-output name=aws_region::$AWS_REGION"
+          echo "::set-output name=aws_iam_role::arn:aws:iam::${AWS_ACCOUNT_ID}:role/CrossAccount-Global-Admin"
+          echo "::set-output name=eks_cluster::$EKS_CLUSTER"
+
+          RELEASE_NAME=${GITHUB_REPOSITORY#*/}
+          echo RELEASE_NAME=$RELEASE_NAME >> $GITHUB_ENV
+          echo NAMESPACE=$RELEASE_NAME >> $GITHUB_ENV
+          echo CHART_PATH=charts/$RELEASE_NAME >> $GITHUB_ENV
+
+      - name: configure AWS credentials for EKS
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.aws_access_key_id }}
+          aws-secret-access-key: ${{ secrets.aws_secret_access_key }}
+          aws-region: ${{ steps.job_properties.outputs.aws_region }}
+          role-skip-session-tagging: true
+          role-to-assume: ${{ steps.job_properties.outputs.aws_iam_role }}
+          role-duration-seconds: 1200
+          role-session-name: GitHubActionsBuildSession
+          mask-aws-account-id: false
+
       - name: Helm uninstall PR
-        if: ${{ github.event_name == 'pull_request' && github.event.action == 'closed' }}
         env:
           EKS_CLUSTER: ${{ steps.job_properties.outputs.eks_cluster }}
         run: |
