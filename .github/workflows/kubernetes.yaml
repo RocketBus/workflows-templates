@@ -106,7 +106,7 @@ jobs:
 
           if [[ ${{ github.event_name }} == 'pull_request' ]]; then
             PREFIX_HOST=pr-${{ github.event.number }}
-            PR_RELEASE_NAME=${RELEASE_NAME}-pr-${{ github.event.number }}
+            PR_RELEASE_NAME=${RELEASE_NAME}-pr${{ github.event.number }}
           
             helm upgrade \
               --install ${PR_RELEASE_NAME} ${CHART_PATH} \
