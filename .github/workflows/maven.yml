@@ -169,6 +169,9 @@ jobs:
         with:
           name: unit-tests-report
 
+      - name: create settings.xml
+        run: echo ${{ secrets.maven_settings }} | base64 -d > ~/.m2/settings.xml
+
       - name: sonarqube scan
         run: ./mvnw $MAVEN_CLI_OPTS verify sonar:sonar -Dmaven.test.skip
 
