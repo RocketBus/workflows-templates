@@ -36,7 +36,7 @@ jobs:
           RELEASE_VERSION=$(echo '${{ inputs.gitversion }}' | jq -r '.MajorMinorPatch')
           git config user.email "github-actions@clickbus.com"
           git config user.name "Github Actions"
-          git commit -a -m "[skip ci] release v$RELEASE_VERSION"
+          git commit -a -m "[deploy-action][skip ci] release v$RELEASE_VERSION"
           git push
           git tag v$RELEASE_VERSION
           git push --tags
@@ -54,5 +54,5 @@ jobs:
           [[ ${{ inputs.node_package_manager }} == 'yarn' ]] && yarn version --patch --no-git-tag-version
           git config user.email "github-actions@clickbus.com"
           git config user.name "Github Actions"
-          git commit -a -m "[skip ci] bump version"
+          git commit -a -m "[deploy-action][skip ci] bump version"
           git push
