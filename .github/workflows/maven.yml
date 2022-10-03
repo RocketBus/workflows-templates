@@ -39,39 +39,38 @@ env:
   SONAR_TOKEN: ${{ secrets.sonar_token }}
 
 jobs:
-  code:
-    name: code
-    runs-on: live
-    if: ${{ github.ref_name == github.event.repository.default_branch }}
-    steps:
-      - name: checkout
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-          token: ${{ secrets.git_access_token }}
+  # code:
+  #   name: code
+  #   runs-on: live
+  #   if: ${{ github.ref_name == github.event.repository.default_branch }}
+  #   steps:
+  #     - name: checkout
+  #       uses: actions/checkout@v3
+  #       with:
+  #         fetch-depth: 0
+  #         token: ${{ secrets.git_access_token }}
 
-      - name: setup JDK
-        uses: actions/setup-java@v3
-        with:
-          java-version: ${{ inputs.jdk_version }}
-          distribution: 'temurin'
-          cache: 'maven'
-          overwrite-settings: false
+  #     - name: setup JDK
+  #       uses: actions/setup-java@v3
+  #       with:
+  #         java-version: ${{ inputs.jdk_version }}
+  #         distribution: 'temurin'
+  #         cache: 'maven'
+  #         overwrite-settings: false
 
-      - name: create settings.xml
-        run: echo ${{ secrets.maven_settings }} | base64 -d > ~/.m2/settings.xml
+  #     - name: create settings.xml
+  #       run: echo ${{ secrets.maven_settings }} | base64 -d > ~/.m2/settings.xml
 
-      - name: bump version
-
-        run: |
-          MAJOR_MINOR_PATCH=$(echo '${{ inputs.gitversion }}' | jq -r '.MajorMinorPatch')
-          ./mvnw $MAVEN_CLI_OPTS org.codehaus.mojo:versions-maven-plugin:2.11.0:set -DnewVersion=${MAJOR_MINOR_PATCH}-SNAPSHOT
-          ./mvnw $MAVEN_CLI_OPTS org.codehaus.mojo:versions-maven-plugin:2.11.0:set-property -Dproperty=revision -DnewVersion=${MAJOR_MINOR_PATCH}-SNAPSHOT
-          ./mvnw $MAVEN_CLI_OPTS org.codehaus.mojo:versions-maven-plugin:2.11.0:commit
-          git config user.email "github-actions@clickbus.com"
-          git config user.name "Github Actions"
-          git diff-index --quiet HEAD || git commit -a -m "[skip ci] bump version"
-          git push
+  #     - name: bump version
+  #       run: |
+  #         MAJOR_MINOR_PATCH=$(echo '${{ inputs.gitversion }}' | jq -r '.MajorMinorPatch')
+  #         ./mvnw $MAVEN_CLI_OPTS org.codehaus.mojo:versions-maven-plugin:2.11.0:set -DnewVersion=${MAJOR_MINOR_PATCH}-SNAPSHOT
+  #         ./mvnw $MAVEN_CLI_OPTS org.codehaus.mojo:versions-maven-plugin:2.11.0:set-property -Dproperty=revision -DnewVersion=${MAJOR_MINOR_PATCH}-SNAPSHOT
+  #         ./mvnw $MAVEN_CLI_OPTS org.codehaus.mojo:versions-maven-plugin:2.11.0:commit
+  #         git config user.email "github-actions@clickbus.com"
+  #         git config user.name "Github Actions"
+  #         git diff-index --quiet HEAD || git commit -a -m "[skip ci] bump version"
+  #         git push
 
   lint:
     name: lint
@@ -157,7 +156,7 @@ jobs:
         run: echo ${{ secrets.maven_settings }} | base64 -d > ~/.m2/settings.xml
 
       - name: execute integration tests
-        run: ./mvnw $MAVEN_CLI_OPTS clean integration-test -DskipUTs || true
+        run: ./mvnw $MAVEN_CLI_OPTS clean integration-test -DskipUTs=true || true
 
   sonarqube:
     name: sonarqube
@@ -167,6 +166,11 @@ jobs:
       - code
       - unit_tests
     steps:
+      - name: checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
       - name: download unit tests report
         uses: actions/download-artifact@v3
         with:
