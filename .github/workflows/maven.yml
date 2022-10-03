@@ -75,9 +75,7 @@ jobs:
   lint:
     name: lint
     runs-on: live
-    if: ${{ always() && (needs.code.result == 'success' || needs.code.result == 'skipped') && ((github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'branch')) }}
-    needs:
-      - code
+    if: ${{ always() && ((github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'branch')) }}
     steps:
       - name: checkout
         uses: actions/checkout@v3
@@ -101,9 +99,7 @@ jobs:
   unit_tests:
     name: unit tests
     runs-on: live
-    if: ${{ always() && (needs.code.result == 'success' || needs.code.result == 'skipped') && ((github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'branch')) }}
-    needs:
-      - code
+    if: ${{ always() && ((github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'branch')) }}
     steps:
       - name: checkout
         uses: actions/checkout@v3
@@ -135,9 +131,7 @@ jobs:
   integration_tests:
     name: integration tests
     runs-on: live
-    if: ${{ always() && (needs.code.result == 'success' || needs.code.result == 'skipped') && ((github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'branch')) }}
-    needs:
-      - code
+    if: ${{ always() && ((github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'branch')) }}
     steps:
       - name: checkout
         uses: actions/checkout@v3
@@ -161,9 +155,8 @@ jobs:
   sonarqube:
     name: sonarqube
     runs-on: live
-    if: ${{ always() && (needs.code.result == 'success' || needs.code.result == 'skipped') && github.ref_name == github.event.repository.default_branch }}
+    if: ${{ always() && github.ref_name == github.event.repository.default_branch }}
     needs:
-      - code
       - unit_tests
     steps:
       - name: checkout
@@ -186,9 +179,7 @@ jobs:
   package:
     name: package
     runs-on: live
-    if: ${{ always() && !inputs.package_disabled && (needs.code.result == 'success' || needs.code.result == 'skipped') && ((github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'branch') || (github.event_name == 'push' && github.ref_type == 'tag')) }}
-    needs:
-      - code
+    if: ${{ always() && !inputs.package_disabled && ((github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'branch') || (github.event_name == 'push' && github.ref_type == 'tag')) }}
     steps:
       - name: checkout
         uses: actions/checkout@v3
