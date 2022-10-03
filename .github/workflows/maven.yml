@@ -19,6 +19,8 @@ on:
         required: false
         default: false
     secrets:
+      git_access_token:
+        required: true
       maven_settings:
         required: true
       nexus_username:
@@ -46,6 +48,7 @@ jobs:
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
+          token: ${{ secrets.git_access_token }}
 
       - name: setup JDK
         uses: actions/setup-java@v3
@@ -67,7 +70,7 @@ jobs:
           ./mvnw $MAVEN_CLI_OPTS org.codehaus.mojo:versions-maven-plugin:2.11.0:commit
           git config user.email "github-actions@clickbus.com"
           git config user.name "Github Actions"
-          git diff-index --quiet HEAD || git commit -a -m "[deploy-action][skip ci] bump version"
+          git diff-index --quiet HEAD || git commit -a -m "[skip ci] bump version"
           git push
 
   lint:

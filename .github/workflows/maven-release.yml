@@ -8,6 +8,8 @@ on:
         required: false
         default: 11
     secrets:
+      git_access_token:
+        required: true
       maven_settings:
         required: true
       nexus_username:
@@ -31,6 +33,7 @@ jobs:
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
+          token: ${{ secrets.git_access_token }}
 
       - name: setup JDK
         uses: actions/setup-java@v3
@@ -51,7 +54,7 @@ jobs:
           RELEASE_VERSION=$(./mvnw maven-help-plugin:evaluate -Dexpression=project.version -q -DforceStdout)
           git config user.email "github-actions@clickbus.com"
           git config user.name "Github Actions"
-          git commit -a -m "[deploy-action][skip ci] release v$RELEASE_VERSION"
+          git commit -a -m "[skip ci] release v$RELEASE_VERSION"
           git push
           git tag v$RELEASE_VERSION
           git push --tags
@@ -70,5 +73,5 @@ jobs:
           ./mvnw $MAVEN_CLI_OPTS org.codehaus.mojo:versions-maven-plugin:2.11.0:commit
           git config user.email "github-actions@clickbus.com"
           git config user.name "Github Actions"
-          git commit -a -m "[deploy-action][skip ci] bump version"
+          git commit -a -m "[skip ci] bump version"
           git push
