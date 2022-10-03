@@ -59,8 +59,9 @@ jobs:
         run: echo ${{ secrets.maven_settings }} | base64 -d > ~/.m2/settings.xml
 
       - name: bump version
+
         run: |
-          MAJOR_MINOR_PATCH=$(echo "${{ inputs.gitversion }}" | jq -r '.MajorMinorPatch')
+          MAJOR_MINOR_PATCH=$(echo "'${{ inputs.gitversion }}'" | jq -r '.MajorMinorPatch')
           ./mvnw $MAVEN_CLI_OPTS org.codehaus.mojo:versions-maven-plugin:2.11.0:set -DnewVersion=${MAJOR_MINOR_PATCH}-SNAPSHOT
           ./mvnw $MAVEN_CLI_OPTS org.codehaus.mojo:versions-maven-plugin:2.11.0:set-property -Dproperty=revision -DnewVersion=${MAJOR_MINOR_PATCH}-SNAPSHOT
           ./mvnw $MAVEN_CLI_OPTS org.codehaus.mojo:versions-maven-plugin:2.11.0:commit

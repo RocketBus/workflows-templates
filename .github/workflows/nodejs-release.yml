@@ -33,7 +33,7 @@ jobs:
       - name: release prepare
         id: release_prepare
         run: |
-          RELEASE_VERSION=$(echo ${{ inputs.gitversion }} | jq -r '.MajorMinorPatch')
+          RELEASE_VERSION=$(echo "'${{ inputs.gitversion }}'" | jq -r '.MajorMinorPatch')
           git config user.email "github-actions@clickbus.com"
           git config user.name "Github Actions"
           git commit -a -m "[skip ci] release v$RELEASE_VERSION"
@@ -50,7 +50,7 @@ jobs:
 
       - name: bump version
         run: |
-          [[ ${{ inputs.node_package_manager }} == 'npm' ]] && npm version patch --no-git-tag-version
+          [[ ${{ inputs.node_package_manager }} == 'npm' ]] && npm version spatch --no-git-tag-version
           [[ ${{ inputs.node_package_manager }} == 'yarn' ]] && yarn version --patch --no-git-tag-version
           git config user.email "github-actions@clickbus.com"
           git config user.name "Github Actions"

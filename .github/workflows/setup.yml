@@ -25,16 +25,6 @@ jobs:
         with:
           node-version: latest
 
-      - name: install commitlint
-        if: ${{ github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize') }}
-        run: |
-          npm install -g @commitlint/cli @commitlint/config-conventional
-          echo "module.exports = {extends: ['@commitlint/config-conventional']}" > commitlint.config.js
-
-      - name: lint commit message
-        if: ${{ github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize') }}
-        run: echo "${{ github.event.pull_request.title }}" | commitlint
-
       - name: setup .NET cli
         uses: actions/setup-dotnet@v2
         with:

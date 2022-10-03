@@ -153,8 +153,8 @@ jobs:
 
       - name: install dependencies
         run: |
-          [[ ${{ inputs.node_package_manager }} == 'npm' ]] && npm ci --prefer-offline --ignore-scripts
-          [[ ${{ inputs.node_package_manager }} == 'yarn' ]] && yarn install --frozen-lockfile --ignore-scripts
+          [[ ${{ inputs.node_package_manager }} == 'npm' ]] && npm ci --prefer-offline
+          [[ ${{ inputs.node_package_manager }} == 'yarn' ]] && yarn install --frozen-lockfile
 
       - name: package artifact
         run: |
