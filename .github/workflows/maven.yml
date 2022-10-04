@@ -183,11 +183,11 @@ jobs:
       - name: sonarqube scan
         run: ./mvnw $MAVEN_CLI_OPTS verify sonar:sonar -Dmaven.test.skip
 
-      - name: sonarqube quality gate check
-        uses: sonarsource/sonarqube-quality-gate-action@master
-        timeout-minutes: 5
-        with:
-          scanMetadataReportFile: target/sonar/report-task.txt
+#      - name: sonarqube quality gate check
+#        uses: sonarsource/sonarqube-quality-gate-action@master
+#        timeout-minutes: 5
+#        with:
+#          scanMetadataReportFile: target/sonar/report-task.txt
 
   package:
     name: package
