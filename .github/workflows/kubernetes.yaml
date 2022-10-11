@@ -194,7 +194,7 @@ jobs:
 
           if [[ ${{ github.event_name }} == 'pull_request' ]]; then
             PREFIX_HOST=pr-${{ github.event.number }}
-            RELEASE_NAME=${RELEASE_NAME}-pr-${{ github.event.number }}
+            RELEASE_NAME=${RELEASE_NAME}-pr${{ github.event.number }}
           fi
 
           helm uninstall ${RELEASE_NAME} -n ${NAMESPACE}
