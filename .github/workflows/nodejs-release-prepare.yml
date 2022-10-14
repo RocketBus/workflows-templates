@@ -44,10 +44,9 @@ jobs:
           [[ ${{ inputs.node_package_manager }} == 'yarn' ]] && yarn version --new-version $RELEASE_VERSION --no-git-tag-version
           git config user.email "github-actions@clickbus.com"
           git config user.name "Github Actions"
-          git commit -a -m "chore: release $RELEASE_VERSION [skip ci]"
-          git push
-          git tag $RELEASE_VERSION
-          git push $RELEASE_VERSION
+          git commit -a -m "chore: release v$RELEASE_VERSION"
+          git tag v$RELEASE_VERSION
+          git push origin v$RELEASE_VERSION
 
       - name: bump version
         run: |

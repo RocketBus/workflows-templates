@@ -58,10 +58,9 @@ jobs:
           ./mvnw $MAVEN_CLI_OPTS org.codehaus.mojo:versions-maven-plugin:2.11.0:commit
           git config user.email "github-actions@clickbus.com"
           git config user.name "Github Actions"
-          git commit -a -m "chore: release $RELEASE_VERSION [skip ci]"
-          git push
-          git tag $RELEASE_VERSION
-          git push origin $RELEASE_VERSION
+          git commit -a -m "chore: release v$RELEASE_VERSION"
+          git tag v$RELEASE_VERSION
+          git push origin v$RELEASE_VERSION
 
       - name: bump version
         run: |
