@@ -81,11 +81,11 @@ jobs:
 
       - name: setup project properties
         id: project_properties
+        env:
+          PROJECT_NAME: ${{ inputs.project_name }}
         run: |
-          if [[ ${{ inputs.project_name }} == "" ]]; then
+          if [[ -z $PROJECT_NAME ]]; then
             PROJECT_NAME=${GITHUB_REPOSITORY#*/}
-          else
-            PROJECT_NAME=${{ inputs.project_name }}
           fi
 
           echo "::set-output name=project_name::$PROJECT_NAME"
