@@ -3,9 +3,6 @@ name: Node.js CI
 on:
   workflow_call:
     inputs:
-      gitversion:
-        type: string
-        required: true
       node_package_manager:
         type: string
         required: false
@@ -19,10 +16,16 @@ on:
         required: false
         default: false
     secrets:
+      nexus_username:
+        required: true
+      nexus_password:
+        required: true
       sonar_token:
         required: true
 
 env:
+  NEXUS_USERNAME: ${{ secrets.nexus_username }}
+  NEXUS_PASSWORD: ${{ secrets.nexus_password }}
   SONAR_HOST_URL: "https://sonar.clickbus.net"
   SONAR_TOKEN: ${{ secrets.sonar_token }}
 
@@ -30,7 +33,7 @@ jobs:
   lint:
     name: lint
     runs-on: live
-    if: ${{ (github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'branch') }}
+    if: ${{ (github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'tag') }}
     steps:
       - name: checkout
         uses: actions/checkout@v3
@@ -43,8 +46,8 @@ jobs:
 
       - name: install dependencies
         run: |
-          [[ ${{ inputs.node_package_manager }} == 'npm' ]] && npm ci --prefer-offline --ignore-scripts
-          [[ ${{ inputs.node_package_manager }} == 'yarn' ]] && yarn install --frozen-lockfile --ignore-scripts
+          [[ ${{ inputs.node_package_manager }} == 'npm' ]] && npm ci --prefer-offline
+          [[ ${{ inputs.node_package_manager }} == 'yarn' ]] && yarn install --frozen-lockfile
 
       - name: lint code
         run: |
@@ -54,9 +57,7 @@ jobs:
   unit_tests:
     name: unit tests
     runs-on: live
-    if: ${{ always() && ((github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'branch')) }}
-    needs:
-      - code
+    if: ${{ (github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'tag') }}
     steps:
       - name: checkout
         uses: actions/checkout@v3
@@ -69,10 +70,11 @@ jobs:
 
       - name: install dependencies
         run: |
-          [[ ${{ inputs.node_package_manager }} == 'npm' ]] && npm ci --prefer-offline --ignore-scripts
-          [[ ${{ inputs.node_package_manager }} == 'yarn' ]] && yarn install --frozen-lockfile --ignore-scripts
+          [[ ${{ inputs.node_package_manager }} == 'npm' ]] && npm ci --prefer-offline
+          [[ ${{ inputs.node_package_manager }} == 'yarn' ]] && yarn install --frozen-lockfile
 
       - name: execute unit tests
+        continue-on-error: true
         run: |
           [[ ${{ inputs.node_package_manager }} == 'npm' ]] && npm run test
           [[ ${{ inputs.node_package_manager }} == 'yarn' ]] && yarn run test
@@ -88,7 +90,7 @@ jobs:
   integration_tests:
     name: integration tests
     runs-on: live
-    if: ${{ always() && ((github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'branch')) }}
+    if: ${{ github.event_name == 'push' && github.ref_type == 'tag' }}
     steps:
       - name: checkout
         uses: actions/checkout@v3
@@ -101,10 +103,11 @@ jobs:
 
       - name: install dependencies
         run: |
-          [[ ${{ inputs.node_package_manager }} == 'npm' ]] && npm ci --prefer-offline --ignore-scripts
-          [[ ${{ inputs.node_package_manager }} == 'yarn' ]] && yarn install --frozen-lockfile --ignore-scripts
+          [[ ${{ inputs.node_package_manager }} == 'npm' ]] && npm ci --prefer-offline
+          [[ ${{ inputs.node_package_manager }} == 'yarn' ]] && yarn install --frozen-lockfile
 
       - name: execute integration tests
+        continue-on-error: true
         run: |
           [[ ${{ inputs.node_package_manager }} == 'npm' ]] && npm run test:integration
           [[ ${{ inputs.node_package_manager }} == 'yarn' ]] && yarn run test:integration
@@ -112,14 +115,22 @@ jobs:
   sonarqube:
     name: sonarqube
     runs-on: live
-    if: ${{ always() && github.ref_name == github.event.repository.default_branch }}
     needs:
       - unit_tests
+    if: ${{ (github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'tag') }}
     steps:
       - name: download unit tests report
         uses: actions/download-artifact@v3
         with:
           name: unit-tests-report
+
+      - name: set sonar parameters
+        id: set_sonar_parameters
+        run: |
+          if [[ ${{ github.event_name }} == 'pull_request' ]]; then
+            SONAR_PARAMETERS="-Dsonar.pullrequest.key=${{ github.event.pull_request.number }} -Dsonar.pullrequest.branch=${{ github.event.pull_request.head.ref }} -Dsonar.pullrequest.github.repository=$GITHUB_REPOSITORY"
+          fi
+          echo "::set-output name=args::$SONAR_PARAMETERS"
 
       - name: sonarqube scan
         uses: sonarsource/sonarqube-scan-action@master
@@ -127,15 +138,19 @@ jobs:
           args: >
             -Dsonar.testExecutionReportPaths=junit.xml
             -Dsonar.javascript.lcov.reportPaths=coverage/cobertura-coverage.xml
+            ${{ steps.set_sonar_parameters.outputs.args }}
 
       - name: sonarqube quality gate check
         uses: sonarsource/sonarqube-quality-gate-action@master
         timeout-minutes: 5
+        continue-on-error: true
 
   package:
     name: package
     runs-on: live
-    if: ${{ always() && !inputs.package_disabled && ((github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'branch') || (github.event_name == 'push' && github.ref_type == 'tag')) }}
+    needs:
+      - sonarqube
+    if: ${{ !inputs.package_disabled && ((github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'tag')) }}
     steps:
       - name: checkout
         uses: actions/checkout@v3
@@ -152,6 +167,7 @@ jobs:
           [[ ${{ inputs.node_package_manager }} == 'yarn' ]] && yarn install --frozen-lockfile
 
       - name: package artifact
+        id: package_artifact
         run: |
           [[ ${{ inputs.node_package_manager }} == 'npm' ]] && npm run build
           [[ ${{ inputs.node_package_manager }} == 'yarn' ]] && yarn run build
@@ -163,3 +179,16 @@ jobs:
           path: |
             dist/
             build/
+
+  release:
+    name: package
+    runs-on: live
+    needs:
+      - package
+    if: ${{ always() && (needs.package.result == 'success' || needs.package.result == 'skipped') && (github.event_name == 'push' && github.ref_type == 'tag') }}
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
+
+      - name: create github release
+        uses: softprops/action-gh-release@v1

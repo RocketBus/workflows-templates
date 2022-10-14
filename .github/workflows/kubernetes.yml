@@ -3,6 +3,9 @@ name: Kubernetes CD with Helm
 on:
   workflow_call:
     inputs:
+      project_name:
+        type: string
+        required: true
       environment:
         type: string
         required: true
@@ -14,14 +17,18 @@ on:
         required: true
       aws_secret_access_key:
         required: true
+      aws_account_id:
+        required: true
+      aws_region:
+        required: true
+      eks_cluster_name:
+        required: true
 
 jobs:
   deploy:
     name: deploy
     runs-on: ${{ inputs.environment }}
     environment: ${{ inputs.environment }}
-    env:
-      ENV: ${{ inputs.environment }}
     steps:
       - name: checkout
         uses: actions/checkout@v3
@@ -29,24 +36,9 @@ jobs:
       - name: set job properties
         id: job_properties
         run: |
-          declare -A AWS_ACCOUNTS_IDS AWS_REGIONS EKS_CLUSTERS
-          
-          AWS_ACCOUNTS_IDS=([dev]=180811438061 [stg]=406026015868 [live]=114395709799)
-          AWS_REGIONS=([dev]=us-east-2 [stg]=us-east-2 [live]=us-east-2)
-          EKS_CLUSTERS=([dev]=k8s-dev-85c52b0e [stg]=k8s-stg-7a1d63f9 [live]=k8s-live-620f830f)
-
-          AWS_ACCOUNT_ID=${AWS_ACCOUNTS_IDS[$ENV]}
-          AWS_REGION=${AWS_REGIONS[$ENV]}
-          EKS_CLUSTER=${EKS_CLUSTERS[$ENV]}
-
-          echo "::set-output name=aws_region::$AWS_REGION"
-          echo "::set-output name=aws_iam_role::arn:aws:iam::${AWS_ACCOUNT_ID}:role/CrossAccount-Global-Admin"
-          echo "::set-output name=eks_cluster::$EKS_CLUSTER"
-
-          RELEASE_NAME=${GITHUB_REPOSITORY#*/}
-          echo RELEASE_NAME=$RELEASE_NAME >> $GITHUB_ENV
-          echo NAMESPACE=$RELEASE_NAME >> $GITHUB_ENV
-          echo CHART_PATH=charts/$RELEASE_NAME >> $GITHUB_ENV
+          echo RELEASE_NAME=${{ inputs.project_name }} >> $GITHUB_ENV
+          echo NAMESPACE=${{ inputs.project_name }} >> $GITHUB_ENV
+          echo CHART_PATH=charts/${{ inputs.project_name }} >> $GITHUB_ENV
 
       - name: configure AWS credentials for Helm
         uses: aws-actions/configure-aws-credentials@v1
@@ -57,9 +49,10 @@ jobs:
 
       - name: Helm dependency update
         run: |
+          AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query "Account" --output text)
           aws ecr get-login-password | helm registry login \
             --username AWS \
-            --password-stdin 203176318594.dkr.ecr.us-east-1.amazonaws.com
+            --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com
 
           helm dep up $CHART_PATH
 
@@ -68,41 +61,41 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.aws_access_key_id }}
           aws-secret-access-key: ${{ secrets.aws_secret_access_key }}
-          aws-region: ${{ steps.job_properties.outputs.aws_region }}
+          aws-region: ${{ secrets.aws_region }}
           role-skip-session-tagging: true
-          role-to-assume: ${{ steps.job_properties.outputs.aws_iam_role }}
+          role-to-assume: "arn:aws:iam::${{ secrets.aws_account_id }}:role/CrossAccount-Global-Admin"
           role-duration-seconds: 1200
-          role-session-name: GitHubActionsBuildSession
+          role-session-name: GitHubActionsDeploySession
           mask-aws-account-id: false
 
-      - name: Helm upgrade
-        env:
-          EKS_CLUSTER: ${{ steps.job_properties.outputs.eks_cluster }}
+      - name: update image tag
         run: |
-          aws eks update-kubeconfig --name $EKS_CLUSTER
+          yq -i '.appVersion = env(APP_VERSION)' ${CHART_PATH}/Chart.yaml
+          yq -i '.image.tag = env(APP_VERSION)' ${CHART_PATH}/environments/${{ inputs.environment }}/values.yaml
+
+      - name: Helm upgrade
+        run: |
+          aws eks update-kubeconfig --name ${{ secrets.eks_cluster_name }}
 
           if [[ ${{ github.event_name }} == 'pull_request' ]]; then
-            RELEASE_NAME=${RELEASE_NAME}-pr-${{ github.event.number }}
-            PREFIX_HOST=pr-${{ github.event.number }}
-            HELM_ARGS="--set ingress.preffixHost=${PREFIX_HOST}"
+            PREFIX=pr-${{ github.event.number }}
+            RELEASE_NAME=${PREFIX}-${RELEASE_NAME}
+            HELM_ARGS="--set ingress.prefixHost=${PREFIX}"
           fi
 
-          if [[ -f ${CHART_PATH}/environments/${ENV}/secrets.yaml ]]; then
-            HELM_ARGS="$HELM_ARGS --values secrets://${CHART_PATH}/environments/${ENV}/secrets.yaml"
+          if [[ -f ${CHART_PATH}/environments/${{ inputs.environment }}/secrets.yaml ]]; then
+            HELM_ARGS="$HELM_ARGS --values secrets://${CHART_PATH}/environments/${{ inputs.environment }}/secrets.yaml"
           fi
 
           helm upgrade \
             --install $RELEASE_NAME $CHART_PATH \
             --create-namespace --namespace $NAMESPACE \
-            --values ${CHART_PATH}/environments/${ENV}/values.yaml \
-            --set image.tag=${{ inputs.image_tag }} $HELM_ARGS
+            --values ${CHART_PATH}/environments/${{ inputs.environment }}/values.yaml $HELM_ARGS
 
   cleanup:
     name: cleanup
     runs-on: ${{ inputs.environment }}
     if: ${{ github.event_name == 'pull_request' && github.event.action == 'closed' }}
-    env:
-      ENV: ${{ inputs.environment }}
     steps:
       - name: checkout
         uses: actions/checkout@v3
@@ -110,43 +103,27 @@ jobs:
       - name: set job properties
         id: job_properties
         run: |
-          declare -A AWS_ACCOUNTS_IDS AWS_REGIONS EKS_CLUSTERS
-          
-          AWS_ACCOUNTS_IDS=([dev]=180811438061 [stg]=406026015868 [live]=114395709799)
-          AWS_REGIONS=([dev]=us-east-2 [stg]=us-east-2 [live]=us-east-2)
-          EKS_CLUSTERS=([dev]=k8s-dev-85c52b0e [stg]=k8s-stg-7a1d63f9 [live]=k8s-live-620f830f)
-
-          AWS_ACCOUNT_ID=${AWS_ACCOUNTS_IDS[$ENV]}
-          AWS_REGION=${AWS_REGIONS[$ENV]}
-          EKS_CLUSTER=${EKS_CLUSTERS[$ENV]}
-
-          echo "::set-output name=aws_region::$AWS_REGION"
-          echo "::set-output name=aws_iam_role::arn:aws:iam::${AWS_ACCOUNT_ID}:role/CrossAccount-Global-Admin"
-          echo "::set-output name=eks_cluster::$EKS_CLUSTER"
-
-          RELEASE_NAME=${GITHUB_REPOSITORY#*/}
-          echo RELEASE_NAME=$RELEASE_NAME >> $GITHUB_ENV
-          echo NAMESPACE=$RELEASE_NAME >> $GITHUB_ENV
-          echo CHART_PATH=charts/$RELEASE_NAME >> $GITHUB_ENV
+          echo RELEASE_NAME=${{ inputs.project_name }} >> $GITHUB_ENV
+          echo NAMESPACE=${{ inputs.project_name }} >> $GITHUB_ENV
+          echo CHART_PATH=charts/${{ inputs.project_name }} >> $GITHUB_ENV
 
       - name: configure AWS credentials for EKS
         uses: aws-actions/configure-aws-credentials@v1
         with:
           aws-access-key-id: ${{ secrets.aws_access_key_id }}
           aws-secret-access-key: ${{ secrets.aws_secret_access_key }}
-          aws-region: ${{ steps.job_properties.outputs.aws_region }}
+          aws-region: ${{ secrets.aws_region }}
           role-skip-session-tagging: true
-          role-to-assume: ${{ steps.job_properties.outputs.aws_iam_role }}
+          role-to-assume: "arn:aws:iam::${{ secrets.aws_account_id }}:role/CrossAccount-Global-Admin"
           role-duration-seconds: 1200
-          role-session-name: GitHubActionsBuildSession
+          role-session-name: GitHubActionsDeploySession
           mask-aws-account-id: false
 
       - name: Helm uninstall PR
-        env:
-          EKS_CLUSTER: ${{ steps.job_properties.outputs.eks_cluster }}
         run: |
-          aws eks update-kubeconfig --name $EKS_CLUSTER
+          aws eks update-kubeconfig --name ${{ secrets.eks_cluster_name }}
 
-          RELEASE_NAME=${RELEASE_NAME}-pr-${{ github.event.number }}
+          PREFIX=pr-${{ github.event.number }}
+          RELEASE_NAME=${PREFIX}-${RELEASE_NAME}
 
           helm uninstall $RELEASE_NAME -n $NAMESPACE

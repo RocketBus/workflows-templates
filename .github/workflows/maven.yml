@@ -3,24 +3,11 @@ name: Java CI with Maven
 on:
   workflow_call:
     inputs:
-      gitversion:
-        type: string
-        required: true
       jdk_version:
         type: string
         required: false
         default: 11
-      integration_tests_disabled:
-        type: boolean
-        required: false
-        default: true
-      package_disabled:
-        type: boolean
-        required: false
-        default: false
     secrets:
-      git_access_token:
-        required: true
       maven_settings:
         required: true
       nexus_username:
@@ -39,43 +26,10 @@ env:
   SONAR_TOKEN: ${{ secrets.sonar_token }}
 
 jobs:
-  # code:
-  #   name: code
-  #   runs-on: live
-  #   if: ${{ github.ref_name == github.event.repository.default_branch }}
-  #   steps:
-  #     - name: checkout
-  #       uses: actions/checkout@v3
-  #       with:
-  #         fetch-depth: 0
-  #         token: ${{ secrets.git_access_token }}
-
-  #     - name: setup JDK
-  #       uses: actions/setup-java@v3
-  #       with:
-  #         java-version: ${{ inputs.jdk_version }}
-  #         distribution: 'temurin'
-  #         cache: 'maven'
-  #         overwrite-settings: false
-
-  #     - name: create settings.xml
-  #       run: echo ${{ secrets.maven_settings }} | base64 -d > ~/.m2/settings.xml
-
-  #     - name: bump version
-  #       run: |
-  #         MAJOR_MINOR_PATCH=$(echo '${{ inputs.gitversion }}' | jq -r '.MajorMinorPatch')
-  #         ./mvnw $MAVEN_CLI_OPTS org.codehaus.mojo:versions-maven-plugin:2.11.0:set -DnewVersion=${MAJOR_MINOR_PATCH}-SNAPSHOT
-  #         ./mvnw $MAVEN_CLI_OPTS org.codehaus.mojo:versions-maven-plugin:2.11.0:set-property -Dproperty=revision -DnewVersion=${MAJOR_MINOR_PATCH}-SNAPSHOT
-  #         ./mvnw $MAVEN_CLI_OPTS org.codehaus.mojo:versions-maven-plugin:2.11.0:commit
-  #         git config user.email "github-actions@clickbus.com"
-  #         git config user.name "Github Actions"
-  #         git diff-index --quiet HEAD || git commit -a -m "[skip ci] bump version"
-  #         git push
-
   lint:
     name: lint
     runs-on: live
-    if: ${{ always() && ((github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'branch')) }}
+    if: ${{ (github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'tag') }}
     steps:
       - name: checkout
         uses: actions/checkout@v3
@@ -99,7 +53,7 @@ jobs:
   unit_tests:
     name: unit tests
     runs-on: live
-    if: ${{ always() && ((github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'branch')) }}
+    if: ${{ (github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'tag') }}
     steps:
       - name: checkout
         uses: actions/checkout@v3
@@ -118,6 +72,7 @@ jobs:
         run: echo ${{ secrets.maven_settings }} | base64 -d > ~/.m2/settings.xml
 
       - name: execute unit tests
+        continue-on-error: true
         run: ./mvnw $MAVEN_CLI_OPTS clean test -DskipITs=true
 
       - name: archive unit tests report
@@ -131,7 +86,7 @@ jobs:
   integration_tests:
     name: integration tests
     runs-on: live
-    if: ${{ always() && ((github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'branch')) }}
+    if: ${{ github.event_name == 'push' && github.ref_type == 'tag' }}
     steps:
       - name: checkout
         uses: actions/checkout@v3
@@ -150,14 +105,15 @@ jobs:
         run: echo ${{ secrets.maven_settings }} | base64 -d > ~/.m2/settings.xml
 
       - name: execute integration tests
-        run: ./mvnw $MAVEN_CLI_OPTS clean integration-test -DskipUTs=true || true
+        continue-on-error: true
+        run: ./mvnw $MAVEN_CLI_OPTS clean integration-test -DskipUTs=true
 
   sonarqube:
     name: sonarqube
     runs-on: live
-    if: ${{ always() && github.ref_name == github.event.repository.default_branch }}
     needs:
       - unit_tests
+    if: ${{ (github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'tag') }}
     steps:
       - name: checkout
         uses: actions/checkout@v3
@@ -181,18 +137,28 @@ jobs:
         run: echo ${{ secrets.maven_settings }} | base64 -d > ~/.m2/settings.xml
 
       - name: sonarqube scan
-        run: ./mvnw $MAVEN_CLI_OPTS verify sonar:sonar -Dmaven.test.skip
+        env:
+          SONAR_PARAMETERS: "-Dmaven.test.skip"
+        run: |
+          if [[ ${{ github.event_name }} == 'pull_request' ]]; then
+            SONAR_PARAMETERS="$SONAR_PARAMETERS -Dsonar.pullrequest.key=${{ github.event.pull_request.number }} -Dsonar.pullrequest.branch=${{ github.event.pull_request.head.ref }} -Dsonar.pullrequest.github.repository=$GITHUB_REPOSITORY"
+          fi
 
-#      - name: sonarqube quality gate check
-#        uses: sonarsource/sonarqube-quality-gate-action@master
-#        timeout-minutes: 5
-#        with:
-#          scanMetadataReportFile: target/sonar/report-task.txt
+          ./mvnw $MAVEN_CLI_OPTS verify sonar:sonar ${SONAR_PARAMETERS}
+
+      - name: sonarqube quality gate check
+        uses: sonarsource/sonarqube-quality-gate-action@master
+        timeout-minutes: 5
+        continue-on-error: true
+        with:
+          scanMetadataReportFile: target/sonar/report-task.txt
 
   package:
     name: package
     runs-on: live
-    if: ${{ always() && !inputs.package_disabled && ((github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'branch') || (github.event_name == 'push' && github.ref_type == 'tag')) }}
+    needs:
+      - sonarqube
+    if: ${{ (github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'tag') }}
     steps:
       - name: checkout
         uses: actions/checkout@v3
@@ -211,7 +177,8 @@ jobs:
         run: echo ${{ secrets.maven_settings }} | base64 -d > ~/.m2/settings.xml
 
       - name: package artifact
-        run: ./mvnw $MAVEN_CLI_OPTS clean package -Dmaven.test.skip=true 
+        id: package_artifact
+        run: ./mvnw $MAVEN_CLI_OPTS clean package -Dmaven.test.skip=true
 
       - name: archive artifact
         uses: actions/upload-artifact@v3
@@ -220,3 +187,16 @@ jobs:
           path: |
             **/target/*.jar
             **/target/*.war
+
+  release:
+    name: package
+    runs-on: live
+    needs:
+      - package
+    if: ${{ github.event_name == 'push' && github.ref_type == 'tag' }}
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
+
+      - name: create github release
+        uses: softprops/action-gh-release@v1

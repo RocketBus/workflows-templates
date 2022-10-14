@@ -2,6 +2,11 @@ name: Setup Workflow
 
 on:
   workflow_call:
+    inputs:
+      project_name:
+        type: string
+        required: false
+        default: ''
     outputs:
       project_name:
         value: ${{ jobs.preflight_checklist.outputs.project_name }}
@@ -18,12 +23,6 @@ jobs:
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
-
-      - name: setup Node.js
-        uses: actions/setup-node@v3
-        if: ${{ github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize') }}
-        with:
-          node-version: latest
 
       - name: setup .NET cli
         uses: actions/setup-dotnet@v2
@@ -83,8 +82,14 @@ jobs:
       - name: setup project properties
         id: project_properties
         run: |
-          echo "::set-output name=project_name::${GITHUB_REPOSITORY#*/}"
-          echo "::set-output name=gitversion::{\"MajorMinorPatch\": \"${GITVERSION_MAJORMINORPATCH}\", \"EscapedBranchName\": \"${GITVERSION_ESCAPEDBRANCHNAME}\", \"ShortSha\": \"${GITVERSION_SHORTSHA}\"}"
+          if [[ ${{ inputs.project_name }} == "" ]]; then
+            PROJECT_NAME=${GITHUB_REPOSITORY#*/}
+          else
+            PROJECT_NAME=${{ inputs.project_name }}
+          fi
+
+          echo "::set-output name=project_name::$PROJECT_NAME"
+          echo "::set-output name=gitversion::{\"SemVer\": \"${GITVERSION_SEMVER}\", \"EscapedBranchName\": \"${GITVERSION_ESCAPEDBRANCHNAME}\", \"ShortSha\": \"${GITVERSION_SHORTSHA}\"}"
     outputs:
       project_name: ${{ steps.project_properties.outputs.project_name }}
       gitversion: ${{ steps.project_properties.outputs.gitversion }}

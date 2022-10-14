@@ -1,8 +1,11 @@
-name: Maven release
+name: Maven release prepare
 
 on:
   workflow_call:
     inputs:
+      gitversion:
+        type: string
+        required: true
       jdk_version:
         type: string
         required: false
@@ -24,10 +27,10 @@ env:
   NEXUS_PASSWORD: ${{ secrets.nexus_password }}
 
 jobs:
-  release:
-    name: release
+  release_prepare:
+    name: release prepare
     runs-on: live
-    if: ${{ github.event_name == 'workflow_dispatch' && github.ref_name == github.event.repository.default_branch }}
+    if: ${{ github.ref_name == github.event.repository.default_branch }}
     steps:
       - name: checkout
         uses: actions/checkout@v3
@@ -49,29 +52,24 @@ jobs:
       - name: release prepare
         id: release_prepare
         run: |
-          ./mvnw $MAVEN_CLI_OPTS org.codehaus.mojo:versions-maven-plugin:2.11.0:set -DremoveSnapshot
+          RELEASE_VERSION=$(echo '${{ inputs.gitversion }}' | jq -r '.SemVer')
+          ./mvnw $MAVEN_CLI_OPTS org.codehaus.mojo:versions-maven-plugin:2.11.0:set -DnewVersion=${RELEASE_VERSION}
+          ./mvnw $MAVEN_CLI_OPTS org.codehaus.mojo:versions-maven-plugin:2.11.0:set-property -Dproperty=revision -DnewVersion=${RELEASE_VERSION}
           ./mvnw $MAVEN_CLI_OPTS org.codehaus.mojo:versions-maven-plugin:2.11.0:commit
-          RELEASE_VERSION=$(./mvnw maven-help-plugin:evaluate -Dexpression=project.version -q -DforceStdout)
           git config user.email "github-actions@clickbus.com"
           git config user.name "Github Actions"
-          git commit -a -m "[skip ci] release v$RELEASE_VERSION"
+          git commit -a -m "chore: release $RELEASE_VERSION [skip ci]"
           git push
-          git tag v$RELEASE_VERSION
-          git push --tags
-
-          echo "::set-output name=release_version::$RELEASE_VERSION"
-
-      - name: create github release
-        uses: softprops/action-gh-release@v1
-        with:
-          tag_name: v${{ steps.release_prepare.outputs.release_version }}
+          git tag $RELEASE_VERSION
+          git push $RELEASE_VERSION
 
       - name: bump version
         run: |
           ./mvnw $MAVEN_CLI_OPTS build-helper:parse-version org.codehaus.mojo:versions-maven-plugin:2.11.0:set -DnewVersion=\${parsedVersion.majorVersion}.\${parsedVersion.minorVersion}.\${parsedVersion.nextIncrementalVersion}-SNAPSHOT
           ./mvnw $MAVEN_CLI_OPTS build-helper:parse-version org.codehaus.mojo:versions-maven-plugin:2.11.0:set-property -Dproperty=revision -DnewVersion=\${parsedVersion.majorVersion}.\${parsedVersion.minorVersion}.\${parsedVersion.incrementalVersion}-SNAPSHOT
           ./mvnw $MAVEN_CLI_OPTS org.codehaus.mojo:versions-maven-plugin:2.11.0:commit
+          VERSION=$(./mvnw $MAVEN_CLI_OPTS org.apache.maven.plugins:maven-help-plugin:3.3.0:evaluate -Dexpression=project.version -q -DforceStdout)
           git config user.email "github-actions@clickbus.com"
           git config user.name "Github Actions"
-          git commit -a -m "[skip ci] bump version"
+          git commit -a -m "chore: bump version to $VERSION [skip ci]"
           git push

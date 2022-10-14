@@ -46,7 +46,7 @@ jobs:
   build:
     name: build
     runs-on: live
-    if: ${{ (github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'branch') || (github.event_name == 'push' && github.ref_type == 'tag') }}
+    if: ${{ (github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'tag') }}
     steps:
       - name: checkout
         uses: actions/checkout@v3
@@ -89,8 +89,7 @@ jobs:
         with:
           images: ${{ steps.login_ecr.outputs.registry }}/${{ inputs.project_name }}
           tags: |
-            type=ref,suffix=-{{sha}},event=branch
-            type=ref,prefix=pr-,suffix=-{{sha}},event=pr
+            type=ref,event=pr,prefix=pr-,suffix=-{{sha}}
             type=semver,pattern={{version}}
 
       - name: set image properties
