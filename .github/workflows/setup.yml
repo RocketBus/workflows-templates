@@ -39,7 +39,7 @@ jobs:
         uses: gittools/actions/gitversion/execute@v0.9.14
         with:
           additionalArguments: >
-            /overrideconfig mode=Mainline
+            /overrideconfig mode=ContinuousDelivery
             /overrideconfig major-version-bump-message="^(build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test)(\\([\\w\\s-]*\\))?(!:|:.*\\n\\n((.+\\n)+\\n)?BREAKING CHANGE:\\s.+)"
             /overrideconfig minor-version-bump-message="^(feat)(\\([\\w\\s-]*\\))?:"
             /overrideconfig patch-version-bump-message="^(build|chore|ci|docs|fix|perf|refactor|revert|style|test)(\\([\\w\\s-]*\\))?:"
