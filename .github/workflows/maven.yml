@@ -188,18 +188,3 @@ jobs:
           path: |
             **/target/*.jar
             **/target/*.war
-
-  release:
-    name: release
-    runs-on: live
-    needs:
-      - unit_tests
-      - sonarqube
-      - package
-    if: ${{ github.event_name == 'push' && github.ref_type == 'tag' }}
-    steps:
-      - name: checkout
-        uses: actions/checkout@v3
-
-      - name: create github release
-        uses: softprops/action-gh-release@v1

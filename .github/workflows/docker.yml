@@ -43,9 +43,24 @@ env:
   AWS_REGION: us-east-1
 
 jobs:
+  lint:
+    name: lint
+    runs-on: live
+    if: ${{ (github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'tag') }}
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
+
+      - name: lint dockerfile
+        uses: hadolint/hadolint-action@v2.0.0
+        with:
+          dockerfile: ${{ inputs.dockerfile_path }}
+
   build:
     name: build
     runs-on: live
+    needs:
+      - lint
     if: ${{ (github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'tag') }}
     steps:
       - name: checkout
@@ -55,11 +70,6 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: app-artifact
-
-      - name: lint dockerfile
-        uses: hadolint/hadolint-action@v2.0.0
-        with:
-          dockerfile: ${{ inputs.dockerfile_path }}
 
       - name: setup Docker context for Buildx
         id: buildx-context
@@ -166,6 +176,7 @@ jobs:
     name: image scan
     runs-on: live
     needs:
+      - lint
       - build
     steps:
       - name: configure AWS credentials
