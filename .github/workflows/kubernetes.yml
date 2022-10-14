@@ -70,6 +70,7 @@ jobs:
 
       - name: update image tag
         run: |
+          export APP_VERSION=${{ inputs.image_tag }}
           yq -i '.appVersion = env(APP_VERSION)' ${CHART_PATH}/Chart.yaml
           yq -i '.image.tag = env(APP_VERSION)' ${CHART_PATH}/environments/${{ inputs.environment }}/values.yaml
 
