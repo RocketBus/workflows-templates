@@ -17,18 +17,14 @@ on:
         required: true
       aws_secret_access_key:
         required: true
-      aws_account_id:
-        required: true
-      aws_region:
-        required: true
-      eks_cluster_name:
-        required: true
 
 jobs:
   deploy:
     name: deploy
     runs-on: ${{ inputs.environment }}
     environment: ${{ inputs.environment }}
+    env:
+      ENV: ${{ inputs.environment }}
     steps:
       - name: checkout
         uses: actions/checkout@v3
@@ -36,6 +32,20 @@ jobs:
       - name: set job properties
         id: job_properties
         run: |
+          declare -A AWS_ACCOUNTS_IDS AWS_REGIONS EKS_CLUSTERS
+
+          AWS_ACCOUNTS_IDS=([dev]=180811438061 [stg]=406026015868 [live]=114395709799)
+          AWS_REGIONS=([dev]=us-east-2 [stg]=us-east-2 [live]=us-east-1)
+          EKS_CLUSTERS=([dev]=k8s-dev-85c52b0e [stg]=k8s-stg-7a1d63f9 [live]=k8s-live-b2401546)
+
+          AWS_ACCOUNT_ID=${AWS_ACCOUNTS_IDS[$ENV]}
+          AWS_REGION=${AWS_REGIONS[$ENV]}
+          EKS_CLUSTER=${EKS_CLUSTERS[$ENV]}
+
+          echo "aws_region=$AWS_REGION" >> $GITHUB_OUTPUT
+          echo "aws_iam_role=arn:aws:iam::${AWS_ACCOUNT_ID}:role/CrossAccount-Global-Admin" >> $GITHUB_OUTPUT
+          echo "eks_cluster=$EKS_CLUSTER" >> $GITHUB_OUTPUT
+
           echo RELEASE_NAME=${{ inputs.project_name }} >> $GITHUB_ENV
           echo NAMESPACE=${{ inputs.project_name }} >> $GITHUB_ENV
           echo CHART_PATH=charts/${{ inputs.project_name }} >> $GITHUB_ENV
@@ -61,9 +71,9 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.aws_access_key_id }}
           aws-secret-access-key: ${{ secrets.aws_secret_access_key }}
-          aws-region: ${{ secrets.aws_region }}
+          aws-region: ${{ steps.job_properties.outputs.aws_region }}
           role-skip-session-tagging: true
-          role-to-assume: "arn:aws:iam::${{ secrets.aws_account_id }}:role/CrossAccount-Global-Admin"
+          role-to-assume: ${{ steps.job_properties.outputs.aws_iam_role }}
           role-duration-seconds: 1200
           role-session-name: GitHubActionsDeploySession
           mask-aws-account-id: false
@@ -76,7 +86,7 @@ jobs:
 
       - name: Helm upgrade
         run: |
-          aws eks update-kubeconfig --name ${{ secrets.eks_cluster_name }}
+          aws eks update-kubeconfig --name ${{ steps.job_properties.outputs.eks_cluster }}
 
           if [[ ${{ github.event_name }} == 'pull_request' ]]; then
             PREFIX=pr-${{ github.event.number }}
@@ -97,6 +107,8 @@ jobs:
     name: cleanup
     runs-on: ${{ inputs.environment }}
     if: ${{ github.event_name == 'pull_request' && github.event.action == 'closed' }}
+    env:
+      ENV: ${{ inputs.environment }}
     steps:
       - name: checkout
         uses: actions/checkout@v3
@@ -104,6 +116,20 @@ jobs:
       - name: set job properties
         id: job_properties
         run: |
+          declare -A AWS_ACCOUNTS_IDS AWS_REGIONS EKS_CLUSTERS
+          
+          AWS_ACCOUNTS_IDS=([dev]=180811438061 [stg]=406026015868 [live]=114395709799)
+          AWS_REGIONS=([dev]=us-east-2 [stg]=us-east-2 [live]=us-east-1)
+          EKS_CLUSTERS=([dev]=k8s-dev-85c52b0e [stg]=k8s-stg-7a1d63f9 [live]=k8s-live-b2401546)
+
+          AWS_ACCOUNT_ID=${AWS_ACCOUNTS_IDS[$ENV]}
+          AWS_REGION=${AWS_REGIONS[$ENV]}
+          EKS_CLUSTER=${EKS_CLUSTERS[$ENV]}
+
+          echo "aws_region=$AWS_REGION" >> $GITHUB_OUTPUT
+          echo "aws_iam_role=arn:aws:iam::${AWS_ACCOUNT_ID}:role/CrossAccount-Global-Admin" >> $GITHUB_OUTPUT
+          echo "eks_cluster=$EKS_CLUSTER" >> $GITHUB_OUTPUT
+
           echo RELEASE_NAME=${{ inputs.project_name }} >> $GITHUB_ENV
           echo NAMESPACE=${{ inputs.project_name }} >> $GITHUB_ENV
           echo CHART_PATH=charts/${{ inputs.project_name }} >> $GITHUB_ENV
@@ -113,16 +139,16 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.aws_access_key_id }}
           aws-secret-access-key: ${{ secrets.aws_secret_access_key }}
-          aws-region: ${{ secrets.aws_region }}
+          aws-region: ${{ steps.job_properties.outputs.aws_region }}
           role-skip-session-tagging: true
-          role-to-assume: "arn:aws:iam::${{ secrets.aws_account_id }}:role/CrossAccount-Global-Admin"
+          role-to-assume: ${{ steps.job_properties.outputs.aws_iam_role }}
           role-duration-seconds: 1200
           role-session-name: GitHubActionsDeploySession
           mask-aws-account-id: false
 
       - name: Helm uninstall PR
         run: |
-          aws eks update-kubeconfig --name ${{ secrets.eks_cluster_name }}
+          aws eks update-kubeconfig --name ${{ steps.job_properties.outputs.eks_cluster }}
 
           PREFIX=pr-${{ github.event.number }}
           RELEASE_NAME=${PREFIX}-${RELEASE_NAME}

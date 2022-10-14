@@ -1,0 +1,192 @@
+name: Java CI with Gradle
+
+on:
+  workflow_call:
+    inputs:
+      jdk_version:
+        type: string
+        required: false
+        default: 11
+    secrets:
+      nexus_username:
+        required: true
+      nexus_password:
+        required: true
+      sonar_token:
+        required: true
+
+env:
+  GRADLE_OPTS: "-Dorg.gradle.daemon=false"
+  NEXUS_USERNAME: ${{ secrets.nexus_username }}
+  NEXUS_PASSWORD: ${{ secrets.nexus_password }}
+  SONAR_HOST_URL: "https://sonar.clickbus.net"
+  SONAR_TOKEN: ${{ secrets.sonar_token }}
+
+jobs:
+  lint:
+    name: lint
+    runs-on: live
+    if: ${{ (github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'tag') }}
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: setup JDK
+        uses: actions/setup-java@v3
+        with:
+          java-version: ${{ inputs.jdk_version }}
+          distribution: 'temurin'
+          cache: 'gradle'
+          overwrite-settings: false
+
+      - name: lint code
+        continue-on-error: true
+        run: ./gradlew checkstyleMain
+
+  unit_tests:
+    name: unit tests
+    runs-on: live
+    if: ${{ (github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'tag') }}
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: setup JDK
+        uses: actions/setup-java@v3
+        with:
+          java-version: ${{ inputs.jdk_version }}
+          distribution: 'temurin'
+          cache: 'gradle'
+          overwrite-settings: false
+
+      - name: execute unit tests
+        continue-on-error: true
+        run: ./gradlew test
+
+      - name: archive unit tests report
+        uses: actions/upload-artifact@v3
+        with:
+          name: unit-tests-report
+          path: |
+            **/build/surefire-reports/TEST-***.xml
+            **/build/site/jacoco/jacoco.xml
+
+  integration_tests:
+    name: integration tests
+    runs-on: live
+    if: ${{ github.event_name == 'push' && github.ref_type == 'tag' }}
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: setup JDK
+        uses: actions/setup-java@v3
+        with:
+          java-version: ${{ inputs.jdk_version }}
+          distribution: 'temurin'
+          cache: 'gradle'
+          overwrite-settings: false
+
+      - name: execute integration tests
+        continue-on-error: true
+        run: ./gradlew integrationTest
+
+  sonarqube:
+    name: sonarqube
+    runs-on: live
+    needs:
+      - unit_tests
+    if: ${{ (github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'tag') }}
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: setup JDK
+        uses: actions/setup-java@v3
+        with:
+          java-version: ${{ inputs.jdk_version }}
+          distribution: 'temurin'
+          cache: 'gradle'
+          overwrite-settings: false
+
+      - name: download unit tests report
+        uses: actions/download-artifact@v3
+        with:
+          name: unit-tests-report
+
+      - name: sonarqube scan
+        continue-on-error: true
+        run: |
+          if [[ ${{ github.event_name }} == 'pull_request' ]]; then
+            SONAR_PARAMETERS="$SONAR_PARAMETERS -Dsonar.pullrequest.key=${{ github.event.pull_request.number }} -Dsonar.pullrequest.branch=${{ github.event.pull_request.head.ref }} -Dsonar.pullrequest.github.repository=$GITHUB_REPOSITORY"
+          fi
+
+          ./gradlew sonarqube ${SONAR_PARAMETERS}
+
+      - name: sonarqube quality gate check
+        uses: sonarsource/sonarqube-quality-gate-action@master
+        timeout-minutes: 5
+        continue-on-error: true
+        with:
+          scanMetadataReportFile: build/sonar/report-task.txt
+
+  package:
+    name: package
+    runs-on: live
+    needs:
+      - unit_tests
+      - sonarqube
+    if: ${{ (github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'tag') }}
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: setup JDK
+        uses: actions/setup-java@v3
+        with:
+          java-version: ${{ inputs.jdk_version }}
+          distribution: 'temurin'
+          cache: 'gradle'
+          overwrite-settings: false
+
+      - name: package artifact
+        id: package_artifact
+        run: ./gradlew build -x test
+
+      - name: archive artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: app-artifact
+          path: |
+            **/build/libs/*.jar
+            **/build/libs/*.war
+
+  release:
+    name: release
+    runs-on: live
+    if: ${{ github.event_name == 'push' && github.ref_type == 'tag' }}
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
+
+      - name: download artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: app-artifact
+
+      - name: create github release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            **/build/libs/*.jar
+            **/build/libs/*.war

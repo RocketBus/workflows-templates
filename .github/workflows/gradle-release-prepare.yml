@@ -1,0 +1,66 @@
+name: Gradle release prepare
+
+on:
+  workflow_call:
+    inputs:
+      gitversion:
+        type: string
+        required: true
+      jdk_version:
+        type: string
+        required: false
+        default: 11
+    secrets:
+      git_access_token:
+        required: true
+      nexus_username:
+        required: true
+      nexus_password:
+        required: true
+
+env:
+  GRADLE_OPTS: "-Dorg.gradle.daemon=false"
+  NEXUS_USERNAME: ${{ secrets.nexus_username }}
+  NEXUS_PASSWORD: ${{ secrets.nexus_password }}
+  SONAR_HOST_URL: "https://sonar.clickbus.net"
+  SONAR_TOKEN: ${{ secrets.sonar_token }}
+
+jobs:
+  release_prepare:
+    name: release prepare
+    runs-on: live
+    if: ${{ github.ref_name == github.event.repository.default_branch }}
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.git_access_token }}
+
+      - name: setup JDK
+        uses: actions/setup-java@v3
+        with:
+          java-version: ${{ inputs.jdk_version }}
+          distribution: 'temurin'
+          cache: 'gradle'
+          overwrite-settings: false
+
+      - name: create settings.xml
+        run: echo ${{ secrets.maven_settings }} | base64 -d > ~/.m2/settings.xml
+
+      - name: release prepare
+        id: release_prepare
+        run: |
+          RELEASE_VERSION=$(echo '${{ inputs.gitversion }}' | jq -r '.SemVer')
+          git config user.email "github-actions@clickbus.com"
+          git config user.name "Github Actions"
+          git commit -a -m "chore: release v$RELEASE_VERSION"
+          git tag v$RELEASE_VERSION
+          git push origin v$RELEASE_VERSION
+
+      - name: bump version
+        run: |
+          git config user.email "github-actions@clickbus.com"
+          git config user.name "Github Actions"
+          git commit -a -m "chore: bump version to $VERSION [skip ci]"
+          git push
