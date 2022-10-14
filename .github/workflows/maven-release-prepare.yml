@@ -61,7 +61,7 @@ jobs:
           git commit -a -m "chore: release $RELEASE_VERSION [skip ci]"
           git push
           git tag $RELEASE_VERSION
-          git push $RELEASE_VERSION
+          git push origin $RELEASE_VERSION
 
       - name: bump version
         run: |
