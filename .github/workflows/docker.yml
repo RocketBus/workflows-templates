@@ -100,8 +100,8 @@ jobs:
           FIRST_IMAGE_TAG=${IMAGE_TAGS[0]}
           IMAGE_TAG=${FIRST_IMAGE_TAG##*:}
 
-          echo "::set-output name=image_repository::$IMAGE_REPOSITORY"
-          echo "::set-output name=image_tag::$IMAGE_TAG"
+          echo "image_repository=$IMAGE_REPOSITORY" >> $GITHUB_OUTPUT
+          echo "image_tag=$IMAGE_TAG" >> $GITHUB_OUTPUT
 
       - name: setup ECR repository
         run: |

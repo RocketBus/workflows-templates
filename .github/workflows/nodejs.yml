@@ -130,7 +130,7 @@ jobs:
           if [[ ${{ github.event_name }} == 'pull_request' ]]; then
             SONAR_PARAMETERS="-Dsonar.pullrequest.key=${{ github.event.pull_request.number }} -Dsonar.pullrequest.branch=${{ github.event.pull_request.head.ref }} -Dsonar.pullrequest.github.repository=$GITHUB_REPOSITORY"
           fi
-          echo "::set-output name=args::$SONAR_PARAMETERS"
+          echo "args=$SONAR_PARAMETERS" >> $GITHUB_OUTPUT
 
       - name: sonarqube scan
         uses: sonarsource/sonarqube-scan-action@master

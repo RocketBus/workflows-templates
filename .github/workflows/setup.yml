@@ -88,8 +88,8 @@ jobs:
             PROJECT_NAME=${GITHUB_REPOSITORY#*/}
           fi
 
-          echo "::set-output name=project_name::$PROJECT_NAME"
-          echo "::set-output name=gitversion::{\"SemVer\": \"${GITVERSION_SEMVER}\", \"EscapedBranchName\": \"${GITVERSION_ESCAPEDBRANCHNAME}\", \"ShortSha\": \"${GITVERSION_SHORTSHA}\"}"
+          echo "project_name=$PROJECT_NAME" >> $GITHUB_OUTPUT
+          echo "gitversion={\"SemVer\": \"${GITVERSION_SEMVER}\", \"EscapedBranchName\": \"${GITVERSION_ESCAPEDBRANCHNAME}\", \"ShortSha\": \"${GITVERSION_SHORTSHA}\"}" >> $GITHUB_OUTPUT
     outputs:
       project_name: ${{ steps.project_properties.outputs.project_name }}
       gitversion: ${{ steps.project_properties.outputs.gitversion }}
