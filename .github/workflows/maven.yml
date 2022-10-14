@@ -188,3 +188,23 @@ jobs:
           path: |
             **/target/*.jar
             **/target/*.war
+
+  release:
+    name: release
+    runs-on: live
+    if: ${{ github.event_name == 'push' && github.ref_type == 'tag' }}
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
+
+      - name: download artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: app-artifact
+
+      - name: create github release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            **/target/*.jar
+            **/target/*.war
