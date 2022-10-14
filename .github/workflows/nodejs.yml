@@ -149,6 +149,7 @@ jobs:
     name: package
     runs-on: live
     needs:
+      - unit_tests
       - sonarqube
     if: ${{ !inputs.package_disabled && ((github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'tag')) }}
     steps:
@@ -181,9 +182,11 @@ jobs:
             build/
 
   release:
-    name: package
+    name: release
     runs-on: live
     needs:
+      - unit_tests
+      - sonarqube
       - package
     if: ${{ always() && (needs.package.result == 'success' || needs.package.result == 'skipped') && (github.event_name == 'push' && github.ref_type == 'tag') }}
     steps:

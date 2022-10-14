@@ -157,6 +157,7 @@ jobs:
     name: package
     runs-on: live
     needs:
+      - unit_tests
       - sonarqube
     if: ${{ (github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'tag') }}
     steps:
@@ -189,9 +190,11 @@ jobs:
             **/target/*.war
 
   release:
-    name: package
+    name: release
     runs-on: live
     needs:
+      - unit_tests
+      - sonarqube
       - package
     if: ${{ github.event_name == 'push' && github.ref_type == 'tag' }}
     steps:
