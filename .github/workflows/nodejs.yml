@@ -143,6 +143,7 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: unit-tests-report
+          path: /github/workspace/
 
       - name: set sonar parameters
         id: set_sonar_parameters
@@ -167,7 +168,6 @@ jobs:
     name: package
     runs-on: live
     needs:
-      - unit_tests
       - sonarqube
     if: ${{ !inputs.package_disabled && ((github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'tag')) }}
     steps:
@@ -208,7 +208,11 @@ jobs:
   release:
     name: release
     runs-on: live
-    if: ${{ github.event_name == 'push' && github.ref_type == 'tag' }}
+    needs:
+      - lint
+      - integration_tests
+      - package
+    if: ${{ always() && (needs.package.result == 'success' || needs.package.result == 'skipped') && (github.event_name == 'push' && github.ref_type == 'tag') }}
     steps:
       - name: checkout
         uses: actions/checkout@v3
