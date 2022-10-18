@@ -101,7 +101,7 @@ jobs:
   integration_tests:
     name: integration tests
     runs-on: live
-    if: ${{ github.event_name == 'push' && github.ref_type == 'tag' }}
+    if: ${{ (github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'tag') }}
     steps:
       - name: checkout
         uses: actions/checkout@v3
@@ -135,6 +135,7 @@ jobs:
     needs:
       - lint
       - unit_tests
+      - integration_tests
     if: ${{ (github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'tag') }}
     steps:
       - name: checkout
@@ -169,7 +170,6 @@ jobs:
     name: package
     runs-on: live
     needs:
-      - integration_tests
       - sonarqube
     if: ${{ !inputs.package_disabled && ((github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'tag')) }}
     steps:
