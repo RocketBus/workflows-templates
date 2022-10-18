@@ -96,8 +96,7 @@ jobs:
         with:
           name: unit-tests-report
           path: |
-            junit.xml
-            coverage/cobertura-coverage.xml
+            coverage/
 
   integration_tests:
     name: integration tests
