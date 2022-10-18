@@ -144,6 +144,7 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: unit-tests-report
+          path: coverage
 
       - name: set sonar parameters
         id: set_sonar_parameters
@@ -155,10 +156,7 @@ jobs:
 
       - name: sonarqube scan
         uses: sonarsource/sonarqube-scan-action@master
-        env:
-          INPUT_PROJECTBASEDIR: ${{ github.workspace }}
         with:
-          projectBaseDir: ${{ github.workspace }}
           args: >
             ${{ steps.set_sonar_parameters.outputs.args }}
 
