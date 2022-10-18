@@ -154,8 +154,6 @@ jobs:
         uses: sonarsource/sonarqube-scan-action@master
         with:
           args: >
-            -Dsonar.testExecutionReportPaths=junit.xml
-            -Dsonar.javascript.lcov.reportPaths=coverage/cobertura-coverage.xml
             ${{ steps.set_sonar_parameters.outputs.args }}
 
       - name: sonarqube quality gate check
