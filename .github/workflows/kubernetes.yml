@@ -13,6 +13,8 @@ on:
         type: string
         required: true
     secrets:
+      git_access_token:
+        required: true
       aws_access_key_id:
         required: true
       aws_secret_access_key:
@@ -28,6 +30,9 @@ jobs:
     steps:
       - name: checkout
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.git_access_token }}
 
       - name: set job properties
         id: job_properties
@@ -83,6 +88,11 @@ jobs:
           export APP_VERSION=${{ inputs.image_tag }}
           yq -i '.appVersion = env(APP_VERSION)' ${CHART_PATH}/Chart.yaml
           yq -i '.image.tag = env(APP_VERSION)' ${CHART_PATH}/environments/${{ inputs.environment }}/values.yaml
+          git config user.email "github-actions@clickbus.com"
+          git config user.name "Github Actions"
+          git add ${CHART_PATH}/environments/${{ inputs.environment }}/values.yaml
+          git commit -m "chore: update ${{ inputs.environment }} version to $VERSION [skip ci]" || true
+          git push
 
       - name: Helm upgrade
         run: |
