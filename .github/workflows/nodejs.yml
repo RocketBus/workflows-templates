@@ -136,6 +136,9 @@ jobs:
       - unit_tests
     if: ${{ (github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'tag') }}
     steps:
+      - name: checkout
+        uses: actions/checkout@v3
+
       - name: download unit tests report
         uses: actions/download-artifact@v3
         with:
@@ -144,8 +147,6 @@ jobs:
       - name: set sonar parameters
         id: set_sonar_parameters
         run: |
-          SONAR_PARAMETERS="-Dproject.settings=${GITHUB_WORKSPACE}/sonar-project.properties"
-
           if [[ ${{ github.event_name }} == 'pull_request' ]]; then
             SONAR_PARAMETERS="$SONAR_PARAMETERS -Dsonar.pullrequest.key=${{ github.event.pull_request.number }} -Dsonar.pullrequest.branch=${{ github.event.pull_request.head.ref }} -Dsonar.pullrequest.github.repository=$GITHUB_REPOSITORY"
           fi
