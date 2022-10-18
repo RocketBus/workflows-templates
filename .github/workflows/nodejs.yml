@@ -46,13 +46,19 @@ jobs:
 
       - name: install dependencies
         run: |
-          [[ ${{ inputs.node_package_manager }} == 'npm' ]] && npm ci --prefer-offline --no-audit
-          [[ ${{ inputs.node_package_manager }} == 'yarn' ]] && yarn install --frozen-lockfile
+          if [[ ${{ inputs.node_package_manager }} == 'npm' ]]; then
+            npm ci --prefer-offline
+          elif [[ ${{ inputs.node_package_manager }} == 'yarn' ]]; then
+            yarn install --frozen-lockfile
+          fi
 
       - name: lint code
         run: |
-          [[ ${{ inputs.node_package_manager }} == 'npm' ]] && npm run lint
-          [[ ${{ inputs.node_package_manager }} == 'yarn' ]] && yarn run lint
+          if [[ ${{ inputs.node_package_manager }} == 'npm' ]]; then
+            npm run lint
+          elif [[ ${{ inputs.node_package_manager }} == 'yarn' ]]; then
+            yarn run lint
+          fi
 
   unit_tests:
     name: unit tests
@@ -70,14 +76,20 @@ jobs:
 
       - name: install dependencies
         run: |
-          [[ ${{ inputs.node_package_manager }} == 'npm' ]] && npm ci --prefer-offline --no-audit
-          [[ ${{ inputs.node_package_manager }} == 'yarn' ]] && yarn install --frozen-lockfile
+          if [[ ${{ inputs.node_package_manager }} == 'npm' ]]; then
+            npm ci --prefer-offline
+          elif [[ ${{ inputs.node_package_manager }} == 'yarn' ]]; then
+            yarn install --frozen-lockfile
+          fi
 
       - name: execute unit tests
         continue-on-error: true
         run: |
-          [[ ${{ inputs.node_package_manager }} == 'npm' ]] && npm run test
-          [[ ${{ inputs.node_package_manager }} == 'yarn' ]] && yarn run test
+          if [[ ${{ inputs.node_package_manager }} == 'npm' ]]; then
+            npm run test
+          elif [[ ${{ inputs.node_package_manager }} == 'yarn' ]]; then
+            yarn run test
+          fi
 
       - name: archive unit tests report
         uses: actions/upload-artifact@v3
@@ -103,14 +115,20 @@ jobs:
 
       - name: install dependencies
         run: |
-          [[ ${{ inputs.node_package_manager }} == 'npm' ]] && npm ci --prefer-offline --no-audit
-          [[ ${{ inputs.node_package_manager }} == 'yarn' ]] && yarn install --frozen-lockfile
+          if [[ ${{ inputs.node_package_manager }} == 'npm' ]]; then
+            npm ci --prefer-offline
+          elif [[ ${{ inputs.node_package_manager }} == 'yarn' ]]; then
+            yarn install --frozen-lockfile
+          fi
 
       - name: execute integration tests
         continue-on-error: true
         run: |
-          [[ ${{ inputs.node_package_manager }} == 'npm' ]] && npm run test:integration
-          [[ ${{ inputs.node_package_manager }} == 'yarn' ]] && yarn run test:integration
+          if [[ ${{ inputs.node_package_manager }} == 'npm' ]]; then
+            npm run test:integration
+          elif [[ ${{ inputs.node_package_manager }} == 'yarn' ]]; then
+            yarn run test:integration
+          fi
 
   sonarqube:
     name: sonarqube
@@ -164,14 +182,20 @@ jobs:
 
       - name: install dependencies
         run: |
-          [[ ${{ inputs.node_package_manager }} == 'npm' ]] && npm ci --prefer-offline --no-audit
-          [[ ${{ inputs.node_package_manager }} == 'yarn' ]] && yarn install --frozen-lockfile
+          if [[ ${{ inputs.node_package_manager }} == 'npm' ]]; then
+            npm ci --prefer-offline
+          elif [[ ${{ inputs.node_package_manager }} == 'yarn' ]]; then
+            yarn install --frozen-lockfile
+          fi
 
       - name: package artifact
         id: package_artifact
         run: |
-          [[ ${{ inputs.node_package_manager }} == 'npm' ]] && npm run build
-          [[ ${{ inputs.node_package_manager }} == 'yarn' ]] && yarn run build
+          if [[ ${{ inputs.node_package_manager }} == 'npm' ]]; then
+            npm run build
+          elif [[ ${{ inputs.node_package_manager }} == 'yarn' ]]; then
+            yarn run build
+          fi
 
       - name: archive artifact
         uses: actions/upload-artifact@v3
