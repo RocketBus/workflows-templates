@@ -46,7 +46,7 @@ jobs:
 
       - name: install dependencies
         run: |
-          [[ ${{ inputs.node_package_manager }} == 'npm' ]] && npm ci --prefer-offline
+          [[ ${{ inputs.node_package_manager }} == 'npm' ]] && npm ci --prefer-offline --no-audit
           [[ ${{ inputs.node_package_manager }} == 'yarn' ]] && yarn install --frozen-lockfile
 
       - name: lint code
@@ -70,7 +70,7 @@ jobs:
 
       - name: install dependencies
         run: |
-          [[ ${{ inputs.node_package_manager }} == 'npm' ]] && npm ci --prefer-offline
+          [[ ${{ inputs.node_package_manager }} == 'npm' ]] && npm ci --prefer-offline --no-audit
           [[ ${{ inputs.node_package_manager }} == 'yarn' ]] && yarn install --frozen-lockfile
 
       - name: execute unit tests
@@ -103,7 +103,7 @@ jobs:
 
       - name: install dependencies
         run: |
-          [[ ${{ inputs.node_package_manager }} == 'npm' ]] && npm ci --prefer-offline
+          [[ ${{ inputs.node_package_manager }} == 'npm' ]] && npm ci --prefer-offline --no-audit
           [[ ${{ inputs.node_package_manager }} == 'yarn' ]] && yarn install --frozen-lockfile
 
       - name: execute integration tests
@@ -164,7 +164,7 @@ jobs:
 
       - name: install dependencies
         run: |
-          [[ ${{ inputs.node_package_manager }} == 'npm' ]] && npm ci --prefer-offline
+          [[ ${{ inputs.node_package_manager }} == 'npm' ]] && npm ci --prefer-offline --no-audit
           [[ ${{ inputs.node_package_manager }} == 'yarn' ]] && yarn install --frozen-lockfile
 
       - name: package artifact
