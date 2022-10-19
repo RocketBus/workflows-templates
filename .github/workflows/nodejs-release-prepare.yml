@@ -40,8 +40,8 @@ jobs:
         id: release_prepare
         run: |
           RELEASE_VERSION=$(echo '${{ inputs.gitversion }}' | jq -r '.SemVer')
-          [[ ${{ inputs.node_package_manager }} == 'npm' ]] && npm version $RELEASE_VERSION --no-git-tag-version
-          [[ ${{ inputs.node_package_manager }} == 'yarn' ]] && yarn version --new-version $RELEASE_VERSION --no-git-tag-version
+          [[ ${{ inputs.node_package_manager }} == 'npm' ]] && npm version $RELEASE_VERSION --no-git-tag-version || true
+          [[ ${{ inputs.node_package_manager }} == 'yarn' ]] && yarn version --new-version $RELEASE_VERSION --no-git-tag-version || true
           git config user.email "github-actions@clickbus.com"
           git config user.name "Github Actions"
           git commit -a -m "chore: release v$RELEASE_VERSION"
