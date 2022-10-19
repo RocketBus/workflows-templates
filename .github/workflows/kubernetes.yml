@@ -91,7 +91,7 @@ jobs:
           git config user.email "github-actions@clickbus.com"
           git config user.name "Github Actions"
           git add ${CHART_PATH}/environments/${{ inputs.environment }}/values.yaml
-          git commit -m "chore: update ${{ inputs.environment }} version to $VERSION [skip ci]" || true
+          git commit -m "chore: update ${{ inputs.environment }} version to $APP_VERSION [skip ci]" || echo "nothing to commit, proceed"
           git push
 
       - name: Helm upgrade
