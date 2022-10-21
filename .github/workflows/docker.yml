@@ -167,7 +167,7 @@ jobs:
           target: ${{ inputs.docker_target }}
           build-args: ${{ inputs.docker_build_args }}
           labels: ${{ steps.docker_metadata.outputs.labels }}
-          tags: ${{ steps.image_properties.outputs.image_tag }}
+          tags: ${{ steps.image_properties.outputs.image_repository }}:${{ steps.image_properties.outputs.image_tag }}
           push: true
     outputs:
       image_repository: ${{ steps.image_properties.outputs.image_repository }}
