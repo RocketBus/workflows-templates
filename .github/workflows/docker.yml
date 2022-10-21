@@ -113,6 +113,7 @@ jobs:
 
           echo "image_repository=$IMAGE_REPOSITORY" >> $GITHUB_OUTPUT
           echo "image_tag=$IMAGE_TAG" >> $GITHUB_OUTPUT
+          echo "image=$FIRST_IMAGE_TAG" >> $GITHUB_OUTPUT
 
       - name: setup ECR repository
         run: |
@@ -167,7 +168,7 @@ jobs:
           target: ${{ inputs.docker_target }}
           build-args: ${{ inputs.docker_build_args }}
           labels: ${{ steps.docker_metadata.outputs.labels }}
-          tags: ${{ steps.image_properties.outputs.image_repository }}:${{ steps.image_properties.outputs.image_tag }}
+          tags: ${{ steps.image_properties.outputs.image }}
           push: true
     outputs:
       image_repository: ${{ steps.image_properties.outputs.image_repository }}
