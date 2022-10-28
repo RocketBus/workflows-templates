@@ -101,7 +101,7 @@ jobs:
           if [[ ${{ github.event_name }} == 'pull_request' ]]; then
             PREFIX=pr-${{ github.event.number }}
             RELEASE_NAME=${PREFIX}-${RELEASE_NAME}
-            HELM_ARGS="--set ingress.prefixHost=${PREFIX}"
+            HELM_ARGS="--set prefixName=${PREFIX}"
           fi
 
           if [[ -f ${CHART_PATH}/environments/${{ inputs.environment }}/secrets.yaml ]]; then

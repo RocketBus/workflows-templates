@@ -58,7 +58,7 @@ jobs:
           ./mvnw $MAVEN_CLI_OPTS org.codehaus.mojo:versions-maven-plugin:2.11.0:commit
           git config user.email "github-actions@clickbus.com"
           git config user.name "Github Actions"
-          git commit -a -m "chore: release v$RELEASE_VERSION"
+          git commit -a -m "chore: release v$RELEASE_VERSION" || echo "nothing to commit, proceed"
           git tag v$RELEASE_VERSION
           git push origin v$RELEASE_VERSION
 
@@ -70,5 +70,5 @@ jobs:
           VERSION=$(./mvnw $MAVEN_CLI_OPTS org.apache.maven.plugins:maven-help-plugin:3.3.0:evaluate -Dexpression=project.version -q -DforceStdout)
           git config user.email "github-actions@clickbus.com"
           git config user.name "Github Actions"
-          git commit -a -m "chore: bump version to $VERSION [skip ci]"
+          git commit -a -m "chore: bump version to $VERSION [skip ci]" || echo "nothing to commit, proceed"
           git push
