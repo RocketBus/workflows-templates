@@ -1,0 +1,31 @@
+name: Imperva CI
+
+on:
+  workflow_call:
+    inputs:
+      site_id:
+        type: string
+        required: true
+        description: |
+          www.clickbus.com.br (50692396)
+          www.grupoj3.com.br (46407632)
+          whitelabels.clickbus.com.br (39358891)
+          api-waf.clickbus.com (99257314)
+    secrets:
+      imperva_api_key:
+        required: true
+      imperva_api_id:
+        required: true
+
+jobs:
+  cache:
+    runs-on: live
+    steps:
+      - name: Purge cache Imperva
+        run: |
+          curl -X 'POST' \
+          "https://my.imperva.com/api/prov/v1/sites/cache/purge?site_id=${{ site_id }}" \
+          -H "accept: application/json" \
+          -H "x-API-Key: ${{ secrets.imperva_api_key }}" \
+          -H "x-API-Id: ${{ secrets.imperva_api_id }}" \
+          -d ""
