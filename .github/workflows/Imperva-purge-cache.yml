@@ -1,4 +1,4 @@
-name: Imperva CI
+name: Imperva purge cache
 
 on:
   workflow_call:
@@ -23,9 +23,13 @@ jobs:
     steps:
       - name: Purge cache Imperva
         run: |
-          curl -X 'POST' \
-          "https://my.imperva.com/api/prov/v1/sites/cache/purge?site_id=${{ site_id }}" \
-          -H "accept: application/json" \
-          -H "x-API-Key: ${{ secrets.imperva_api_key }}" \
-          -H "x-API-Id: ${{ secrets.imperva_api_id }}" \
-          -d ""
+          site_id="${{ inputs.site_id }}"
+          for i  in  $site_id; do
+            curl -X 'POST' \
+              "https://my.imperva.com/api/prov/v1/sites/cache/purge?site_id=$site_id" \
+              -H "accept: application/json" \
+              -H "x-API-Key: ${{ secrets.imperva_api_key }}" \
+              -H "x-API-Id: ${{ secrets.imperva_api_id }}" \
+              -d ""
+          done
+          
