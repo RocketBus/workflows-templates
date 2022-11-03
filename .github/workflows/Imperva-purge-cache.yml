@@ -24,9 +24,9 @@ jobs:
       - name: Purge cache Imperva
         run: |
           site_id="${{ inputs.site_id }}"
-          for i  in  $site_id; do
+          for id  in  $site_id; do
             curl -X 'POST' \
-              "https://my.imperva.com/api/prov/v1/sites/cache/purge?site_id=$site_id" \
+              "https://my.imperva.com/api/prov/v1/sites/cache/purge?site_id=$id" \
               -H "accept: application/json" \
               -H "x-API-Key: ${{ secrets.imperva_api_key }}" \
               -H "x-API-Id: ${{ secrets.imperva_api_id }}" \
