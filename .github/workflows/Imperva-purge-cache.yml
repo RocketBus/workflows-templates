@@ -26,7 +26,7 @@ jobs:
     steps:
       - name: Purge cache Imperva
         run: |
-          sleep ${{ inputs.break }}s
+          sleep ${{ inputs.break }}
           site_id="${{ inputs.site_id }}"
           for id  in  $site_id; do
             curl -X 'POST' \
