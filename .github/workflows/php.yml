@@ -15,10 +15,6 @@ on:
         type: boolean
         required: false
         default: false
-      environment:
-        type: string
-        required: false
-        default: ""
     secrets:
       nexus_username:
         required: true
@@ -42,19 +38,16 @@ jobs:
       - name: checkout
         uses: actions/checkout@v3
 
-      - name: setup Node.js
-        uses: actions/setup-node@v3
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
         with:
-          node-version: ${{ inputs.node_version }}
-          cache: ${{ inputs.node_package_manager }}
+          php-version: ${{ inputs.php_version }}
+          coverage: none
 
-      - name: install dependencies
-        run: |
-          if [[ ${{ inputs.node_package_manager }} == 'npm' ]]; then
-            npm ci --prefer-offline
-          elif [[ ${{ inputs.node_package_manager }} == 'yarn' ]]; then
-            yarn install --frozen-lockfile
-          fi
+      - name: Install composer dependencies
+        uses: ramsey/composer-install@v2
+        with:
+          composer-options: "--ignore-platform-reqs --optimize-autoloader"
 
       - name: lint code
         continue-on-error: true
@@ -197,14 +190,10 @@ jobs:
       - name: package artifact
         id: package_artifact
         run: |
-          if [[ ${{ inputs.environment }} != "" ]];
-            NODE_ENV_SCRIPT=${{ inputs.environment }}
-          fi
-
           if [[ ${{ inputs.node_package_manager }} == 'npm' ]]; then
-            npm run build${NODE_ENV_SCRIPT:+:$NODE_ENV_SCRIPT}
+            npm run build
           elif [[ ${{ inputs.node_package_manager }} == 'yarn' ]]; then
-            yarn run build${NODE_ENV_SCRIPT:+:$NODE_ENV_SCRIPT}
+            yarn run build
           fi
 
       - name: archive artifact

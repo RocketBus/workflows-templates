@@ -3,9 +3,6 @@ name: Imperva purge cache
 on:
   workflow_call:
     inputs:
-      break:
-        type: string
-        default: 60
       site_id:
         type: string
         required: true
@@ -28,7 +25,6 @@ jobs:
         run: |
           site_id="${{ inputs.site_id }}"
           for id  in  $site_id; do
-            sleep ${{ inputs.break }}
             curl -X 'POST' \
               "https://my.imperva.com/api/prov/v1/sites/cache/purge?site_id=$id" \
               -H "accept: application/json" \
@@ -36,5 +32,4 @@ jobs:
               -H "x-API-Id: ${{ secrets.imperva_api_id }}" \
               -d ""
           done
-        shell: bash
           
