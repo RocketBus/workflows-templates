@@ -78,7 +78,7 @@ jobs:
 
           ECR_REGISTRY=${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
           ECR_REPOSITORY=${GITHUB_REPOSITORY#*/}
-          AWS_IAM_ROLE=arn:aws:iam::${AWS_ACCOUNT_ID}:role/CrossAccount-Global-Developer
+          AWS_IAM_ROLE=arn:aws:iam::${AWS_ACCOUNT_ID}:role/CrossAccount-Global-Admin
 
           echo "::set-output name=aws_account_id::${AWS_ACCOUNT_ID}"
           echo "::set-output name=aws_region::${AWS_REGION}"
@@ -89,7 +89,7 @@ jobs:
           SOURCE_AWS_ACCOUNT_ID=${AWS_ACCOUNTS_IDS[$SOURCE_ENV]}
           SOURCE_AWS_REGION=${AWS_REGIONS[$SOURCE_ENV]}
           SOURCE_ECR_REGISTRY=${SOURCE_AWS_ACCOUNT_ID}.dkr.ecr.${SOURCE_AWS_REGION}.amazonaws.com
-          SOURCE_AWS_IAM_ROLE=arn:aws:iam::${SOURCE_AWS_ACCOUNT_ID}:role/CrossAccount-Global-Developer
+          SOURCE_AWS_IAM_ROLE=arn:aws:iam::${SOURCE_AWS_ACCOUNT_ID}:role/CrossAccount-Global-Admin
           SOURCE_IMAGE_TAG=${SOURCE_ECR_REGISTRY}/${ECR_REPOSITORY}:${{ inputs.promote_from_branch }}-${GITHUB_SHA:0:7}
 
           echo "::set-output name=source_aws_account_id::${SOURCE_AWS_ACCOUNT_ID}"
