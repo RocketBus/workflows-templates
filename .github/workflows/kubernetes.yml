@@ -25,6 +25,7 @@ jobs:
     name: deploy
     runs-on: ${{ inputs.environment }}
     environment: ${{ inputs.environment }}
+    if: ${{ !(github.event_name == 'pull_request' && github.event.action == 'closed') }}
     env:
       ENV: ${{ inputs.environment }}
     steps:

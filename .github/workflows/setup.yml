@@ -17,7 +17,7 @@ jobs:
   preflight_checklist:
     name: preflight checklist
     runs-on: live
-    if: ${{ (github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'branch') || (github.event_name == 'push' && github.ref_type == 'tag') || github.event_name == 'workflow_dispatch' }}
+    if: ${{ github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref_type == 'branch') || (github.event_name == 'push' && github.ref_type == 'tag') || github.event_name == 'workflow_dispatch' }}
     steps:
       - name: checkout
         uses: actions/checkout@v3
