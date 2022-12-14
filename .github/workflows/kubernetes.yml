@@ -56,7 +56,7 @@ jobs:
           echo CHART_PATH=charts/${{ inputs.project_name }} >> $GITHUB_ENV
 
       - name: configure AWS credentials for Helm
-        uses: aws-actions/configure-aws-credentials@v1
+        uses: aws-actions/configure-aws-credentials@v1-node16
         with:
           aws-access-key-id: ${{ secrets.aws_access_key_id }}
           aws-secret-access-key: ${{ secrets.aws_secret_access_key }}
@@ -72,7 +72,7 @@ jobs:
           helm dep up $CHART_PATH
 
       - name: configure AWS credentials for EKS
-        uses: aws-actions/configure-aws-credentials@v1
+        uses: aws-actions/configure-aws-credentials@v1-node16
         with:
           aws-access-key-id: ${{ secrets.aws_access_key_id }}
           aws-secret-access-key: ${{ secrets.aws_secret_access_key }}
@@ -146,7 +146,7 @@ jobs:
           echo CHART_PATH=charts/${{ inputs.project_name }} >> $GITHUB_ENV
 
       - name: configure AWS credentials for EKS
-        uses: aws-actions/configure-aws-credentials@v1
+        uses: aws-actions/configure-aws-credentials@v1-node16
         with:
           aws-access-key-id: ${{ secrets.aws_access_key_id }}
           aws-secret-access-key: ${{ secrets.aws_secret_access_key }}
