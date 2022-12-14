@@ -54,5 +54,5 @@ jobs:
           [[ ${{ inputs.node_package_manager }} == 'yarn' ]] && yarn version --patch --no-git-tag-version
           git config user.email "github-actions@clickbus.com"
           git config user.name "Github Actions"
-          git commit -a -m "chore: bump version to $VERSION [skip ci]" || echo "nothing to commit, proceed"
+          git commit -a -m "chore: bump version [skip ci]" || echo "nothing to commit, proceed"
           git push

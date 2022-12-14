@@ -31,7 +31,7 @@ jobs:
       - name: checkout
         uses: actions/checkout@v3
         with:
-          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.event.repository.default_branch }}
+          ref: ${{ github.event.repository.default_branch }}
           token: ${{ secrets.git_access_token }}
 
       - name: set job properties
@@ -84,6 +84,7 @@ jobs:
           mask-aws-account-id: false
 
       - name: update image tag
+        if: ${{ github.event_name == 'push' && github.ref_type == 'tag' || github.event_name == 'workflow_dispatch' }}
         run: |
           export APP_VERSION=${{ inputs.image_tag }}
           yq -i '.appVersion = env(APP_VERSION)' ${CHART_PATH}/Chart.yaml
@@ -91,7 +92,7 @@ jobs:
           git config user.email "github-actions@clickbus.com"
           git config user.name "Github Actions"
           git add ${CHART_PATH}/environments/${{ inputs.environment }}/values.yaml
-          git commit -m "chore: update ${{ inputs.environment }} version to $APP_VERSION" || echo "nothing to commit, proceed"
+          git commit -m "chore: update ${{ inputs.environment }} version to $APP_VERSION [skip ci]" || echo "nothing to commit, proceed"
           git push
 
       - name: Helm upgrade

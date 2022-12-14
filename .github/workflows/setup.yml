@@ -25,7 +25,7 @@ jobs:
           fetch-depth: 0
 
       - name: setup .NET cli
-        uses: actions/setup-dotnet@v2
+        uses: actions/setup-dotnet@v3
         with:
           dotnet-version: '6.0.x'
         
@@ -40,9 +40,6 @@ jobs:
         with:
           additionalArguments: >
             /overrideconfig mode=ContinuousDelivery
-            /overrideconfig major-version-bump-message="^(build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test)(\\([\\w\\s-]*\\))?(!:|:.*\\n\\n((.+\\n)+\\n)?BREAKING CHANGE:\\s.+)"
-            /overrideconfig minor-version-bump-message="^(feat)(\\([\\w\\s-]*\\))?:"
-            /overrideconfig patch-version-bump-message="^(build|chore|ci|docs|fix|perf|refactor|revert|style|test)(\\([\\w\\s-]*\\))?:"
 
       - name: Display GitVersion outputs
         run: |
