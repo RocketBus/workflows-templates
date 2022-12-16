@@ -57,6 +57,7 @@ jobs:
 
       - name: lint dockerfile
         uses: hadolint/hadolint-action@v3.0.0
+        continue-on-error: true
         with:
           dockerfile: ${{ inputs.dockerfile_path }}
 
