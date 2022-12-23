@@ -53,6 +53,7 @@ jobs:
           if [[ ${{ inputs.node_package_manager }} == 'npm' ]]; then
             npm ci --prefer-offline
           elif [[ ${{ inputs.node_package_manager }} == 'yarn' ]]; then
+            npm install --global yarn
             yarn install --frozen-lockfile
           fi
 
@@ -84,6 +85,7 @@ jobs:
           if [[ ${{ inputs.node_package_manager }} == 'npm' ]]; then
             npm ci --prefer-offline
           elif [[ ${{ inputs.node_package_manager }} == 'yarn' ]]; then
+            npm install --global yarn
             yarn install --frozen-lockfile
           fi
 
@@ -121,6 +123,7 @@ jobs:
           if [[ ${{ inputs.node_package_manager }} == 'npm' ]]; then
             npm ci --prefer-offline
           elif [[ ${{ inputs.node_package_manager }} == 'yarn' ]]; then
+            npm install --global yarn
             yarn install --frozen-lockfile
           fi
 
@@ -191,6 +194,7 @@ jobs:
           if [[ ${{ inputs.node_package_manager }} == 'npm' ]]; then
             npm ci --prefer-offline
           elif [[ ${{ inputs.node_package_manager }} == 'yarn' ]]; then
+            npm install --global yarn
             yarn install --frozen-lockfile
           fi
 
@@ -204,6 +208,7 @@ jobs:
           if [[ ${{ inputs.node_package_manager }} == 'npm' ]]; then
             npm run build${NODE_ENV_SCRIPT:+:$NODE_ENV_SCRIPT}
           elif [[ ${{ inputs.node_package_manager }} == 'yarn' ]]; then
+            npm install --global yarn
             yarn run build${NODE_ENV_SCRIPT:+:$NODE_ENV_SCRIPT}
           fi
 
