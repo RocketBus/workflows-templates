@@ -46,7 +46,7 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: ${{ inputs.node_version }}
-          cache: ${{ inputs.node_package_manager }}
+          cache: npm
 
       - name: install dependencies
         run: |
@@ -56,6 +56,13 @@ jobs:
             npm install --global yarn
             yarn install --frozen-lockfile
           fi
+          
+      - name: setup Yarn cache
+        uses: actions/setup-node@v3
+        if: ${{ inputs.node_package_manager == 'yarn' }}
+        with:
+          node-version: ${{ inputs.node_version }}
+          cache: yarn
 
       - name: lint code
         continue-on-error: true
@@ -78,7 +85,7 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: ${{ inputs.node_version }}
-          cache: ${{ inputs.node_package_manager }}
+          cache: npm
 
       - name: install dependencies
         run: |
@@ -88,6 +95,13 @@ jobs:
             npm install --global yarn
             yarn install --frozen-lockfile
           fi
+          
+      - name: setup Yarn cache
+        uses: actions/setup-node@v3
+        if: ${{ inputs.node_package_manager == 'yarn' }}
+        with:
+          node-version: ${{ inputs.node_version }}
+          cache: yarn
 
       - name: execute unit tests
         continue-on-error: true
@@ -116,7 +130,7 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: ${{ inputs.node_version }}
-          cache: ${{ inputs.node_package_manager }}
+          cache: npm
 
       - name: install dependencies
         run: |
@@ -126,6 +140,13 @@ jobs:
             npm install --global yarn
             yarn install --frozen-lockfile
           fi
+          
+      - name: setup Yarn cache
+        uses: actions/setup-node@v3
+        if: ${{ inputs.node_package_manager == 'yarn' }}
+        with:
+          node-version: ${{ inputs.node_version }}
+          cache: yarn
 
       - name: execute integration tests
         continue-on-error: true
@@ -187,7 +208,7 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: ${{ inputs.node_version }}
-          cache: ${{ inputs.node_package_manager }}
+          cache: npm
 
       - name: install dependencies
         run: |
@@ -197,6 +218,13 @@ jobs:
             npm install --global yarn
             yarn install --frozen-lockfile
           fi
+          
+      - name: setup Yarn cache
+        uses: actions/setup-node@v3
+        if: ${{ inputs.node_package_manager == 'yarn' }}
+        with:
+          node-version: ${{ inputs.node_version }}
+          cache: yarn
 
       - name: package artifact
         id: package_artifact
