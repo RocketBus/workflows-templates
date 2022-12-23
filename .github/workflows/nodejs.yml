@@ -229,7 +229,7 @@ jobs:
       - name: package artifact
         id: package_artifact
         run: |
-          if [[ ${{ inputs.environment }} != "" ]];
+          if [[ -n "${{ inputs.environment }}" ]];
             NODE_ENV_SCRIPT=${{ inputs.environment }}
           fi
 
