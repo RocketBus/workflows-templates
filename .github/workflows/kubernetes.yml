@@ -84,7 +84,6 @@ jobs:
           mask-aws-account-id: false
 
       - name: update image tag
-        if: ${{ github.event_name == 'push' && github.ref_type == 'tag' || github.event_name == 'workflow_dispatch' }}
         run: |
           export APP_VERSION=${{ inputs.image_tag }}
           yq -i '.appVersion = env(APP_VERSION)' ${CHART_PATH}/Chart.yaml
