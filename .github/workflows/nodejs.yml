@@ -48,21 +48,24 @@ jobs:
           node-version: ${{ inputs.node_version }}
           cache: npm
 
-      - name: install dependencies
-        run: |
-          if [[ ${{ inputs.node_package_manager }} == 'npm' ]]; then
-            npm ci --prefer-offline
-          elif [[ ${{ inputs.node_package_manager }} == 'yarn' ]]; then
-            npm install --global yarn
-            yarn install --frozen-lockfile
-          fi
-          
+      - name: install Yarn
+        if: ${{ inputs.node_package_manager == 'yarn' }}
+        run: npm install --global yarn
+
       - name: setup Yarn cache
         uses: actions/setup-node@v3
         if: ${{ inputs.node_package_manager == 'yarn' }}
         with:
           node-version: ${{ inputs.node_version }}
           cache: yarn
+
+      - name: install dependencies
+        run: |
+          if [[ ${{ inputs.node_package_manager }} == 'npm' ]]; then
+            npm ci --prefer-offline
+          elif [[ ${{ inputs.node_package_manager }} == 'yarn' ]]; then
+            yarn install --frozen-lockfile
+          fi
 
       - name: lint code
         continue-on-error: true
@@ -87,21 +90,24 @@ jobs:
           node-version: ${{ inputs.node_version }}
           cache: npm
 
-      - name: install dependencies
-        run: |
-          if [[ ${{ inputs.node_package_manager }} == 'npm' ]]; then
-            npm ci --prefer-offline
-          elif [[ ${{ inputs.node_package_manager }} == 'yarn' ]]; then
-            npm install --global yarn
-            yarn install --frozen-lockfile
-          fi
-          
+      - name: install Yarn
+        if: ${{ inputs.node_package_manager == 'yarn' }}
+        run: npm install --global yarn
+
       - name: setup Yarn cache
         uses: actions/setup-node@v3
         if: ${{ inputs.node_package_manager == 'yarn' }}
         with:
           node-version: ${{ inputs.node_version }}
           cache: yarn
+
+      - name: install dependencies
+        run: |
+          if [[ ${{ inputs.node_package_manager }} == 'npm' ]]; then
+            npm ci --prefer-offline
+          elif [[ ${{ inputs.node_package_manager }} == 'yarn' ]]; then
+            yarn install --frozen-lockfile
+          fi
 
       - name: execute unit tests
         continue-on-error: true
@@ -132,21 +138,24 @@ jobs:
           node-version: ${{ inputs.node_version }}
           cache: npm
 
-      - name: install dependencies
-        run: |
-          if [[ ${{ inputs.node_package_manager }} == 'npm' ]]; then
-            npm ci --prefer-offline
-          elif [[ ${{ inputs.node_package_manager }} == 'yarn' ]]; then
-            npm install --global yarn
-            yarn install --frozen-lockfile
-          fi
-          
+      - name: install Yarn
+        if: ${{ inputs.node_package_manager == 'yarn' }}
+        run: npm install --global yarn
+
       - name: setup Yarn cache
         uses: actions/setup-node@v3
         if: ${{ inputs.node_package_manager == 'yarn' }}
         with:
           node-version: ${{ inputs.node_version }}
           cache: yarn
+
+      - name: install dependencies
+        run: |
+          if [[ ${{ inputs.node_package_manager }} == 'npm' ]]; then
+            npm ci --prefer-offline
+          elif [[ ${{ inputs.node_package_manager }} == 'yarn' ]]; then
+            yarn install --frozen-lockfile
+          fi
 
       - name: execute integration tests
         continue-on-error: true
@@ -168,6 +177,25 @@ jobs:
     steps:
       - name: checkout
         uses: actions/checkout@v3
+
+      - name: install Yarn
+        if: ${{ inputs.node_package_manager == 'yarn' }}
+        run: npm install --global yarn
+
+      - name: setup Yarn cache
+        uses: actions/setup-node@v3
+        if: ${{ inputs.node_package_manager == 'yarn' }}
+        with:
+          node-version: ${{ inputs.node_version }}
+          cache: yarn
+
+      - name: install dependencies
+        run: |
+          if [[ ${{ inputs.node_package_manager }} == 'npm' ]]; then
+            npm ci --prefer-offline
+          elif [[ ${{ inputs.node_package_manager }} == 'yarn' ]]; then
+            yarn install --frozen-lockfile
+          fi
 
       - name: download unit tests report
         uses: actions/download-artifact@v3
@@ -210,21 +238,24 @@ jobs:
           node-version: ${{ inputs.node_version }}
           cache: npm
 
-      - name: install dependencies
-        run: |
-          if [[ ${{ inputs.node_package_manager }} == 'npm' ]]; then
-            npm ci --prefer-offline
-          elif [[ ${{ inputs.node_package_manager }} == 'yarn' ]]; then
-            npm install --global yarn
-            yarn install --frozen-lockfile
-          fi
-          
+      - name: install Yarn
+        if: ${{ inputs.node_package_manager == 'yarn' }}
+        run: npm install --global yarn
+
       - name: setup Yarn cache
         uses: actions/setup-node@v3
         if: ${{ inputs.node_package_manager == 'yarn' }}
         with:
           node-version: ${{ inputs.node_version }}
           cache: yarn
+
+      - name: install dependencies
+        run: |
+          if [[ ${{ inputs.node_package_manager }} == 'npm' ]]; then
+            npm ci --prefer-offline
+          elif [[ ${{ inputs.node_package_manager }} == 'yarn' ]]; then
+            yarn install --frozen-lockfile
+          fi
 
       - name: package artifact
         id: package_artifact
@@ -247,6 +278,7 @@ jobs:
           path: |
             dist/
             build/
+            node_modules/
 
   release:
     name: release
