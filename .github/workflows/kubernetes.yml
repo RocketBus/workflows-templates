@@ -89,11 +89,11 @@ jobs:
           export APP_VERSION=${{ inputs.image_tag }}
           yq -i '.appVersion = env(APP_VERSION)' ${CHART_PATH}/Chart.yaml
           yq -i '.image.tag = env(APP_VERSION)' ${CHART_PATH}/environments/${{ inputs.environment }}/values.yaml
-          git config user.email "github-actions@clickbus.com"
-          git config user.name "Github Actions"
-          git add ${CHART_PATH}/environments/${{ inputs.environment }}/values.yaml
-          git commit -m "chore: update ${{ inputs.environment }} version to $APP_VERSION [skip ci]" || echo "nothing to commit, proceed"
-          git push
+#          git config user.email "github-actions@clickbus.com"
+#          git config user.name "Github Actions"
+#          git add ${CHART_PATH}/environments/${{ inputs.environment }}/values.yaml
+#          git commit -m "chore: update ${{ inputs.environment }} version to $APP_VERSION [skip ci]" || echo "nothing to commit, proceed"
+#          git push
 
       - name: Helm upgrade
         run: |
