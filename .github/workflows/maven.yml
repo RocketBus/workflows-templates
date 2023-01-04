@@ -72,7 +72,6 @@ jobs:
         run: echo ${{ secrets.maven_settings }} | base64 -d > ~/.m2/settings.xml
 
       - name: execute unit tests
-        continue-on-error: true
         run: ./mvnw $MAVEN_CLI_OPTS clean test -DskipITs=true
 
       - name: archive unit tests report
