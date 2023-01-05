@@ -44,7 +44,7 @@ jobs:
       - name: Setup PHP with PECL extension
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '7.2'
+          php-version: ${{ inputs.php_version }}
           extensions: xml, mbstring, xdebug, phpcs
           tools: composer:2.2.9
           coverage: xdebug
@@ -80,7 +80,7 @@ jobs:
       - name: Setup PHP with PECL extension
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '7.2'
+          php-version: ${{ inputs.php_version }}
           extensions: xml, mbstring, xdebug
           tools: composer:2.2.9
           coverage: xdebug
