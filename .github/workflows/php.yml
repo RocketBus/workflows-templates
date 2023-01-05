@@ -58,8 +58,7 @@ jobs:
 
       - name: code_sniffer
         continue-on-error: true
-        run: | 
-          php vendor/bin/phpcs
+        run: phpcs
 
       - name: ls
         continue-on-error: true
