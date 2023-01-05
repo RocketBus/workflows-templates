@@ -60,7 +60,6 @@ jobs:
         continue-on-error: true
         run: | 
           php vendor/bin/phpcs
-          ls -la ./reports
 
       - name: ls
         continue-on-error: true
