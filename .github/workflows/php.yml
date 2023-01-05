@@ -46,7 +46,7 @@ jobs:
         with:
           php-version: ${{ inputs.php_version }}
           extensions: xml, mbstring, xdebug
-          tools: composer:2.2.9
+          tools: composer:2.2.9, phpcs:3.4.0
           coverage: xdebug
         env:
           GITHUB_TOKEN: ${{ secrets.git_access_token }}
