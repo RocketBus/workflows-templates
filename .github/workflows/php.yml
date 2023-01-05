@@ -115,10 +115,16 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: ${{ inputs.node_version }}
-          cache: yarn
+          cache: npm
 
       - name: install Yarn
         run: npm install --global yarn
+
+      - name: setup Yarn cache
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ inputs.node_version }}
+          cache: yarn
 
       - name: install dependencies
         run: yarn install --ignore-engines
