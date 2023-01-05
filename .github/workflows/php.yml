@@ -60,7 +60,7 @@ jobs:
         continue-on-error: true
         run: |
           mkdir ./reports
-          ./vendor/bin/phpcs --report-file=./reports/${{ env.REPORT_CODESNIFFER }}
+          ./vendor/bin/phpcs --report=xml --report-file=./reports/${{ env.REPORT_CODESNIFFER }} ./src
 
       - name: ls
         continue-on-error: true
