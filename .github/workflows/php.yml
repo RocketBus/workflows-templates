@@ -58,7 +58,7 @@ jobs:
 
       - name: code_sniffer
         continue-on-error: true
-        run: phpcs -q --report=checkstyle src
+        run: phpcs --report=xml --report-file=./reports/${{ env.REPORT_CODESNIFFER }}
 
       - name: ls
         continue-on-error: true
