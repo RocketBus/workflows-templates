@@ -58,7 +58,9 @@ jobs:
 
       - name: code_sniffer
         continue-on-error: true
-        run: phpcs --report=xml --report-file=./reports/${{ env.REPORT_CODESNIFFER }}
+        run: |
+          mkdir ./reports
+          phpcs --report=xml --report-file=./reports/${{ env.REPORT_CODESNIFFER }}
 
       - name: ls
         continue-on-error: true
