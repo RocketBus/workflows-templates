@@ -58,7 +58,7 @@ jobs:
 
       - name: code_sniffer
         continue-on-error: true
-        run: phpcs
+        run: phpcs -q --report=checkstyle src
 
       - name: ls
         continue-on-error: true
