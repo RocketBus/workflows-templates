@@ -45,16 +45,19 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ inputs.php_version }}
-          extensions: xml, mbstring, xdebug, phpcs
+          extensions: xml, mbstring
           tools: composer:2.2.9
           coverage: xdebug
-        env:
-          GITHUB_TOKEN: ${{ secrets.git_access_token }}
+        # env:
+        #   GITHUB_TOKEN: ${{ secrets.git_access_token }}
       
       - name: Install dependencies
-        uses: "ramsey/composer-install@v2"
-        with:
-          custom-cache-suffix: ${{ github.sha }}
+        run: composer install
+        env:
+          GITHUB_TOKEN: ${{ secrets.git_access_token }}
+        # uses: "ramsey/composer-install@v2"
+        # with:
+        #   custom-cache-suffix: ${{ github.sha }}
 
       - name: code_sniffer
         continue-on-error: true
