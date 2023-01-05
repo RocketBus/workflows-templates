@@ -62,6 +62,11 @@ jobs:
           php vendor/bin/phpcs
           ls -la ./reports
 
+      - name: ls
+        continue-on-error: true
+        run: |
+          ls -la ./reports
+
       - name: archive unit tests report
         uses: actions/upload-artifact@v3
         with:
