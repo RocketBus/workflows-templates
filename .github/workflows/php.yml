@@ -45,23 +45,22 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ inputs.php_version }}
-          extensions: xml, mbstring
+          extensions: xml, mbstring, xdebug
           tools: composer:2.2.9
           coverage: xdebug
-        # env:
-        #   GITHUB_TOKEN: ${{ secrets.git_access_token }}
-      
-      - name: Install dependencies
-        run: composer install
         env:
           GITHUB_TOKEN: ${{ secrets.git_access_token }}
-        # uses: "ramsey/composer-install@v2"
-        # with:
-        #   custom-cache-suffix: ${{ github.sha }}
+      
+      - name: Install dependencies
+        uses: "ramsey/composer-install@v2"
+        with:
+          custom-cache-suffix: ${{ github.sha }}
 
       - name: code_sniffer
         continue-on-error: true
-        run: php vendor/bin/phpcs
+        run: | 
+          php vendor/bin/phpcs
+          ls -la ./reports
 
       - name: archive unit tests report
         uses: actions/upload-artifact@v3
@@ -73,7 +72,7 @@ jobs:
   phpunit:
     name: PHPUnit
     runs-on: live
-    #if: ${{ (github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'tag') }}
+    if: ${{ (github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'tag') }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -109,7 +108,7 @@ jobs:
   javascript_unit_tests:
     name: javascript unit tests
     runs-on: live
-    #if: ${{ (github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'tag') }}
+    if: ${{ (github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'tag') }}
     steps:
       - name: checkout
         uses: actions/checkout@v3
@@ -150,7 +149,7 @@ jobs:
       - code_sniffer
       - phpunit
       - javascript_unit_tests
-    #if: ${{ (github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'tag') }}
+    if: ${{ (github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'tag') }}
     steps:
       - name: checkout
         uses: actions/checkout@v3
