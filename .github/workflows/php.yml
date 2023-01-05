@@ -1,0 +1,221 @@
+name: PHP CI
+
+on:
+  workflow_call:
+    inputs:
+      php_version:
+        type: string
+        required: false
+        default: "7.2"
+      composer_version:
+        type: string
+        required: false
+        default: "2.2.9"
+      node_version:
+        type: string
+        required: true
+      package_disabled:
+        type: boolean
+        required: false
+        default: false
+      environment:
+        type: string
+        required: true
+    secrets:
+      git_access_token:
+        required: true
+
+env:
+  REPORT_CODESNIFFER: "phpunit.coverage.xml"
+  REPORT_PHPUNIT: "phpunit.xml" 
+  COVERAGE_JAVASCRIPT: "lcov.info"
+
+jobs:
+  code_sniffer:
+    name: PHP_CodeSniffer
+    runs-on: live
+    if: ${{ (github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'tag') }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Setup PHP with PECL extension
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '7.2'
+          extensions: xml, mbstring, xdebug
+          tools: composer:2.2.9
+          coverage: xdebug
+        env:
+          GITHUB_TOKEN: ${{ secrets.git_access_token }}
+      
+      - name: Install dependencies
+        uses: "ramsey/composer-install@v2"
+        with:
+          custom-cache-suffix: ${{ github.sha }}
+
+      - name: code_sniffer
+        continue-on-error: true
+        run: php vendor/bin/phpcs
+
+      - name: archive unit tests report
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ env.REPORT_CODESNIFFER }}
+          path: ./reports/${{ env.REPORT_CODESNIFFER }}
+          retention-days: 1
+
+  phpunit:
+    name: PHPUnit
+    runs-on: live
+    if: ${{ (github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'tag') }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Setup PHP with PECL extension
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '7.2'
+          extensions: xml, mbstring, xdebug
+          tools: composer:2.2.9
+          coverage: xdebug
+        env:
+          GITHUB_TOKEN: ${{ secrets.git_access_token }}
+      
+      - name: Install dependencies
+        uses: "ramsey/composer-install@v2"
+        with:
+          custom-cache-suffix: ${{ github.sha }}
+
+      - name: phpunit
+        continue-on-error: true
+        run: php vendor/bin/phpunit -c app
+
+      - name: archive unit tests report
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ env.REPORT_PHPUNIT }}
+          path: ./reports/${{ env.REPORT_PHPUNIT }}
+          retention-days: 1
+
+  javascript_unit_tests:
+    name: javascript unit tests
+    runs-on: live
+    if: ${{ (github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'tag') }}
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
+
+      - name: setup Yarn cache
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ inputs.node_version }}
+          cache: yarn
+
+      - name: install Yarn
+        run: npm install --global yarn
+
+      - name: install dependencies
+        run: yarn install --ignore-engines
+
+      - name: execute unit tests
+        continue-on-error: true
+        run: yarn test -- --coverage
+
+      - name: Upload report artfact
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ env.COVERAGE_JAVASCRIPT }}
+          path: ./coverage/${{ env.COVERAGE_JAVASCRIPT }}
+          retention-days: 1
+
+  sonarqube:
+    name: sonarqube
+    runs-on: live
+    needs:
+      - code_sniffer
+      - phpunit
+      - javascript_unit_tests
+    if: ${{ (github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'tag') }}
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: download php code sniffer report
+        uses: actions/download-artifact@v3
+        with:
+          name: ${{ env.REPORT_CODESNIFFER }}
+          path: ./reports/
+
+      - name: download php unit tests report
+        uses: actions/download-artifact@v3
+        with:
+          name: ${{ env.REPORT_CODESNIFFER }}
+          path: ./reports/
+
+      - name: download javascript unit tests report
+        uses: actions/download-artifact@v3
+        with:
+          name: ${{ env.COVERAGE_JAVASCRIPT }}
+          path: ./coverage/
+
+      - name: set sonar parameters
+        id: set_sonar_parameters
+        run: |
+          if [[ ${{ github.event_name }} == 'pull_request' ]]; then
+            SONAR_PARAMETERS="$SONAR_PARAMETERS -Dsonar.pullrequest.key=${{ github.event.pull_request.number }} -Dsonar.pullrequest.branch=${{ github.event.pull_request.head.ref }} -Dsonar.pullrequest.github.repository=$GITHUB_REPOSITORY"
+          fi
+          echo "args=$SONAR_PARAMETERS" >> $GITHUB_OUTPUT
+
+      - name: sonarqube scan
+        uses: sonarsource/sonarqube-scan-action@master
+        with:
+          args: >
+            ${{ steps.set_sonar_parameters.outputs.args }}
+
+      - name: sonarqube quality gate check
+        uses: sonarsource/sonarqube-quality-gate-action@master
+        timeout-minutes: 5
+        continue-on-error: true
+
+  # package:
+  #   name: package
+  #   runs-on: live
+  #   needs:
+  #     - sonarqube
+  #   if: ${{ !inputs.package_disabled && ((github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'tag')) }}
+  #   steps:
+  #     - name: checkout
+  #       uses: actions/checkout@v3
+  #       with:
+  #         fetch-depth: 0
+          
+  #     - name: archive artifact
+  #       uses: actions/upload-artifact@v3
+  #       with:
+  #         name: app-artifact
+  #         path: |
+  #           dist/
+  #           build/
+
+  # release:
+  #   name: release
+  #   runs-on: live
+  #   needs:
+  #     - package
+  #   if: ${{ always() && (needs.package.result == 'success' || needs.package.result == 'skipped') && (github.event_name == 'push' && github.ref_type == 'tag') }}
+  #   steps:
+  #     - name: checkout
+  #       uses: actions/checkout@v3
+  #       with:
+  #         fetch-depth: 0
+
+  #     - name: create github release
+  #       uses: softprops/action-gh-release@v1
