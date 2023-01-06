@@ -3,14 +3,6 @@ name: PHP CI
 on:
   workflow_call:
     inputs:
-      php_version:
-        type: string
-        required: false
-        default: "7.2"
-      composer_version:
-        type: string
-        required: false
-        default: "2.2.9"
       node_version:
         type: string
         required: true
@@ -40,17 +32,10 @@ jobs:
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
-
-      - name: Setup PHP with PECL extension
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: ${{ inputs.php_version }}
-          extensions: xml, mbstring, xdebug
-          tools: composer:2.2.9, phpcs:3.4.0
-          coverage: xdebug
-        env:
-          GITHUB_TOKEN: ${{ secrets.git_access_token }}
       
+      - name: Setup composer
+        run: composer config --global github-oauth.github.com ${{ secrets.git_access_token }}
+
       - name: Install dependencies
         uses: "ramsey/composer-install@v2"
         with:
@@ -58,9 +43,7 @@ jobs:
 
       - name: code_sniffer
         continue-on-error: true
-        run: |
-          mkdir ./reports
-          ./vendor/bin/phpcs --report=xml --report-file=./reports/${{ env.REPORT_CODESNIFFER }} ./src
+        run: ./vendor/bin/phpcs
 
       - name: ls
         continue-on-error: true
