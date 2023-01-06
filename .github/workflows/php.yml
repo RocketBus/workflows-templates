@@ -45,13 +45,6 @@ jobs:
         continue-on-error: true
         run: ./vendor/bin/phpcs
 
-      - name: archive unit tests report
-        uses: actions/upload-artifact@v3
-        with:
-          name: ${{ env.REPORT_CODESNIFFER }}
-          path: ./reports/${{ env.REPORT_CODESNIFFER }}
-          retention-days: 1
-
   phpunit:
     name: PHPUnit
     runs-on: live
@@ -70,6 +63,13 @@ jobs:
       - name: phpunit
         continue-on-error: true
         run: php vendor/bin/phpunit -c app
+
+      - name: archive PHP_CodeSniffer report
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ env.REPORT_CODESNIFFER }}
+          path: ./reports/${{ env.REPORT_CODESNIFFER }}
+          retention-days: 1
 
       - name: archive unit tests report
         uses: actions/upload-artifact@v3
