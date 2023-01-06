@@ -21,6 +21,8 @@ env:
   REPORT_CODESNIFFER: "phpunit.coverage.xml"
   REPORT_PHPUNIT: "phpunit.xml" 
   COVERAGE_JAVASCRIPT: "lcov.info"
+  SONAR_HOST_URL: "https://sonar.clickbus.net"
+  SONAR_TOKEN: ${{ secrets.sonar_token }}  
 
 jobs:
   code_sniffer:
