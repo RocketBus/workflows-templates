@@ -16,6 +16,8 @@ on:
     secrets:
       git_access_token:
         required: true
+      sonar_token:
+        required: true
 
 env:
   REPORT_CODESNIFFER: "phpunit.coverage.xml"
@@ -185,10 +187,10 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Setup composer
+      - name: setup composer
         run: composer config --global github-oauth.github.com ${{ secrets.git_access_token }}
 
-      - name: Install php dependencies
+      - name: install php dependencies
         uses: "ramsey/composer-install@v2"
         with:
           custom-cache-suffix: ${{ github.sha }}
