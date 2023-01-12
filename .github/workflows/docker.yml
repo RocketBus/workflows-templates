@@ -175,7 +175,7 @@ jobs:
               }
             '
 
-      - name: docker build and push
+      - name: docker build
         uses: docker/build-push-action@v3
         with:
           cache-from: type=gha
@@ -186,7 +186,13 @@ jobs:
           build-args: ${{ inputs.docker_build_args }}
           labels: ${{ steps.docker_metadata.outputs.labels }}
           tags: ${{ steps.image_properties.outputs.image }}
-          push: true
+          outputs: type=oci,dest=image.tar.gz
+
+      - name: docker push
+        run: |
+          echo "Pushing image to ECR..."
+          docker load -i image.tar.gz
+          docker push ${{ steps.image_properties.outputs.image }}
     outputs:
       image_repository: ${{ steps.image_properties.outputs.image_repository }}
       image_tag: ${{ steps.image_properties.outputs.image_tag }}
