@@ -179,8 +179,10 @@ jobs:
       - name: docker push
         run: |
           echo "Pushing image to ECR..."
+          IMAGE=${{ steps.image_properties.outputs.image }}
+          IMAGE_REPOSITORY=${IMAGE%%:*}
           docker load -i image.tar.gz
-          docker tag ${{ steps.image_properties.outputs.image_repository }}:latest ${{ steps.image_properties.outputs.image }}
+          docker tag ${IMAGE_REPOSITORY}:latest ${{ steps.image_properties.outputs.image }}
           docker push ${{ steps.image_properties.outputs.image }}
     outputs:
       image_repository: ${{ steps.image_properties.outputs.image_repository }}
