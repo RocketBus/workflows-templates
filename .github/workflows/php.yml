@@ -29,7 +29,7 @@ env:
 jobs:
   code_sniffer:
     name: PHP_CodeSniffer
-    runs-on: live
+    runs-on: ${{ inputs.node_version }}
     #if: ${{ (github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'tag') }}
     steps:
       - name: checkout
@@ -51,7 +51,7 @@ jobs:
 
   phpunit:
     name: PHPUnit
-    runs-on: live
+    runs-on: ${{ inputs.node_version }}
     #if: ${{ (github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'tag') }}
     steps:
       - name: Checkout
@@ -76,18 +76,16 @@ jobs:
         with:
           name: ${{ env.REPORT_CODESNIFFER }}
           path: ./reports/${{ env.REPORT_CODESNIFFER }}
-          retention-days: 1
 
       - name: archive unit tests report
         uses: actions/upload-artifact@v3
         with:
           name: ${{ env.REPORT_PHPUNIT }}
           path: ./reports/${{ env.REPORT_PHPUNIT }}
-          retention-days: 1
 
   javascript_unit_tests:
     name: javascript unit tests
-    runs-on: live
+    runs-on: ${{ inputs.node_version }}
     #if: ${{ (github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'tag') }}
     steps:
       - name: checkout
@@ -120,11 +118,10 @@ jobs:
         with:
           name: ${{ env.COVERAGE_JAVASCRIPT }}
           path: ./coverage/${{ env.COVERAGE_JAVASCRIPT }}
-          retention-days: 1
 
   sonarqube:
     name: sonarqube
-    runs-on: live
+    runs-on: ${{ inputs.node_version }}
     needs:
       - code_sniffer
       - phpunit
@@ -175,10 +172,10 @@ jobs:
 
   package:
     name: package
-    runs-on: live
+    runs-on: ${{ inputs.node_version }}
     needs:
       - sonarqube
-    # if: ${{ !inputs.package_disabled && ((github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'tag')) }}
+    #if: ${{ !inputs.package_disabled && ((github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'tag')) }}
     env:
       SYMFONY_ENV: brazil_prod
     steps:
@@ -220,25 +217,25 @@ jobs:
       - name: install dependency with gulp
         run: node_modules/gulp/bin/gulp.js build
 
-      - name: clear php dependencies
-        run: find ./vendor -name ".git" -type d | xargs rm -rf
-
-      - name: package version
-        run: tar --ignore-failed-read -zcvf package.tar.gz app bin features src vendor web 
-
       - name: archive artifact
         uses: actions/upload-artifact@v3
         with:
           name: app-artifact
-          path: package.tar.gz
-          retention-days: 1
+          path: |
+            app
+            bin
+            features
+            src
+            vendor
+            web
+            !vendor/**/.git
 
   release:
     name: release
-    runs-on: live
+    runs-on: ${{ inputs.node_version }}
     needs:
       - package
-    # if: ${{ always() && (needs.package.result == 'success' || needs.package.result == 'skipped') && (github.event_name == 'push' && github.ref_type == 'tag') }}
+    #if: ${{ always() && (needs.package.result == 'success' || needs.package.result == 'skipped') && (github.event_name == 'push' && github.ref_type == 'tag') }}
     steps:
       - name: checkout
         uses: actions/checkout@v3
