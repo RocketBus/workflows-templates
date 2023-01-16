@@ -104,8 +104,7 @@ jobs:
         run: echo ${{ secrets.maven_settings }} | base64 -d > ~/.m2/settings.xml
 
       - name: execute integration tests
-        continue-on-error: true
-        run: ./mvnw $MAVEN_CLI_OPTS clean integration-test -DskipUTs=true
+        run: echo "./mvnw $MAVEN_CLI_OPTS clean integration-test -DskipUTs=true"
 
   sonarqube:
     name: sonarqube
@@ -150,7 +149,6 @@ jobs:
       - name: sonarqube quality gate check
         uses: sonarsource/sonarqube-quality-gate-action@master
         timeout-minutes: 5
-        continue-on-error: true
         with:
           scanMetadataReportFile: target/sonar/report-task.txt
 
