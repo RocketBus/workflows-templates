@@ -217,18 +217,17 @@ jobs:
       - name: install dependency with gulp
         run: node_modules/gulp/bin/gulp.js build
 
+      - name: Cleanup ./vendor/
+        run: find ./vendor -name ".git" -type d | xargs rm -rf
+
+      - name: Package the app
+        run: tar --ignore-failed-read -zcvf app-artifact.tar.gz app bin features src vendor web
+
       - name: archive artifact
         uses: actions/upload-artifact@v3
         with:
           name: app-artifact
-          path: |
-            app
-            bin
-            features
-            src
-            vendor
-            web
-            !vendor/**/.git
+          path: app-artifact.tar.gz
 
   release:
     name: release
