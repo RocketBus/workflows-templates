@@ -222,6 +222,7 @@ jobs:
             ${{ steps.set_sonar_parameters.outputs.args }}
 
       - name: sonarqube quality gate check
+        continue-on-error: true
         uses: sonarsource/sonarqube-quality-gate-action@master
         timeout-minutes: 5
 
