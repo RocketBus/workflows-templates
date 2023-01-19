@@ -71,6 +71,14 @@ jobs:
       - name: checkout
         uses: actions/checkout@v3
 
+      - name: unzip tar.gz artifact
+        run: |
+          if test -f "app-artifact.tar.gz"; then
+            mkdir app-artifact
+            tar -xzf ./app-artifact.tar.gz -C ./app-artifact
+            rm -f ./app-artifact.tar.gz
+          fi
+
       - name: download artifact
         uses: actions/download-artifact@v3
         continue-on-error: true
