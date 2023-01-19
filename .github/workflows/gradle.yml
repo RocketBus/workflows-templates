@@ -43,7 +43,7 @@ jobs:
 
       - name: lint code
         continue-on-error: true
-        run: ./gradlew checkstyleMain
+        run: ./gradlew check -x test
 
   unit_tests:
     name: unit tests
@@ -71,8 +71,7 @@ jobs:
         with:
           name: unit-tests-report
           path: |
-            **/build/surefire-reports/TEST-***.xml
-            **/build/site/jacoco/jacoco.xml
+            **/build/reports/jacoco/test/jacocoTestReport.xml
 
   integration_tests:
     name: integration tests
