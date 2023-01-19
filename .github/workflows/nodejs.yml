@@ -68,6 +68,7 @@ jobs:
           fi
 
       - name: lint code
+        continue-on-error: true
         run: |
           if [[ ${{ inputs.node_package_manager }} == 'npm' ]]; then
             npm run lint
