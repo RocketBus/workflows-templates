@@ -55,39 +55,39 @@ jobs:
           echo NAMESPACE=${{ inputs.project_name }} >> $GITHUB_ENV
           echo CHART_PATH=charts/${{ inputs.project_name }} >> $GITHUB_ENV
 
-      - name: configure AWS credentials for Helm
-        uses: aws-actions/configure-aws-credentials@v1-node16
-        with:
-          aws-access-key-id: ${{ secrets.aws_access_key_id }}
-          aws-secret-access-key: ${{ secrets.aws_secret_access_key }}
-          aws-region: us-east-1
+      # - name: configure AWS credentials for Helm
+      #   uses: aws-actions/configure-aws-credentials@v1-node16
+      #   with:
+      #     aws-access-key-id: ${{ secrets.aws_access_key_id }}
+      #     aws-secret-access-key: ${{ secrets.aws_secret_access_key }}
+      #     aws-region: us-east-1
 
-      - name: Helm dependency update
-        run: |
-          AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query "Account" --output text)
-          aws ecr get-login-password | helm registry login \
-            --username AWS \
-            --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com
+      # - name: Helm dependency update
+      #   run: |
+      #     AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query "Account" --output text)
+      #     aws ecr get-login-password | helm registry login \
+      #       --username AWS \
+      #       --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com
 
-          helm dep up $CHART_PATH
+      #     helm dep up $CHART_PATH
 
-      - name: configure AWS credentials for EKS
-        uses: aws-actions/configure-aws-credentials@v1-node16
-        with:
-          aws-access-key-id: ${{ secrets.aws_access_key_id }}
-          aws-secret-access-key: ${{ secrets.aws_secret_access_key }}
-          aws-region: ${{ steps.job_properties.outputs.aws_region }}
-          role-skip-session-tagging: true
-          role-to-assume: ${{ steps.job_properties.outputs.aws_iam_role }}
-          role-duration-seconds: 1200
-          role-session-name: GitHubActionsDeploySession
-          mask-aws-account-id: false
+      # - name: configure AWS credentials for EKS
+      #   uses: aws-actions/configure-aws-credentials@v1-node16
+      #   with:
+      #     aws-access-key-id: ${{ secrets.aws_access_key_id }}
+      #     aws-secret-access-key: ${{ secrets.aws_secret_access_key }}
+      #     aws-region: ${{ steps.job_properties.outputs.aws_region }}
+      #     role-skip-session-tagging: true
+      #     role-to-assume: ${{ steps.job_properties.outputs.aws_iam_role }}
+      #     role-duration-seconds: 1200
+      #     role-session-name: GitHubActionsDeploySession
+      #     mask-aws-account-id: false
 
-      - name: update image tag
-        run: |
-          export APP_VERSION=${{ inputs.image_tag }}
-          yq -i '.appVersion = env(APP_VERSION)' ${CHART_PATH}/Chart.yaml
-          yq -i '.image.tag = env(APP_VERSION)' ${CHART_PATH}/environments/${{ inputs.environment }}/values.yaml
+      # - name: update image tag
+      #   run: |
+      #     export APP_VERSION=${{ inputs.image_tag }}
+      #     yq -i '.appVersion = env(APP_VERSION)' ${CHART_PATH}/Chart.yaml
+      #     yq -i '.image.tag = env(APP_VERSION)' ${CHART_PATH}/environments/${{ inputs.environment }}/values.yaml
 #          git config user.email "github-actions@clickbus.com"
 #          git config user.name "Github Actions"
 #          git add ${CHART_PATH}/environments/${{ inputs.environment }}/values.yaml
@@ -105,69 +105,70 @@ jobs:
           fi
 
           FILES=$(ls ${CHART_PATH}/environments/${{ inputs.environment }} | grep secret | wc -l) 
-          if [[ $FILES => 1  ]]; then
-            FILE_LIST=($(ls ${CHART_PATH}/environments/${{ inputs.environment }} | grep secret ))
-            BASE_VALUES='--values secrets://${CHART_PATH}/environments/${{ inputs.environment }}' 
-            for (( i=0; i<$FILES; i++)) do
-              TMP_LIST="${BASE_VALUES}/${FILE_LIST[$i]}"
-              FULL_LIST+=" $TMP_LIST"
-            done
-            HELM_ARGS="$HELM_ARGS $FULL_LIST"
-          fi
+          echo $FILES
+  #         if [[ $FILES => 1  ]]; then
+  #           FILE_LIST=($(ls ${CHART_PATH}/environments/${{ inputs.environment }} | grep secret ))
+  #           BASE_VALUES='--values secrets://${CHART_PATH}/environments/${{ inputs.environment }}' 
+  #           for (( i=0; i<$FILES; i++)) do
+  #             TMP_LIST="${BASE_VALUES}/${FILE_LIST[$i]}"
+  #             FULL_LIST+=" $TMP_LIST"
+  #           done
+  #           HELM_ARGS="$HELM_ARGS $FULL_LIST"
+  #         fi
 
-          helm upgrade \
-            --install $RELEASE_NAME $CHART_PATH \
-            --create-namespace --namespace $NAMESPACE \
-            --values ${CHART_PATH}/environments/${{ inputs.environment }}/values.yaml $HELM_ARGS
+  #         helm upgrade \
+  #           --install $RELEASE_NAME $CHART_PATH \
+  #           --create-namespace --namespace $NAMESPACE \
+  #           --values ${CHART_PATH}/environments/${{ inputs.environment }}/values.yaml $HELM_ARGS
 
-  cleanup:
-    name: cleanup
-    runs-on: ${{ inputs.environment }}
-    if: ${{ github.event_name == 'pull_request' && github.event.action == 'closed' }}
-    env:
-      ENV: ${{ inputs.environment }}
-    steps:
-      - name: checkout
-        uses: actions/checkout@v3
+  # cleanup:
+  #   name: cleanup
+  #   runs-on: ${{ inputs.environment }}
+  #   if: ${{ github.event_name == 'pull_request' && github.event.action == 'closed' }}
+  #   env:
+  #     ENV: ${{ inputs.environment }}
+  #   steps:
+  #     - name: checkout
+  #       uses: actions/checkout@v3
 
-      - name: set job properties
-        id: job_properties
-        run: |
-          declare -A AWS_ACCOUNTS_IDS AWS_REGIONS EKS_CLUSTERS
+  #     - name: set job properties
+  #       id: job_properties
+  #       run: |
+  #         declare -A AWS_ACCOUNTS_IDS AWS_REGIONS EKS_CLUSTERS
           
-          AWS_ACCOUNTS_IDS=([dev]=180811438061 [stg]=406026015868 [live]=114395709799)
-          AWS_REGIONS=([dev]=us-east-2 [stg]=us-east-2 [live]=us-east-1)
-          EKS_CLUSTERS=([dev]=k8s-dev-85c52b0e [stg]=k8s-stg-7a1d63f9 [live]=k8s-live-b2401546)
+  #         AWS_ACCOUNTS_IDS=([dev]=180811438061 [stg]=406026015868 [live]=114395709799)
+  #         AWS_REGIONS=([dev]=us-east-2 [stg]=us-east-2 [live]=us-east-1)
+  #         EKS_CLUSTERS=([dev]=k8s-dev-85c52b0e [stg]=k8s-stg-7a1d63f9 [live]=k8s-live-b2401546)
 
-          AWS_ACCOUNT_ID=${AWS_ACCOUNTS_IDS[$ENV]}
-          AWS_REGION=${AWS_REGIONS[$ENV]}
-          EKS_CLUSTER=${EKS_CLUSTERS[$ENV]}
+  #         AWS_ACCOUNT_ID=${AWS_ACCOUNTS_IDS[$ENV]}
+  #         AWS_REGION=${AWS_REGIONS[$ENV]}
+  #         EKS_CLUSTER=${EKS_CLUSTERS[$ENV]}
 
-          echo "aws_region=$AWS_REGION" >> $GITHUB_OUTPUT
-          echo "aws_iam_role=arn:aws:iam::${AWS_ACCOUNT_ID}:role/CrossAccount-Global-Admin" >> $GITHUB_OUTPUT
-          echo "eks_cluster=$EKS_CLUSTER" >> $GITHUB_OUTPUT
+  #         echo "aws_region=$AWS_REGION" >> $GITHUB_OUTPUT
+  #         echo "aws_iam_role=arn:aws:iam::${AWS_ACCOUNT_ID}:role/CrossAccount-Global-Admin" >> $GITHUB_OUTPUT
+  #         echo "eks_cluster=$EKS_CLUSTER" >> $GITHUB_OUTPUT
 
-          echo RELEASE_NAME=${{ inputs.project_name }} >> $GITHUB_ENV
-          echo NAMESPACE=${{ inputs.project_name }} >> $GITHUB_ENV
-          echo CHART_PATH=charts/${{ inputs.project_name }} >> $GITHUB_ENV
+  #         echo RELEASE_NAME=${{ inputs.project_name }} >> $GITHUB_ENV
+  #         echo NAMESPACE=${{ inputs.project_name }} >> $GITHUB_ENV
+  #         echo CHART_PATH=charts/${{ inputs.project_name }} >> $GITHUB_ENV
 
-      - name: configure AWS credentials for EKS
-        uses: aws-actions/configure-aws-credentials@v1-node16
-        with:
-          aws-access-key-id: ${{ secrets.aws_access_key_id }}
-          aws-secret-access-key: ${{ secrets.aws_secret_access_key }}
-          aws-region: ${{ steps.job_properties.outputs.aws_region }}
-          role-skip-session-tagging: true
-          role-to-assume: ${{ steps.job_properties.outputs.aws_iam_role }}
-          role-duration-seconds: 1200
-          role-session-name: GitHubActionsDeploySession
-          mask-aws-account-id: false
+  #     - name: configure AWS credentials for EKS
+  #       uses: aws-actions/configure-aws-credentials@v1-node16
+  #       with:
+  #         aws-access-key-id: ${{ secrets.aws_access_key_id }}
+  #         aws-secret-access-key: ${{ secrets.aws_secret_access_key }}
+  #         aws-region: ${{ steps.job_properties.outputs.aws_region }}
+  #         role-skip-session-tagging: true
+  #         role-to-assume: ${{ steps.job_properties.outputs.aws_iam_role }}
+  #         role-duration-seconds: 1200
+  #         role-session-name: GitHubActionsDeploySession
+  #         mask-aws-account-id: false
 
-      - name: Helm uninstall PR
-        run: |
-          aws eks update-kubeconfig --name ${{ steps.job_properties.outputs.eks_cluster }}
+  #     - name: Helm uninstall PR
+  #       run: |
+  #         aws eks update-kubeconfig --name ${{ steps.job_properties.outputs.eks_cluster }}
 
-          PREFIX=pr-${{ github.event.number }}
-          RELEASE_NAME=${PREFIX}-${RELEASE_NAME}
+  #         PREFIX=pr-${{ github.event.number }}
+  #         RELEASE_NAME=${PREFIX}-${RELEASE_NAME}
 
-          helm uninstall $RELEASE_NAME -n $NAMESPACE
+  #         helm uninstall $RELEASE_NAME -n $NAMESPACE
