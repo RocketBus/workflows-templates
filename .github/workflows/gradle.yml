@@ -43,7 +43,7 @@ jobs:
 
       - name: lint code
         continue-on-error: true
-        run: ./gradlew check -x test
+        run: ./gradlew --no-daemon --parallel check -x test
 
   unit_tests:
     name: unit tests
@@ -64,7 +64,7 @@ jobs:
           overwrite-settings: false
 
       - name: execute unit tests
-        run: ./gradlew test
+        run: ./gradlew --no-daemon --parallel test
 
       - name: archive unit tests report
         uses: actions/upload-artifact@v3
@@ -92,7 +92,7 @@ jobs:
           overwrite-settings: false
 
       - name: execute integration tests
-        run: echo "./gradlew integrationTest"
+        run: echo "./gradlew --no-daemon --parallel integrationTest"
 
   sonarqube:
     name: sonarqube
@@ -127,7 +127,7 @@ jobs:
             SONAR_PARAMETERS="$SONAR_PARAMETERS -Dsonar.pullrequest.key=${{ github.event.pull_request.number }} -Dsonar.pullrequest.branch=${{ github.event.pull_request.head.ref }} -Dsonar.pullrequest.github.repository=$GITHUB_REPOSITORY"
           fi
 
-          ./gradlew sonarqube ${SONAR_PARAMETERS}
+          ./gradlew --no-daemon --parallel sonarqube ${SONAR_PARAMETERS}
 
       - name: sonarqube quality gate check
         uses: sonarsource/sonarqube-quality-gate-action@master
@@ -157,7 +157,7 @@ jobs:
 
       - name: package artifact
         id: package_artifact
-        run: ./gradlew build -x test
+        run: ./gradlew --no-daemon --parallel build -x test
 
       - name: archive artifact
         uses: actions/upload-artifact@v3
