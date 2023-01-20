@@ -34,6 +34,10 @@ on:
         type: boolean
         required: false
         default: true
+      concurrency_group:
+        type: string
+        required: false
+        default: ${{ github.run_id }}
     secrets:
       aws_access_key_id:
         required: true
@@ -45,6 +49,9 @@ on:
 
 env:
   AWS_REGION: us-east-1
+
+concurrency:
+  group: ${{ inputs.concurrency_group }}
 
 jobs:
   lint:
