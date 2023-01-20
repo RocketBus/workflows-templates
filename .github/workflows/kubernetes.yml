@@ -105,17 +105,16 @@ jobs:
           fi
 
           FILES=$(ls ${CHART_PATH}/environments/${{ inputs.environment }} | grep secret | wc -l) 
-          echo $FILES
-  #         if [[ $FILES => 1  ]]; then
-  #           FILE_LIST=($(ls ${CHART_PATH}/environments/${{ inputs.environment }} | grep secret ))
-  #           BASE_VALUES='--values secrets://${CHART_PATH}/environments/${{ inputs.environment }}' 
-  #           for (( i=0; i<$FILES; i++)) do
-  #             TMP_LIST="${BASE_VALUES}/${FILE_LIST[$i]}"
-  #             FULL_LIST+=" $TMP_LIST"
-  #           done
-  #           HELM_ARGS="$HELM_ARGS $FULL_LIST"
-  #         fi
-
+          if [[ $FILES => 1  ]]; then
+            FILE_LIST=($(ls ${CHART_PATH}/environments/${{ inputs.environment }} | grep secret ))
+            BASE_VALUES='--values secrets://${CHART_PATH}/environments/${{ inputs.environment }}' 
+            for (( i=0; i<$FILES; i++)) do
+              TMP_LIST="${BASE_VALUES}/${FILE_LIST[$i]}"
+              FULL_LIST+=" $TMP_LIST"
+            done
+            HELM_ARGS="$HELM_ARGS $FULL_LIST"
+          fi
+          echo $HELM_ARGS
   #         helm upgrade \
   #           --install $RELEASE_NAME $CHART_PATH \
   #           --create-namespace --namespace $NAMESPACE \
