@@ -52,6 +52,7 @@ env:
 
 concurrency:
   group: ${{ inputs.concurrency_group }}
+  cancel-in-progress: false
 
 jobs:
   lint:
