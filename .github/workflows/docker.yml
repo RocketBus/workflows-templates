@@ -34,6 +34,10 @@ on:
         type: boolean
         required: false
         default: true
+      concurrency_group:
+        type: string
+        required: false
+        default: ${{ github.run_id }}
     secrets:
       aws_access_key_id:
         required: true
@@ -46,20 +50,23 @@ on:
 env:
   AWS_REGION: us-east-1
 
+concurrency:
+  group: ${{ inputs.concurrency_group }}
+
 jobs:
   lint:
-    name: lint
-    runs-on: live
-    if: ${{ (github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'tag') }}
-    steps:
-      - name: checkout
-        uses: actions/checkout@v3
-
-      - name: lint dockerfile
-        uses: hadolint/hadolint-action@v3.0.0
-        continue-on-error: true
-        with:
-          dockerfile: ${{ inputs.dockerfile_path }}
+      name: lint
+      runs-on: live
+      if: ${{ (github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'tag') }}
+      steps:
+        - name: checkout
+          uses: actions/checkout@v3
+  
+        - name: lint dockerfile
+          uses: hadolint/hadolint-action@v3.0.0
+          continue-on-error: true
+          with:
+            dockerfile: ${{ inputs.dockerfile_path }}
 
   build:
     name: build
