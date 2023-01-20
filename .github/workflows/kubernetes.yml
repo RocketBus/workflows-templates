@@ -105,7 +105,7 @@ jobs:
           fi
 
           FILES=$(ls ${CHART_PATH}/environments/${{ inputs.environment }} | grep secret | wc -l) 
-          if [[ $FILES => 1  ]]; then
+          if [[ $FILES >= 1  ]]; then
             FILE_LIST=($(ls ${CHART_PATH}/environments/${{ inputs.environment }} | grep secret ))
             BASE_VALUES='--values secrets://${CHART_PATH}/environments/${{ inputs.environment }}' 
             for (( i=0; i<$FILES; i++)) do
