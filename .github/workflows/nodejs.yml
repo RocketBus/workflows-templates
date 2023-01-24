@@ -202,6 +202,7 @@ jobs:
           fi
 
       - name: download unit tests report
+        continue-on-error: true
         uses: actions/download-artifact@v3
         with:
           name: unit-tests-report
