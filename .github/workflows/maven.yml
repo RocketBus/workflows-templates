@@ -19,7 +19,7 @@ on:
 
 env:
   MAVEN_CLI_OPTS: "-B -e -fae -ntp -V"
-  MAVEN_OPTS: "-Xmx1024m -Xms512m -Dhttps.protocols=TLSv1.2 -Dorg.slf4j.simpleLogger.showDateTime=true -Djava.awt.headless=true"
+  MAVEN_OPTS: "-Xmx1024m -Xms512m -Dhttps.protocols=TLSv1.2 -Dorg.slf4j.simpleLogger.showDateTime=true -Djava.awt.headless=true -Dfile.encoding=UTF-8"
   NEXUS_USERNAME: ${{ secrets.nexus_username }}
   NEXUS_PASSWORD: ${{ secrets.nexus_password }}
   SONAR_HOST_URL: "https://sonar.clickbus.net"
