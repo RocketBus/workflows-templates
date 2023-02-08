@@ -121,6 +121,8 @@ jobs:
         uses: docker/build-push-action@v2
         with:
           context: .
+          SONAR_URL: ${{ secrest.SONAR_URL }}
+          SONAR_TOKEN: ${{ secrest.SONAR_TOKEN }}
           labels: ${{ steps.meta.outputs.labels }}
           tags: ${{ steps.meta.outputs.tags }}
           build-args: ${{ inputs.build_args }}
