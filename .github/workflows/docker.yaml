@@ -38,6 +38,8 @@ on:
 env:
   ENV: ${{ inputs.env }}
   SOURCE_ENV: ${{ inputs.promote_from_env }}
+  SONAR_URL: ${{ secrets.SONAR_URL }}
+  SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
 jobs:
   build:
@@ -69,6 +71,9 @@ jobs:
       - name: Set env variables
         id: env
         run: |
+          echo $SONAR_URL
+          echo SONAR_URL
+          echo "$SONAR_URL"
           declare -A AWS_ACCOUNTS_IDS AWS_REGIONS
           AWS_ACCOUNTS_IDS=([dev]=180811438061 [stg]=406026015868 [live]=114395709799)
           AWS_REGIONS=([dev]=us-east-2 [stg]=us-east-2 [live]=us-east-2)
@@ -113,10 +118,10 @@ jobs:
 
       - name: Build image
         if: ${{ ! inputs.promote_image_version }}
-        uses: docker/build-push-action@v2
         env:
           SONAR_URL: ${{ secrets.SONAR_URL }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        uses: docker/build-push-action@v2
         with:
           context: .
           labels: ${{ steps.meta.outputs.labels }}
