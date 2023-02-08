@@ -97,6 +97,11 @@ jobs:
           echo "::set-output name=source_ecr_registry::${SOURCE_ECR_REGISTRY}"
           echo "::set-output name=source_aws_iam_role::${SOURCE_AWS_IAM_ROLE}"
           echo "::set-output name=source_image_tag::${SOURCE_IMAGE_TAG}"
+          
+          SONAR_URL=${{ secrets.sonar_url }}
+          SONAR_TOKEN=${{ secrets.sonar_token }}
+          
+          echo $SONAR_URL
 
           TESTS_AVALIABLE=$(grep -E '^FROM (.+) AS (lint|unit-tests|integration-tests|e2e-tests)$' Dockerfile | awk '{print $4}')
           echo "::set-output name=tests_avaliable::$(jq -ncR '[inputs]' <<< ${TESTS_AVALIABLE})"
