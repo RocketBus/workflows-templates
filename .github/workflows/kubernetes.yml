@@ -105,7 +105,8 @@ jobs:
           fi
 
           if [[ -f ${CHART_PATH}/environments/${{ inputs.environment }}/secrets.yaml ]]; then
-            HELM_ARGS="$HELM_ARGS --values secrets://${CHART_PATH}/environments/${{ inputs.environment }}/secrets.yaml"
+            sops -d ${CHART_PATH}/environments/${{ inputs.environment }}/secrets.yaml > ${CHART_PATH}/environments/${{ inputs.environment }}/secrets.yaml.dec
+            HELM_ARGS="$HELM_ARGS --values ${CHART_PATH}/environments/${{ inputs.environment }}/secrets.yaml.dec"
           fi
 
           helm upgrade \

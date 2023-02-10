@@ -106,60 +106,57 @@ jobs:
       - name: execute integration tests
         run: echo "./mvnw $MAVEN_CLI_OPTS clean integration-test -DskipUTs=true"
 
-  # sonarqube:
-  #   name: sonarqube
-  #   runs-on: live
-  #   needs:
-  #     - lint
-  #     - unit_tests
-  #     - integration_tests
-  #   if: ${{ (github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'tag') }}
-  #   steps:
-  #     - name: checkout
-  #       uses: actions/checkout@v3
-  #       with:
-  #         fetch-depth: 0
-
-  #     - name: setup JDK
-  #       uses: actions/setup-java@v3
-  #       with:
-  #         java-version: ${{ inputs.jdk_version }}
-  #         distribution: 'temurin'
-  #         cache: 'maven'
-  #         overwrite-settings: false
-
-  #     - name: download unit tests report
-  #       uses: actions/download-artifact@v3
-  #       with:
-  #         name: unit-tests-report
-
-  #     - name: create settings.xml
-  #       run: echo ${{ secrets.maven_settings }} | base64 -d > ~/.m2/settings.xml
-
-  #     - name: sonarqube scan
-  #       env:
-  #         SONAR_PARAMETERS: "-Dmaven.test.skip"
-  #       run: |
-  #         if [[ ${{ github.event_name }} == 'pull_request' ]]; then
-  #           SONAR_PARAMETERS="$SONAR_PARAMETERS -Dsonar.pullrequest.key=${{ github.event.pull_request.number }} -Dsonar.pullrequest.branch=${{ github.event.pull_request.head.ref }} -Dsonar.pullrequest.github.repository=$GITHUB_REPOSITORY"
-  #         fi
-
-  #         ./mvnw $MAVEN_CLI_OPTS verify sonar:sonar ${SONAR_PARAMETERS}
-
-  #     - name: sonarqube quality gate check
-  #       uses: sonarsource/sonarqube-quality-gate-action@master
-  #       timeout-minutes: 5
-  #       with:
-  #         scanMetadataReportFile: target/sonar/report-task.txt
-
-  package:
-    name: package
+  sonarqube:
+    name: sonarqube
     runs-on: live
     needs:
       - lint
       - unit_tests
       - integration_tests
-      # - sonarqube
+    if: ${{ (github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'tag') }}
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: setup JDK
+        uses: actions/setup-java@v3
+        with:
+          java-version: ${{ inputs.jdk_version }}
+          distribution: 'temurin'
+          cache: 'maven'
+          overwrite-settings: false
+
+      - name: download unit tests report
+        uses: actions/download-artifact@v3
+        with:
+          name: unit-tests-report
+
+      - name: create settings.xml
+        run: echo ${{ secrets.maven_settings }} | base64 -d > ~/.m2/settings.xml
+
+      - name: sonarqube scan
+        env:
+          SONAR_PARAMETERS: "-Dmaven.test.skip"
+        run: |
+          if [[ ${{ github.event_name }} == 'pull_request' ]]; then
+            SONAR_PARAMETERS="$SONAR_PARAMETERS -Dsonar.pullrequest.key=${{ github.event.pull_request.number }} -Dsonar.pullrequest.branch=${{ github.event.pull_request.head.ref }} -Dsonar.pullrequest.github.repository=$GITHUB_REPOSITORY"
+          fi
+
+          ./mvnw $MAVEN_CLI_OPTS verify sonar:sonar ${SONAR_PARAMETERS}
+
+      - name: sonarqube quality gate check
+        uses: sonarsource/sonarqube-quality-gate-action@master
+        timeout-minutes: 5
+        with:
+          scanMetadataReportFile: target/sonar/report-task.txt
+
+  package:
+    name: package
+    runs-on: live
+    needs:
+      - sonarqube
     if: ${{ (github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'tag') }}
     steps:
       - name: checkout
