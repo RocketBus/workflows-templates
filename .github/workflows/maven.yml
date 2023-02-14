@@ -147,6 +147,7 @@ jobs:
           ./mvnw $MAVEN_CLI_OPTS verify sonar:sonar ${SONAR_PARAMETERS}
 
       - name: sonarqube quality gate check
+        if: github.event_name == 'pull_request'
         uses: sonarsource/sonarqube-quality-gate-action@master
         timeout-minutes: 5
         with:
