@@ -138,10 +138,14 @@ jobs:
 
       - name: sonarqube scan
         env:
-          SONAR_PARAMETERS: ""
+          SONAR_PARAMETERS: "-Dmaven.test.skip"
         run: |
           if [[ ${{ github.event_name }} == 'pull_request' ]]; then
             SONAR_PARAMETERS="$SONAR_PARAMETERS -Dsonar.pullrequest.key=${{ github.event.pull_request.number }} -Dsonar.pullrequest.branch=${{ github.event.pull_request.head.ref }} -Dsonar.pullrequest.github.repository=$GITHUB_REPOSITORY"
+          fi
+          
+          if [[ ${{ github.event_name }} == 'push' && ${{ github.ref_type }} == 'tag' ]]; then
+            SONAR_PARAMETERS="$SONAR_PARAMETERS -Dsonar.branch.name=${{ github.event.repository.default_branch }}
           fi
 
           ./mvnw $MAVEN_CLI_OPTS verify sonar:sonar ${SONAR_PARAMETERS}
