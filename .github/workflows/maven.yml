@@ -80,6 +80,7 @@ jobs:
           name: unit-tests-report
           path: |
             **/target/surefire-reports/TEST-***.xml
+            **/target/jacoco.exec
             **/target/site/jacoco/jacoco.xml
 
   integration_tests:
