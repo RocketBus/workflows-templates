@@ -92,7 +92,8 @@ jobs:
           overwrite-settings: false
 
       - name: execute integration tests
-        run: echo "./gradlew --no-daemon --parallel integrationTest"
+        continue-on-error: true
+        run: ./gradlew --no-daemon --parallel integrationTest
 
 #   sonarqube:
 #     name: sonarqube

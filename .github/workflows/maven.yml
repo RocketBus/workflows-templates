@@ -18,7 +18,7 @@ on:
         required: true
 
 env:
-  MAVEN_CLI_OPTS: "-B -e -fae -ntp -V"
+  MAVEN_CLI_OPTS: "-B -U -e -fae -ntp -V"
   MAVEN_OPTS: "-Xmx1024m -Xms512m -Dhttps.protocols=TLSv1.2 -Dorg.slf4j.simpleLogger.showDateTime=true -Djava.awt.headless=true -Dfile.encoding=UTF-8"
   NEXUS_USERNAME: ${{ secrets.nexus_username }}
   NEXUS_PASSWORD: ${{ secrets.nexus_password }}
@@ -105,7 +105,8 @@ jobs:
         run: echo ${{ secrets.maven_settings }} | base64 -d > ~/.m2/settings.xml
 
       - name: execute integration tests
-        run: echo "./mvnw $MAVEN_CLI_OPTS clean integration-test -DskipUTs=true"
+        continue-on-error: true
+        run: ./mvnw $MAVEN_CLI_OPTS clean failsafe:integration-test
 
   sonarqube:
     name: sonarqube
@@ -143,10 +144,6 @@ jobs:
         run: |
           if [[ ${{ github.event_name }} == 'pull_request' ]]; then
             SONAR_PARAMETERS="$SONAR_PARAMETERS -Dsonar.pullrequest.key=${{ github.event.pull_request.number }} -Dsonar.pullrequest.branch=${{ github.event.pull_request.head.ref }} -Dsonar.pullrequest.github.repository=$GITHUB_REPOSITORY"
-          fi
-          
-          if [[ ${{ github.event_name }} == 'push' && ${{ github.ref_type }} == 'tag' ]]; then
-            SONAR_PARAMETERS="$SONAR_PARAMETERS -Dsonar.branch.name=${{ github.event.repository.default_branch }}"
           fi
 
           ./mvnw $MAVEN_CLI_OPTS verify sonar:sonar ${SONAR_PARAMETERS}

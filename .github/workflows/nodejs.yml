@@ -32,6 +32,7 @@ env:
   NEXUS_PASSWORD: ${{ secrets.nexus_password }}
   SONAR_HOST_URL: "https://sonar.clickbus.net"
   SONAR_TOKEN: ${{ secrets.sonar_token }}
+  NODE_OPTIONS: "--max_old_space_size=4096"
 
 jobs:
   lint:
@@ -156,11 +157,12 @@ jobs:
           fi
 
       - name: execute integration tests
+        continue-on-error: true
         run: |
           if [[ ${{ inputs.node_package_manager }} == 'npm' ]]; then
-            echo "npm run test:integration"
+            npm run test:integration
           elif [[ ${{ inputs.node_package_manager }} == 'yarn' ]]; then
-            echo "yarn run test:integration"
+            yarn run test:integration
           fi
 
   sonarqube:
