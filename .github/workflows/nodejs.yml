@@ -215,10 +215,6 @@ jobs:
             SONAR_PARAMETERS="$SONAR_PARAMETERS -Dsonar.pullrequest.key=${{ github.event.pull_request.number }} -Dsonar.pullrequest.branch=${{ github.event.pull_request.head.ref }} -Dsonar.pullrequest.github.repository=$GITHUB_REPOSITORY"
           fi
 
-          if [[ ${{ github.event_name }} == 'push' && ${{ github.ref_type }} == 'tag' ]]; then
-            SONAR_PARAMETERS="$SONAR_PARAMETERS -Dsonar.branch.name=${{ github.event.repository.default_branch }}"
-          fi
-
           echo "args=$SONAR_PARAMETERS" >> $GITHUB_OUTPUT
 
       - name: sonarqube scan
