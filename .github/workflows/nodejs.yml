@@ -176,6 +176,31 @@ jobs:
     steps:
       - name: checkout
         uses: actions/checkout@v3
+        
+      - name: setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ inputs.node_version }}
+          cache: npm
+
+      - name: install Yarn
+        if: ${{ inputs.node_package_manager == 'yarn' }}
+        run: npm install --global yarn
+
+      - name: setup Yarn cache
+        uses: actions/setup-node@v3
+        if: ${{ inputs.node_package_manager == 'yarn' }}
+        with:
+          node-version: ${{ inputs.node_version }}
+          cache: yarn
+
+      - name: install dependencies
+        run: |
+          if [[ ${{ inputs.node_package_manager }} == 'npm' ]]; then
+            npm ci --prefer-offline
+          elif [[ ${{ inputs.node_package_manager }} == 'yarn' ]]; then
+            yarn install --frozen-lockfile
+          fi
 
       - name: download unit tests report
         uses: actions/download-artifact@v3
