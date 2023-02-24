@@ -105,8 +105,8 @@ jobs:
         run: echo ${{ secrets.maven_settings }} | base64 -d > ~/.m2/settings.xml
 
       - name: execute integration tests
-        continue-on-error: true
-        run: ./mvnw $MAVEN_CLI_OPTS clean failsafe:integration-test
+        continue-on-error: false
+        run: ./mvnw $MAVEN_CLI_OPTS clean test-compile failsafe:integration-test failsafe:verify
 
   sonarqube:
     name: sonarqube
