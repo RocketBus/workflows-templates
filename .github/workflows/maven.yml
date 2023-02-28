@@ -48,7 +48,7 @@ jobs:
         run: echo ${{ secrets.maven_settings }} | base64 -d > ~/.m2/settings.xml
 
       - name: lint code
-        run: ./mvnw $MAVEN_CLI_OPTS clean checkstyle:check -Dcheckstyle.config.location=google_checks.xml
+        run: ./mvnw $MAVEN_CLI_OPTS clean spotless:apply
 
   unit_tests:
     name: unit tests
