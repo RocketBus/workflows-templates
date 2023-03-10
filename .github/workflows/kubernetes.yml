@@ -106,6 +106,7 @@ jobs:
             yq -i '.appVersion = env(APP_VERSION)' ${CHART_PATH}/Chart.yaml
           fi
           yq -i '.image.tag = env(APP_VERSION)' ${CHART_PATH}/environments/${{ steps.job_properties.outputs.environment }}/values.yaml
+          yq -i '.nginx.image.tag = env(APP_VERSION)' ${CHART_PATH}/environments/${{ steps.job_properties.outputs.environment }}/values.yaml
 #          git config user.email "github-actions@clickbus.com"
 #          git config user.name "Github Actions"
 #          git add ${CHART_PATH}/environments/${{ inputs.environment }}/values.yaml
