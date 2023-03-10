@@ -87,8 +87,7 @@ jobs:
       - name: unzip tar.gz artifact
         run: |
           if test -f "app-artifact.tar.gz"; then
-            mkdir app-artifact
-            tar -xzf ./app-artifact.tar.gz -C ./app-artifact
+            tar -xzf ./app-artifact.tar.gz
             rm -f ./app-artifact.tar.gz
           fi
 
