@@ -88,12 +88,21 @@ jobs:
           role-session-name: GitHubActionsDeploySession
           mask-aws-account-id: false
 
+      - name: define environment
+        id: environment
+        run: |
+          ENVIRONMENT=${{ inputs.environment }}
+          if [[ ${{ inputs.squad }} == '' ]]; then
+            ENVIRONMENT=${{ inputs.squad }}
+          fi
+          echo "environment=$ENVIRONMENT" >> $GITHUB_OUTPUT
+      
       - name: update image tag
         run: |
           IMAGE_TAG=${{ inputs.image_tag }}
           export APP_VERSION=${IMAGE_TAG#v}
           yq -i '.appVersion = env(APP_VERSION)' ${CHART_PATH}/Chart.yaml
-          yq -i '.image.tag = env(APP_VERSION)' ${CHART_PATH}/environments/${{ inputs.environment }}/values.yaml
+          yq -i '.image.tag = env(APP_VERSION)' ${CHART_PATH}/environments/${{ steps.environment.outputs.environment }}/values.yaml
 #          git config user.email "github-actions@clickbus.com"
 #          git config user.name "Github Actions"
 #          git add ${CHART_PATH}/environments/${{ inputs.environment }}/values.yaml
@@ -110,21 +119,16 @@ jobs:
             HELM_ARGS="--set prefixName=${PREFIX}"
           fi
 
-          environment=${{ inputs.environment }}
-          if [[ ${{ inputs.squad }} == '' ]]; then
-            environment=${{ inputs.squad }}
-          fi
-
-          if [[ -f ${CHART_PATH}/environments/$environment/secrets.yaml ]]; then
-            sops -d ${CHART_PATH}/environments/${{ inputs.environment }}/secrets.yaml > ${CHART_PATH}/environments/${{ inputs.environment }}/secrets.yaml.dec
-            HELM_ARGS="$HELM_ARGS --values ${CHART_PATH}/environments/${{ inputs.environment }}/secrets.yaml.dec"
+          if [[ -f ${CHART_PATH}/environments/${{ steps.environment.outputs.environment }}/secrets.yaml ]]; then
+            sops -d ${CHART_PATH}/environments/${{ steps.environment.outputs.environment }}/secrets.yaml > ${CHART_PATH}/environments/${{ steps.environment.outputs.environment }}/secrets.yaml.dec
+            HELM_ARGS="$HELM_ARGS --values ${CHART_PATH}/environments/${{ steps.environment.outputs.environment }}/secrets.yaml.dec"
           fi
 
           helm upgrade \
             --install $RELEASE_NAME $CHART_PATH \
             --create-namespace --namespace $NAMESPACE \
             --wait \
-            --values ${CHART_PATH}/environments/$environment/values.yaml $HELM_ARGS
+            --values ${CHART_PATH}/environments/${{ steps.environment.outputs.environment }}/values.yaml $HELM_ARGS
 
   cleanup:
     name: cleanup
