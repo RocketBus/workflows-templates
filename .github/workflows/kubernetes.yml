@@ -101,7 +101,9 @@ jobs:
         run: |
           IMAGE_TAG=${{ inputs.image_tag }}
           export APP_VERSION=${IMAGE_TAG#v}
-          yq -i '.appVersion = env(APP_VERSION)' ${CHART_PATH}/Chart.yaml
+          if [[ -f ${CHART_PATH}/Chart.yaml ]]; then
+            yq -i '.appVersion = env(APP_VERSION)' ${CHART_PATH}/Chart.yaml
+          fi
           yq -i '.image.tag = env(APP_VERSION)' ${CHART_PATH}/environments/${{ steps.environment.outputs.environment }}/values.yaml
 #          git config user.email "github-actions@clickbus.com"
 #          git config user.name "Github Actions"
