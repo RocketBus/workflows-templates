@@ -72,7 +72,9 @@ jobs:
             --username AWS \
             --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com
 
-          helm dep up $CHART_PATH
+          if [[ -f ${CHART_PATH}/Chart.yaml ]]
+            helm dep up $CHART_PATH
+          fi
 
       - name: configure AWS credentials for EKS
         uses: aws-actions/configure-aws-credentials@v1-node16
