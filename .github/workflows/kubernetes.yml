@@ -72,7 +72,7 @@ jobs:
             --username AWS \
             --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com
 
-          if [[ -f ${CHART_PATH}/Chart.yaml ]]
+          if [[ -f ${CHART_PATH}/Chart.yaml ]]; then
             helm dep up $CHART_PATH
           fi
 
