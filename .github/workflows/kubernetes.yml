@@ -92,7 +92,7 @@ jobs:
         id: environment
         run: |
           ENVIRONMENT=${{ inputs.environment }}
-          if [[ ${{ inputs.squad }} == '' ]]; then
+          if [[ !${{ inputs.squad }} == '' ]]; then
             ENVIRONMENT=${{ inputs.squad }}
           fi
           echo "environment=$ENVIRONMENT" >> $GITHUB_OUTPUT
