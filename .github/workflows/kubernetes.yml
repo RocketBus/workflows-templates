@@ -12,6 +12,9 @@ on:
       image_tag:
         type: string
         required: true
+      squad:
+        type: string
+        required: false
     secrets:
       git_access_token:
         required: true
@@ -105,7 +108,12 @@ jobs:
             HELM_ARGS="--set prefixName=${PREFIX}"
           fi
 
-          if [[ -f ${CHART_PATH}/environments/${{ inputs.environment }}/secrets.yaml ]]; then
+          environment=${{ inputs.environment }}
+          if [[ ${{ inputs.squad }} == '' ]]; then
+            environment=${{ inputs.squad }}
+          fi
+
+          if [[ -f ${CHART_PATH}/environments/$environment/secrets.yaml ]]; then
             sops -d ${CHART_PATH}/environments/${{ inputs.environment }}/secrets.yaml > ${CHART_PATH}/environments/${{ inputs.environment }}/secrets.yaml.dec
             HELM_ARGS="$HELM_ARGS --values ${CHART_PATH}/environments/${{ inputs.environment }}/secrets.yaml.dec"
           fi
@@ -114,7 +122,7 @@ jobs:
             --install $RELEASE_NAME $CHART_PATH \
             --create-namespace --namespace $NAMESPACE \
             --wait \
-            --values ${CHART_PATH}/environments/${{ inputs.environment }}/values.yaml $HELM_ARGS
+            --values ${CHART_PATH}/environments/$environment/values.yaml $HELM_ARGS
 
   cleanup:
     name: cleanup
