@@ -58,8 +58,9 @@ jobs:
           echo NAMESPACE=${{ inputs.project_name }} >> $GITHUB_ENV
           echo CHART_PATH=charts/${{ inputs.project_name }} >> $GITHUB_ENV
 
-          environment=${{ inputs.environment }}
-          if [[ ${{ inputs.squad }} != '' ]]; then
+          environment=${{ inputs.environment }}          
+          squad=${{ inputs.squad }}
+          if [[ $squad != '' ]]; then
             environment=${{ inputs.squad }}
           fi
           echo "ENVIRONMENT=$environment" >> $GITHUB_OUTPUT
