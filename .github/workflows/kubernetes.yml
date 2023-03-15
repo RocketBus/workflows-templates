@@ -119,7 +119,8 @@ jobs:
             HELM_ARGS="--set prefixName=${PREFIX}"
           fi
 
-          if [[ ${{ inputs.squad }} != '' ]]; then
+          squad=${{ inputs.squad }}
+          if [[ $squad != '' ]]; then
             RELEASE_NAME=${{ inputs.squad }}-${RELEASE_NAME}
           fi
 
