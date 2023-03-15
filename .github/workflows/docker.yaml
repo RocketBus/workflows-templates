@@ -73,7 +73,7 @@ jobs:
           
           declare -A AWS_ACCOUNTS_IDS AWS_REGIONS
           AWS_ACCOUNTS_IDS=([dev]=180811438061 [stg]=406026015868 [live]=114395709799)
-          AWS_REGIONS=([dev]=us-east-2 [stg]=us-east-2 [live]=us-east-2)
+          AWS_REGIONS=([dev]=us-east-2 [stg]=us-east-2 [live]=us-east-1)
 
           AWS_ACCOUNT_ID=${AWS_ACCOUNTS_IDS[$ENV]}
           AWS_REGION=${AWS_REGIONS[$ENV]}
