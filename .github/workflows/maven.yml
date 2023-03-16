@@ -7,6 +7,14 @@ on:
         type: string
         required: false
         default: 11
+      skip_tests:
+        type: boolean
+        required: false
+        default: false
+      skip_quality_gate_check:
+        type: boolean
+        required: false
+        default: false
     secrets:
       maven_settings:
         required: true
@@ -53,7 +61,7 @@ jobs:
   unit_tests:
     name: unit tests
     runs-on: live
-    if: ${{ (github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'tag') }}
+    if: ${{ ((github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'tag')) && (! inputs.skip_tests) }}
     steps:
       - name: checkout
         uses: actions/checkout@v3
@@ -86,7 +94,7 @@ jobs:
   integration_tests:
     name: integration tests
     runs-on: live
-    if: ${{ (github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'tag') }}
+    if: ${{ ((github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'tag')) && (! inputs.skip_tests) }}
     steps:
       - name: checkout
         uses: actions/checkout@v3
@@ -153,7 +161,7 @@ jobs:
           ./mvnw $MAVEN_CLI_OPTS verify sonar:sonar ${SONAR_PARAMETERS}
 
       - name: sonarqube quality gate check
-        if: github.event_name == 'pull_request'
+        if: (github.event_name == 'pull_request') && (! inputs.skip_quality_gate_check)
         uses: sonarsource/sonarqube-quality-gate-action@master
         timeout-minutes: 5
         with:
