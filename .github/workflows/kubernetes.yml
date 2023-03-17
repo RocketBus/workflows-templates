@@ -12,6 +12,9 @@ on:
       image_tag:
         type: string
         required: true
+      squad:
+        type: string
+        required: false
     secrets:
       git_access_token:
         required: true
@@ -55,6 +58,13 @@ jobs:
           echo NAMESPACE=${{ inputs.project_name }} >> $GITHUB_ENV
           echo CHART_PATH=charts/${{ inputs.project_name }} >> $GITHUB_ENV
 
+          environment=${{ inputs.environment }}          
+          squad=${{ inputs.squad }}
+          if [[ $squad != '' ]]; then
+            environment=${{ inputs.squad }}
+          fi
+          echo "ENVIRONMENT=$environment" >> $GITHUB_OUTPUT
+
       - name: configure AWS credentials for Helm
         uses: aws-actions/configure-aws-credentials@v1-node16
         with:
@@ -69,7 +79,9 @@ jobs:
             --username AWS \
             --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com
 
-          helm dep up $CHART_PATH
+          if [[ -f ${CHART_PATH}/Chart.yaml ]]; then
+            helm dep up $CHART_PATH
+          fi
 
       - name: configure AWS credentials for EKS
         uses: aws-actions/configure-aws-credentials@v1-node16
@@ -82,13 +94,15 @@ jobs:
           role-duration-seconds: 1200
           role-session-name: GitHubActionsDeploySession
           mask-aws-account-id: false
-
+  
       - name: update image tag
         run: |
           IMAGE_TAG=${{ inputs.image_tag }}
           export APP_VERSION=${IMAGE_TAG#v}
-          yq -i '.appVersion = env(APP_VERSION)' ${CHART_PATH}/Chart.yaml
-          yq -i '.image.tag = env(APP_VERSION)' ${CHART_PATH}/environments/${{ inputs.environment }}/values.yaml
+          if [[ -f ${CHART_PATH}/Chart.yaml ]]; then
+            yq -i '.appVersion = env(APP_VERSION)' ${CHART_PATH}/Chart.yaml
+          fi
+          yq -i '.image.tag = env(APP_VERSION)' ${CHART_PATH}/environments/${{ steps.job_properties.outputs.environment }}/values.yaml
 #          git config user.email "github-actions@clickbus.com"
 #          git config user.name "Github Actions"
 #          git add ${CHART_PATH}/environments/${{ inputs.environment }}/values.yaml
@@ -105,16 +119,21 @@ jobs:
             HELM_ARGS="--set prefixName=${PREFIX}"
           fi
 
-          if [[ -f ${CHART_PATH}/environments/${{ inputs.environment }}/secrets.yaml ]]; then
-            sops -d ${CHART_PATH}/environments/${{ inputs.environment }}/secrets.yaml > ${CHART_PATH}/environments/${{ inputs.environment }}/secrets.yaml.dec
-            HELM_ARGS="$HELM_ARGS --values ${CHART_PATH}/environments/${{ inputs.environment }}/secrets.yaml.dec"
+          squad=${{ inputs.squad }}
+          if [[ $squad != '' ]]; then
+            RELEASE_NAME=${{ inputs.squad }}-${RELEASE_NAME}
+          fi
+
+          if [[ -f ${CHART_PATH}/environments/${{ steps.job_properties.outputs.environment }}/secrets.yaml ]]; then
+            sops -d ${CHART_PATH}/environments/${{ steps.job_properties.outputs.environment }}/secrets.yaml > ${CHART_PATH}/environments/${{ steps.job_properties.outputs.environment }}/secrets.yaml.dec
+            HELM_ARGS="$HELM_ARGS --values ${CHART_PATH}/environments/${{ steps.job_properties.outputs.environment }}/secrets.yaml.dec"
           fi
 
           helm upgrade \
             --install $RELEASE_NAME $CHART_PATH \
             --create-namespace --namespace $NAMESPACE \
             --wait \
-            --values ${CHART_PATH}/environments/${{ inputs.environment }}/values.yaml $HELM_ARGS
+            --values ${CHART_PATH}/environments/${{ steps.job_properties.outputs.environment }}/values.yaml $HELM_ARGS
 
   cleanup:
     name: cleanup
