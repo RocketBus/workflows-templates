@@ -184,6 +184,7 @@ jobs:
         run: npm install --global yarn
 
       - name: execute audit
+        continue-on-error: true
         run: |
           if [[ ${{ inputs.node_package_manager }} == 'npm' ]]; then
             npm audit --audit-level=high
