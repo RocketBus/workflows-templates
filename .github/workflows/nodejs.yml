@@ -183,13 +183,6 @@ jobs:
         if: ${{ inputs.node_package_manager == 'yarn' }}
         run: npm install --global yarn
 
-      - name: setup Yarn cache
-        uses: actions/setup-node@v3
-        if: ${{ inputs.node_package_manager == 'yarn' }}
-        with:
-          node-version: ${{ inputs.node_version }}
-          cache: yarn
-
       - name: execute audit
         run: |
           if [[ ${{ inputs.node_package_manager }} == 'npm' ]]; then
