@@ -122,10 +122,10 @@ jobs:
             HELM_ARGS="--set prefixName=${PREFIX}"
           fi
 
-          squad=${{ inputs.squad }}
-          if [[ $squad != '' ]]; then
-            RELEASE_NAME=${{ inputs.squad }}
-          fi
+          # squad=${{ inputs.squad }}
+          # if [[ $squad != '' ]]; then
+          #   RELEASE_NAME=${{ inputs.squad }}
+          # fi
 
           if [[ -f ${CHART_PATH}/environments/${{ steps.job_properties.outputs.environment }}/secrets.yaml ]]; then
             sops -d ${CHART_PATH}/environments/${{ steps.job_properties.outputs.environment }}/secrets.yaml > ${CHART_PATH}/environments/${{ steps.job_properties.outputs.environment }}/secrets.yaml.dec
