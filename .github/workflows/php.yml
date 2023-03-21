@@ -244,7 +244,7 @@ jobs:
     runs-on: ${{ inputs.environment }}
     needs:
       - package
-    if: ${{ always() && (needs.package.result == 'success' || needs.package.result == 'skipped') && (github.event_name == 'push' && github.ref_type == 'tag') }}
+    if: ${{ always() && (needs.package.result == 'success' || needs.package.result == 'skipped') && (github.event_name == 'push' && github.ref_type == 'tag' && github.ref == 'refs/heads/master') }}
     steps:
       - name: checkout
         uses: actions/checkout@v3
