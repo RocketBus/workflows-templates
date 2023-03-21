@@ -15,7 +15,7 @@ on:
         required: true
       image_tag:
         type: string
-        required: true
+        required: false
     secrets:
       git_access_token:
         required: true
