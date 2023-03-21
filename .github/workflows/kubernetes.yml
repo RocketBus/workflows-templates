@@ -99,9 +99,6 @@ jobs:
         run: |
           IMAGE_TAG=${{ inputs.image_tag }}
           export APP_VERSION=${IMAGE_TAG#v}
-          if [[ $(yq '.nginx.image.tag' ${CHART_PATH}/environments/${{ inputs.environment }}/values.yaml) != null ]]; then
-            yq -i '.nginx.image.tag = env(APP_VERSION)' ${CHART_PATH}/environments/${{ inputs.environment }}/values.yaml
-          fi
           if [[ -f ${CHART_PATH}/Chart.yaml ]]; then
             yq -i '.appVersion = env(APP_VERSION)' ${CHART_PATH}/Chart.yaml
           fi
