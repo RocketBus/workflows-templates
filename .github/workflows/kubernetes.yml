@@ -123,7 +123,8 @@ jobs:
 
           squad=${{ inputs.squad }}
           if [[ $squad != '' ]]; then
-            RELEASE_NAME=${{ inputs.squad }}            
+            RELEASE_NAME=${{ inputs.squad }}  
+            HELM_ARGS="${CHART_PATH}/environments/dev/values_comon.yaml"                 
           fi
 
           if [[ -f ${CHART_PATH}/secrets.yaml ]]; then
