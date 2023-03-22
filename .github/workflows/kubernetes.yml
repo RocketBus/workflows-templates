@@ -138,7 +138,7 @@ jobs:
             --install $RELEASE_NAME $CHART_PATH \
             --create-namespace --namespace $NAMESPACE \
             --wait \
-            --values $HELM_ARGS ${CHART_PATH}/environments/${{ steps.job_properties.outputs.environment }}/values.yaml
+            --values ${CHART_PATH}/environments/${{ steps.job_properties.outputs.environment }}/values.yaml $HELM_ARGS
 
   cleanup:
     name: cleanup
