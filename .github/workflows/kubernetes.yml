@@ -116,16 +116,16 @@ jobs:
         run: |
           aws eks update-kubeconfig --name ${{ steps.job_properties.outputs.eks_cluster }}
 
-          if [[ ${{ github.event_name }} == 'pull_request' ]]; then
-            PREFIX=pr-${{ github.event.number }}
-            RELEASE_NAME=${PREFIX}-${RELEASE_NAME}
-            HELM_ARGS="--set prefixName=${PREFIX}"
-          fi
-
-          # squad=${{ inputs.squad }}
-          # if [[ $squad != '' ]]; then
-          #   RELEASE_NAME=${{ inputs.squad }}
+          # if [[ ${{ github.event_name }} == 'pull_request' ]]; then
+          #   PREFIX=pr-${{ github.event.number }}
+          #   RELEASE_NAME=${PREFIX}-${RELEASE_NAME}
+          #   HELM_ARGS="--set prefixName=${PREFIX}"
           # fi
+
+          squad=${{ inputs.squad }}
+          if [[ $squad != '' ]]; then
+            RELEASE_NAME=${{ inputs.squad }}
+          fi
 
           if [[ -f ${CHART_PATH}/environments/${{ steps.job_properties.outputs.environment }}/secrets.yaml ]]; then
             sops -d ${CHART_PATH}/environments/${{ steps.job_properties.outputs.environment }}/secrets.yaml > ${CHART_PATH}/environments/${{ steps.job_properties.outputs.environment }}/secrets.yaml.dec
