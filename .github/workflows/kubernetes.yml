@@ -28,7 +28,7 @@ jobs:
     name: deploy
     runs-on: ${{ inputs.environment }}
     environment: ${{ inputs.environment }}
-    if: ${{ !(github.event_name == 'pull_request') }}
+    if: ${{ !(github.event_name == 'pull_request' && github.event.action == 'closed') }}
     env:
       ENV: ${{ inputs.environment }}
     steps:
@@ -113,11 +113,11 @@ jobs:
         run: |
           aws eks update-kubeconfig --name ${{ steps.job_properties.outputs.eks_cluster }}
 
-          # if [[ ${{ github.event_name }} == 'pull_request' ]]; then
-          #   PREFIX=pr-${{ github.event.number }}
-          #   RELEASE_NAME=${PREFIX}-${RELEASE_NAME}
-          #   HELM_ARGS="--set prefixName=${PREFIX}"
-          # fi
+          if [[ ${{ github.event_name }} == 'pull_request' ]]; then
+             PREFIX=pr-${{ github.event.number }}
+             RELEASE_NAME=${PREFIX}-${RELEASE_NAME}
+             HELM_ARGS="--set prefixName=${PREFIX}"
+          fi
 
           squad=${{ inputs.squad }}
           if [[ $squad != '' ]]; then
