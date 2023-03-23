@@ -124,9 +124,9 @@ jobs:
           squad=${{ inputs.squad }}
           if [[ $squad != '' ]]; then
             RELEASE_NAME=${{ inputs.squad }}  
-            HELM_ARGS="$HELM_ARGS --values ${CHART_PATH}/environments/dev/values_comon.yaml"
-            sops -d ${CHART_PATH}/environments/dev/secrets.yaml > ${CHART_PATH}/environments/dev/secrets.yaml.dec
-            HELM_ARGS="$HELM_ARGS --values ${CHART_PATH}/environments/dev/secrets.yaml.dec"             
+            HELM_ARGS="$HELM_ARGS --values ${CHART_PATH}/environments/dev/values_common.yaml"
+            sops -d ${CHART_PATH}/environments/dev/secrets_common.yaml > ${CHART_PATH}/environments/dev/secrets_common.yaml.dec
+            HELM_ARGS="$HELM_ARGS --values ${CHART_PATH}/environments/dev/secrets_common.yaml.dec"           
           fi
 
           if [[ -f ${CHART_PATH}/environments/${{ steps.job_properties.outputs.environment }}/secrets.yaml ]]; then
