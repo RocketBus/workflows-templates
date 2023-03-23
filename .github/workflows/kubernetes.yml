@@ -101,7 +101,7 @@ jobs:
           if [[ -f ${CHART_PATH}/Chart.yaml ]]; then
             yq -i '.appVersion = env(APP_VERSION)' ${CHART_PATH}/Chart.yaml
           fi
-          if [[ $(yq '.nginx.image.tag' ${CHART_PATH}/environments/${{ inputs.environment }}/values.yaml) != null ]]; then
+          if [[ $(yq '.nginx.image.tag' ${CHART_PATH}/environments/${{ steps.job_properties.outputs.environment }}/values.yaml) != null ]]; then
             yq -i '.nginx.image.tag = env(APP_VERSION)' ${CHART_PATH}/environments/${{ steps.job_properties.outputs.environment }}/values.yaml
           fi
           yq -i '.image.tag = env(APP_VERSION)' ${CHART_PATH}/environments/${{ steps.job_properties.outputs.environment }}/values.yaml
