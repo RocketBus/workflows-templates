@@ -260,7 +260,7 @@ jobs:
               if ${{ inputs.scan_fail_build }}; then
                 # aws ecr batch-delete-image --repository-name $IMAGE_REPOSITORY --image-ids imageTag=$IMAGE_TAG
                 echo "::error title=image scan::Failed minimum severity level. Found vulnerabilities with level ${SEVERITY_CUTOFF,,} or higher"
-                # exit 1
+                exit 1
               else
                 echo "::warning title=image scan::Warning minimum severity level. Found vulnerabilities with level ${SEVERITY_CUTOFF,,} or higher"
               fi
