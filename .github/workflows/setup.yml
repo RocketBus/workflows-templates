@@ -23,15 +23,21 @@ jobs:
   preflight_checklist:
     name: preflight checklist
     runs-on: live
-    container:
-      image: gittools/gitversion:6.0.0
-      env:
-        PATH: $PATH:/tools
     steps:
       - name: checkout
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
+
+      - name: setup .NET cli
+        uses: actions/setup-dotnet@v2
+        with:
+          dotnet-version: '6.0.x'
+        
+      - name: setup GitVersion
+        uses: gittools/actions/gitversion/setup@v0.9.15
+        with:
+          versionSpec: '5.x'
 
       - name: determine version
         id: gitversion

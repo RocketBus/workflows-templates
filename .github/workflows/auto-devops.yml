@@ -37,6 +37,8 @@ jobs:
     if: ${{ !inputs.tests_disabled }}
     name: tests
     uses: ./.github/workflows/tests.yml
+    with:
+      project_buildpack: ${{ needs.setup.outputs.project_buildpack }}
     needs:
       - setup
   # build_artifact:
