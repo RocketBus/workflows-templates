@@ -22,21 +22,19 @@ jobs:
     if: ${{ inputs.project_buildpack == 'java' }}
     name: lint
     runs-on: live
-    container:
-      image: amazoncorretto:${{ inputs.jdk_version }}
     steps:
       - name: checkout
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
 
-      - name: Cache local Maven repository
-        uses: actions/cache@v3
+      - name: setup JDK
+        uses: actions/setup-java@v3
         with:
-          path: ~/.m2/repository
-          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
-          restore-keys: |
-            ${{ runner.os }}-maven-
+          java-version: ${{ inputs.jdk_version }}
+          distribution: 'temurin'
+          cache: 'maven'
+          overwrite-settings: false
 
       - name: lint code
         run: ./mvnw $MAVEN_CLI_OPTS clean spotless:apply
@@ -45,21 +43,19 @@ jobs:
     if: ${{ inputs.project_buildpack == 'java' }}
     name: unit tests
     runs-on: live
-    container:
-      image: amazoncorretto:${{ inputs.jdk_version }}
     steps:
       - name: checkout
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
 
-      - name: Cache local Maven repository
-        uses: actions/cache@v3
+      - name: setup JDK
+        uses: actions/setup-java@v3
         with:
-          path: ~/.m2/repository
-          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
-          restore-keys: |
-            ${{ runner.os }}-maven-
+          java-version: ${{ inputs.jdk_version }}
+          distribution: 'temurin'
+          cache: 'maven'
+          overwrite-settings: false
 
       - name: execute unit tests
         run: ./mvnw $MAVEN_CLI_OPTS clean test -DskipITs=true
