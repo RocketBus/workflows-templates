@@ -1,0 +1,74 @@
+name: Tests Workflow
+
+on:
+  workflow_call:
+    inputs:
+      jdk_version:
+        type: string
+        required: false
+        default: 11
+      project_buildpack:
+        type: string
+        required: false
+        default: ''
+
+env:
+  MAVEN_CLI_OPTS: "-B -U -e -fae -ntp -V"
+  MAVEN_OPTS: "-Xmx1024m -Xms512m -Dhttps.protocols=TLSv1.2 -Dorg.slf4j.simpleLogger.showDateTime=true -Djava.awt.headless=true -Dfile.encoding=UTF-8"
+  SONAR_HOST_URL: "https://sonar.clickbus.net"
+
+jobs:
+  lint:
+    if: ${{ inputs.project_buildpack == 'java' }}
+    name: lint
+    runs-on: live
+    container:
+      image: amazoncorretto:${{ inputs.jdk_version }}
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Cache local Maven repository
+        uses: actions/cache@v3
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+
+      - name: lint code
+        run: ./mvnw $MAVEN_CLI_OPTS clean spotless:apply
+
+  unit_tests:
+    if: ${{ inputs.project_buildpack == 'java' }}
+    name: unit tests
+    runs-on: live
+    container:
+      image: amazoncorretto:${{ inputs.jdk_version }}
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Cache local Maven repository
+        uses: actions/cache@v3
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+
+      - name: execute unit tests
+        run: ./mvnw $MAVEN_CLI_OPTS clean test -DskipITs=true
+
+      - name: archive unit tests report
+        uses: actions/upload-artifact@v3
+        with:
+          name: unit-tests-report
+          path: |
+            **/target/surefire-reports/TEST-***.xml
+            **/target/jacoco.exec
+            **/target/site/jacoco/jacoco.xml

@@ -7,11 +7,15 @@ on:
         type: string
         required: false
         default: ''
+      project_buildpack:
+        type: string
+        required: false
+        default: ''
     outputs:
       project_name:
         value: ${{ jobs.preflight_checklist.outputs.project_name }}
-      project_management:
-        value: ${{ jobs.preflight_checklist.outputs.project_management }}
+      project_buildpack:
+        value: ${{ jobs.preflight_checklist.outputs.project_buildpack }}
       gitversion:
         value: ${{ jobs.preflight_checklist.outputs.gitversion }}
 
@@ -19,22 +23,13 @@ jobs:
   preflight_checklist:
     name: preflight checklist
     runs-on: live
-    if: ${{ github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref_type == 'branch') || (github.event_name == 'push' && github.ref_type == 'tag') || github.event_name == 'workflow_dispatch' }}
+    container:
+      image: gittools/gitversion:6.0.0
     steps:
       - name: checkout
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
-
-      - name: setup .NET cli
-        uses: actions/setup-dotnet@v2
-        with:
-          dotnet-version: '6.0.x'
-        
-      - name: setup GitVersion
-        uses: gittools/actions/gitversion/setup@v0.9.15
-        with:
-          versionSpec: '5.x'
 
       - name: determine version
         id: gitversion
@@ -82,15 +77,19 @@ jobs:
         id: project_properties
         env:
           PROJECT_NAME: ${{ inputs.project_name }}
+          PROJECT_BUILDPACK: ${{ inputs.buildpack }}
         run: |
-          if [[ -z $PROJECT_NAME ]]; then
-            PROJECT_NAME=${GITHUB_REPOSITORY#*/}
-          fi
+          [[ -z $PROJECT_NAME ]] && PROJECT_NAME=${GITHUB_REPOSITORY#*/}
+
+          [[ -z $PROJECT_BUILDPACK && -f pom.xml ]] && PROJECT_BUILDPACK="java"
+          [[ -z $PROJECT_BUILDPACK && -f build.gradle ]] && PROJECT_BUILDPACK="gradle"
+          [[ -z $PROJECT_BUILDPACK && -f package.json ]] && PROJECT_BUILDPACK="nodejs"
+          [[ -z $PROJECT_BUILDPACK && -f composer.json ]] && PROJECT_BUILDPACK="php"
 
           echo "project_name=$PROJECT_NAME" >> $GITHUB_OUTPUT
-          echo "project_management=teste" >> $GITHUB_OUTPUT
+          echo "project_buildpack=$PROJECT_BUILDPACK" >> $GITHUB_OUTPUT
           echo "gitversion={\"SemVer\": \"${GITVERSION_SEMVER}\", \"EscapedBranchName\": \"${GITVERSION_ESCAPEDBRANCHNAME}\", \"ShortSha\": \"${GITVERSION_SHORTSHA}\"}" >> $GITHUB_OUTPUT
     outputs:
       project_name: ${{ steps.project_properties.outputs.project_name }}
-      project_management: ${{ steps.project_properties.outputs.project_management }}
+      project_buildpack: ${{ steps.project_properties.outputs.project_buildpack }}
       gitversion: ${{ steps.project_properties.outputs.gitversion }}

@@ -1,47 +1,56 @@
 name: Auto DevOps Workflow
 
+run-name: teste auto-devops
+
 on:
   workflow_call:
     inputs:
       project_name:
         type: string
         required: false
-        default: ""
-      project_management:
+        default: ''
+      project_buildpack:
         type: string
         required: false
-        default: ""
-      project_namespace:
-        type: string
+        default: ''
+      tests_disabled:
+        type: boolean
         required: false
-        default: ""
-    secrets:
-      nexus_password:
-        required: true
-      sonar_token:
-        required: true
-      
+        default: false
+      build_artifact_disabled:
+        type: boolean
+        required: false
+        default: false
+      build_docker_disabled:
+        type: boolean
+        required: false
+        default: false
+
 jobs:
   setup:
     name: setup
     uses: ./.github/workflows/setup.yml
-  maven:
-    if: ${{ needs.setup.project_management == 'maven' }}
-    name: maven
-    uses: ./.github/workflows/maven.yml
+    with:
+      project_name: ${{ inputs.project_name }}
+      project_buildpack: ${{ inputs.project_buildpack }}
+  tests:
+    if: ${{ !inputs.tests_disabled }}
+    name: tests
+    uses: ./.github/workflows/tests.yml
     needs:
       - setup
-  yarn:
-    if: ${{ needs.setup.project_management == 'yarn' }}
-    name: yarn
-    uses: ./.github/workflows/yarn.yml
-    needs:
-      - setup
-  docker:
-    if: ${{ !inputs.docker_enabled }}
-    name: docker
-    uses: ./.github/workflows/docker.yml
-    needs:
-      - setup
-      - maven
-      - yarn
+  # build_artifact:
+  #   if: ${{ !inputs.build_artifact_disabled }}
+  #   name: build artifact
+  #   uses: ./.github/workflows/build-artifact.yml
+  #   needs:
+  #     - setup
+  #     - tests
+  # build_docker:
+  #   if: ${{ !inputs.build_docker_disabled }}
+  #   name: build docker
+  #   uses: ./.github/workflows/build-docker.yml
+  #   needs:
+  #     - setup
+  #     - tests
+  #     - build_artifact
