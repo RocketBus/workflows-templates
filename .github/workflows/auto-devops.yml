@@ -15,6 +15,15 @@ on:
         type: string
         required: false
         default: ""
+    secrets:
+      maven_settings:
+        required: true
+      nexus_username:
+        required: true
+      nexus_password:
+        required: true
+      sonar_token:
+        required: true
       
 jobs:
   setup:
@@ -23,3 +32,6 @@ jobs:
   maven:
     name: maven
     uses: ./.github/workflows/maven.yml
+    with:
+      jdk_version: 8
+    secrets: inherit
