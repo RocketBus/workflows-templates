@@ -25,6 +25,8 @@ jobs:
     runs-on: live
     container:
       image: gittools/gitversion:6.0.0
+      env:
+        PATH: $PATH:/tools
     steps:
       - name: checkout
         uses: actions/checkout@v3
