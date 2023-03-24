@@ -17,6 +17,9 @@ on:
         default: ""
       
 jobs:
-  _:
-    name: setup workflow
-    uses: ./.github/workflows/setup.yml
+  setup:
+    name: setup
+    uses: ./.github/workflows/jobs/setup.yml
+  maven:
+    name: maven
+    uses: ./.github/workflows/jobs/maven.yml
