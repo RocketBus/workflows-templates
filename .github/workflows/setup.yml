@@ -10,6 +10,8 @@ on:
     outputs:
       project_name:
         value: ${{ jobs.preflight_checklist.outputs.project_name }}
+      project_management:
+        value: ${{ jobs.preflight_checklist.outputs.project_management }}
       gitversion:
         value: ${{ jobs.preflight_checklist.outputs.gitversion }}
 
@@ -86,7 +88,9 @@ jobs:
           fi
 
           echo "project_name=$PROJECT_NAME" >> $GITHUB_OUTPUT
+          echo "project_management=teste" >> $GITHUB_OUTPUT
           echo "gitversion={\"SemVer\": \"${GITVERSION_SEMVER}\", \"EscapedBranchName\": \"${GITVERSION_ESCAPEDBRANCHNAME}\", \"ShortSha\": \"${GITVERSION_SHORTSHA}\"}" >> $GITHUB_OUTPUT
     outputs:
       project_name: ${{ steps.project_properties.outputs.project_name }}
+      project_management: ${{ steps.project_properties.outputs.project_management }}
       gitversion: ${{ steps.project_properties.outputs.gitversion }}

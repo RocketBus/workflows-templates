@@ -7,7 +7,7 @@ on:
         type: string
         required: false
         default: ""
-      project_language:
+      project_management:
         type: string
         required: false
         default: ""
@@ -15,23 +15,7 @@ on:
         type: string
         required: false
         default: ""
-      jdk_version:
-        type: string
-        required: false
-        default: 11
-      skip_tests:
-        type: boolean
-        required: false
-        default: false
-      skip_quality_gate_check:
-        type: boolean
-        required: false
-        default: false
     secrets:
-      maven_settings:
-        required: true
-      nexus_username:
-        required: true
       nexus_password:
         required: true
       sonar_token:
@@ -42,8 +26,22 @@ jobs:
     name: setup
     uses: ./.github/workflows/setup.yml
   maven:
+    if: ${{ needs.setup.project_management == 'maven' }}
     name: maven
     uses: ./.github/workflows/maven.yml
-    with:
-      jdk_version: 8
-    secrets: inherit
+    needs:
+      - setup
+  yarn:
+    if: ${{ needs.setup.project_management == 'yarn' }}
+    name: yarn
+    uses: ./.github/workflows/yarn.yml
+    needs:
+      - setup
+  docker:
+    if: ${{ !inputs.docker_enabled }}
+    name: docker
+    uses: ./.github/workflows/docker.yml
+    needs:
+      - setup
+      - maven
+      - yarn
