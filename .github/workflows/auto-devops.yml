@@ -1,0 +1,22 @@
+name: Auto DevOps Workflow
+
+on:
+  workflow_call:
+    inputs:
+      project_name:
+        type: string
+        required: false
+        default: ""
+      project_language:
+        type: string
+        required: false
+        default: ""
+      project_namespace:
+        type: string
+        required: false
+        default: ""
+      
+jobs:
+  _:
+    name: setup workflow
+    uses: ./.github/workflows/setup.yml
