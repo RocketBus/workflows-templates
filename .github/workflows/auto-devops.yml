@@ -19,7 +19,7 @@ on:
 jobs:
   setup:
     name: setup
-    uses: ./.github/workflows/jobs/setup.yml
+    uses: ./.github/workflows/setup.yml
   maven:
     name: maven
-    uses: ./.github/workflows/jobs/maven.yml
+    uses: ./.github/workflows/maven.yml
