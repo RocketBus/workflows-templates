@@ -19,19 +19,12 @@ on:
         type: string
         required: false
         default: ""
-    secrets:
-      nexus_username:
-        required: true
-      nexus_password:
-        required: true
-      sonar_token:
-        required: true
-
+        
 env:
-  NEXUS_USERNAME: ${{ secrets.nexus_username }}
-  NEXUS_PASSWORD: ${{ secrets.nexus_password }}
+  NEXUS_USERNAME: "teste"
+  NEXUS_PASSWORD: "teste"
   SONAR_HOST_URL: "https://sonar.clickbus.net"
-  SONAR_TOKEN: ${{ secrets.sonar_token }}
+  SONAR_TOKEN: "teste"
   NODE_OPTIONS: "--max_old_space_size=4096"
 
 jobs:

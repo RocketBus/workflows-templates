@@ -15,23 +15,14 @@ on:
         type: boolean
         required: false
         default: false
-    secrets:
-      maven_settings:
-        required: true
-      nexus_username:
-        required: true
-      nexus_password:
-        required: true
-      sonar_token:
-        required: true
 
 env:
   MAVEN_CLI_OPTS: "-B -U -e -fae -ntp -V"
   MAVEN_OPTS: "-Xmx1024m -Xms512m -Dhttps.protocols=TLSv1.2 -Dorg.slf4j.simpleLogger.showDateTime=true -Djava.awt.headless=true -Dfile.encoding=UTF-8"
-  NEXUS_USERNAME: ${{ secrets.nexus_username }}
-  NEXUS_PASSWORD: ${{ secrets.nexus_password }}
+  NEXUS_USERNAME: "teste"
+  NEXUS_PASSWORD: "teste"
   SONAR_HOST_URL: "https://sonar.clickbus.net"
-  SONAR_TOKEN: ${{ secrets.sonar_token }}
+  SONAR_TOKEN: "teste"
 
 jobs:
   lint:
