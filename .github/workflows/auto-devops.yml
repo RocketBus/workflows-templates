@@ -15,6 +15,18 @@ on:
         type: string
         required: false
         default: ""
+      jdk_version:
+        type: string
+        required: false
+        default: 11
+      skip_tests:
+        type: boolean
+        required: false
+        default: false
+      skip_quality_gate_check:
+        type: boolean
+        required: false
+        default: false
     secrets:
       maven_settings:
         required: true
