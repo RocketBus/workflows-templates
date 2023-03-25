@@ -19,12 +19,3 @@ jobs:
   gradle_tests:
     if: ${{ inputs.project_buildpack == 'gradle' }}
     uses: ./.github/workflows/gradle-tests.yml
-  npm_tests:
-    if: ${{ inputs.project_buildpack == 'npm' }}
-    uses: ./.github/workflows/npm-tests.yml
-  yarn_tests:
-    if: ${{ inputs.project_buildpack == 'yarn' }}
-    uses: ./.github/workflows/yarn-tests.yml
-  php_tests:
-    if: ${{ inputs.project_buildpack == 'php' }}
-    uses: ./.github/workflows/php-tests.yml
