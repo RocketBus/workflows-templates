@@ -1,0 +1,64 @@
+name: Maven Tests Workflow
+
+on:
+  workflow_call:
+    inputs:
+      jdk_version:
+        type: string
+        required: false
+        default: 11
+
+env:
+  MAVEN_CLI_OPTS: "-B -U -e -fae -ntp -V"
+  MAVEN_OPTS: "-Xmx1024m -Xms512m -Dhttps.protocols=TLSv1.2 -Dorg.slf4j.simpleLogger.showDateTime=true -Djava.awt.headless=true -Dfile.encoding=UTF-8"
+  SONAR_HOST_URL: "https://sonar.clickbus.net"
+
+jobs:
+  lint:
+    name: lint
+    runs-on: live
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: setup JDK
+        uses: actions/setup-java@v3
+        with:
+          java-version: ${{ inputs.jdk_version }}
+          distribution: 'temurin'
+          cache: 'maven'
+          overwrite-settings: false
+
+      - name: lint code
+        run: ./mvnw $MAVEN_CLI_OPTS clean spotless:apply
+
+  unit_tests:
+    name: unit tests
+    runs-on: live
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: setup JDK
+        uses: actions/setup-java@v3
+        with:
+          java-version: ${{ inputs.jdk_version }}
+          distribution: 'temurin'
+          cache: 'maven'
+          overwrite-settings: false
+
+      - name: execute unit tests
+        run: ./mvnw $MAVEN_CLI_OPTS clean test -DskipITs=true
+
+      - name: archive unit tests report
+        uses: actions/upload-artifact@v3
+        with:
+          name: unit-tests-report
+          path: |
+            **/target/surefire-reports/TEST-***.xml
+            **/target/jacoco.exec
+            **/target/site/jacoco/jacoco.xml

@@ -12,59 +12,19 @@ on:
         required: false
         default: ''
 
-env:
-  MAVEN_CLI_OPTS: "-B -U -e -fae -ntp -V"
-  MAVEN_OPTS: "-Xmx1024m -Xms512m -Dhttps.protocols=TLSv1.2 -Dorg.slf4j.simpleLogger.showDateTime=true -Djava.awt.headless=true -Dfile.encoding=UTF-8"
-  SONAR_HOST_URL: "https://sonar.clickbus.net"
-
 jobs:
-  lint:
-    if: ${{ inputs.project_buildpack == 'java' }}
-    name: lint
-    runs-on: live
-    steps:
-      - name: checkout
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-
-      - name: setup JDK
-        uses: actions/setup-java@v3
-        with:
-          java-version: ${{ inputs.jdk_version }}
-          distribution: 'temurin'
-          cache: 'maven'
-          overwrite-settings: false
-
-      - name: lint code
-        run: ./mvnw $MAVEN_CLI_OPTS clean spotless:apply
-
-  unit_tests:
-    if: ${{ inputs.project_buildpack == 'java' }}
-    name: unit tests
-    runs-on: live
-    steps:
-      - name: checkout
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-
-      - name: setup JDK
-        uses: actions/setup-java@v3
-        with:
-          java-version: ${{ inputs.jdk_version }}
-          distribution: 'temurin'
-          cache: 'maven'
-          overwrite-settings: false
-
-      - name: execute unit tests
-        run: ./mvnw $MAVEN_CLI_OPTS clean test -DskipITs=true
-
-      - name: archive unit tests report
-        uses: actions/upload-artifact@v3
-        with:
-          name: unit-tests-report
-          path: |
-            **/target/surefire-reports/TEST-***.xml
-            **/target/jacoco.exec
-            **/target/site/jacoco/jacoco.xml
+  maven_tests:
+    if: ${{ inputs.project_buildpack == 'maven' }}
+    uses: ./.github/workflows/maven-tests.yml
+  gradle_tests:
+    if: ${{ inputs.project_buildpack == 'gradle' }}
+    uses: ./.github/workflows/gradle-tests.yml
+  npm_tests:
+    if: ${{ inputs.project_buildpack == 'npm' }}
+    uses: ./.github/workflows/npm-tests.yml
+  yarn_tests:
+    if: ${{ inputs.project_buildpack == 'yarn' }}
+    uses: ./.github/workflows/yarn-tests.yml
+  php_tests:
+    if: ${{ inputs.project_buildpack == 'php' }}
+    uses: ./.github/workflows/php-tests.yml

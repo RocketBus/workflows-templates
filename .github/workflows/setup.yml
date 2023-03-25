@@ -89,10 +89,11 @@ jobs:
         run: |
           [[ -z $PROJECT_NAME ]] && PROJECT_NAME=${GITHUB_REPOSITORY#*/}
 
-          [[ -z $PROJECT_BUILDPACK && -f pom.xml ]] && PROJECT_BUILDPACK="java"
-          [[ -z $PROJECT_BUILDPACK && -f build.gradle ]] && PROJECT_BUILDPACK="gradle"
-          [[ -z $PROJECT_BUILDPACK && -f package.json ]] && PROJECT_BUILDPACK="nodejs"
-          [[ -z $PROJECT_BUILDPACK && -f composer.json ]] && PROJECT_BUILDPACK="php"
+          [[ -z $PROJECT_BUILDPACK && -f pom.xml ]] && PROJECT_BUILDPACK="maven"
+          [[ -z $PROJECT_BUILDPACK ]] && [[ -f build.gradle || -f build.gradle.kts ]] && PROJECT_BUILDPACK="gradle"
+          [[ -z $PROJECT_BUILDPACK && -f package-lock.json ]] && PROJECT_BUILDPACK="npm"
+          [[ -z $PROJECT_BUILDPACK && -f yarn.lock ]] && PROJECT_BUILDPACK="yarn"
+          [[ -z $PROJECT_BUILDPACK && -f composer.lock ]] && PROJECT_BUILDPACK="php"
 
           echo "project_name=$PROJECT_NAME" >> $GITHUB_OUTPUT
           echo "project_buildpack=$PROJECT_BUILDPACK" >> $GITHUB_OUTPUT
