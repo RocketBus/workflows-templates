@@ -129,6 +129,11 @@ jobs:
             HELM_ARGS="$HELM_ARGS --values ${CHART_PATH}/environments/dev/secrets_common.yaml.dec"           
           fi
 
+          if [[ -f ${CHART_PATH}/environments/${{ steps.job_properties.outputs.environment }}/secrets_common.yaml ]]; then
+            sops -d ${CHART_PATH}/environments/${{ steps.job_properties.outputs.environment }}/secrets_common.yaml > ${CHART_PATH}/environments/${{ steps.job_properties.outputs.environment }}/secrets_common.yaml.dec
+            HELM_ARGS="$HELM_ARGS --values ${CHART_PATH}/environments/${{ steps.job_properties.outputs.environment }}/secrets_common.yaml.dec"
+          fi
+
           if [[ -f ${CHART_PATH}/environments/${{ steps.job_properties.outputs.environment }}/secrets.yaml ]]; then
             sops -d ${CHART_PATH}/environments/${{ steps.job_properties.outputs.environment }}/secrets.yaml > ${CHART_PATH}/environments/${{ steps.job_properties.outputs.environment }}/secrets.yaml.dec
             HELM_ARGS="$HELM_ARGS --values ${CHART_PATH}/environments/${{ steps.job_properties.outputs.environment }}/secrets.yaml.dec"
