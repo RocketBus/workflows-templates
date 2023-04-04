@@ -64,14 +64,14 @@ jobs:
           overwrite-settings: false
 
       - name: execute unit tests
-        run: ./gradlew --no-daemon --parallel test
+        run: ./gradlew --no-daemon --parallel test jacocoRootReport
 
       - name: archive unit tests report
         uses: actions/upload-artifact@v3
         with:
           name: unit-tests-report
           path: |
-            **/build/reports/jacoco/test/jacocoTestReport.xml
+            **/build/reports/jacoco/jacocoRootReport
 
   integration_tests:
     name: integration tests
@@ -95,46 +95,46 @@ jobs:
         continue-on-error: true
         run: ./gradlew --no-daemon --parallel integrationTest
 
-#   sonarqube:
-#     name: sonarqube
-#     runs-on: live
-#     needs:
-#       - lint
-#       - unit_tests
-#       - integration_tests
-#     if: ${{ (github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'tag') }}
-#     steps:
-#       - name: checkout
-#         uses: actions/checkout@v3
-#         with:
-#           fetch-depth: 0
+  sonarqube:
+    name: sonarqube
+    runs-on: live
+    needs:
+      - lint
+      - unit_tests
+      - integration_tests
+    if: ${{ (github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'tag') }}
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
 
-#       - name: setup JDK
-#         uses: actions/setup-java@v3
-#         with:
-#           java-version: ${{ inputs.jdk_version }}
-#           distribution: 'temurin'
-#           cache: 'gradle'
-#           overwrite-settings: false
+      - name: setup JDK
+        uses: actions/setup-java@v3
+        with:
+          java-version: ${{ inputs.jdk_version }}
+          distribution: 'temurin'
+          cache: 'gradle'
+          overwrite-settings: false
 
-#       - name: download unit tests report
-#         uses: actions/download-artifact@v3
-#         with:
-#           name: unit-tests-report
+      - name: download unit tests report
+        uses: actions/download-artifact@v3
+        with:
+          name: unit-tests-report
 
-#       - name: sonarqube scan
-#         run: |
-#           if [[ ${{ github.event_name }} == 'pull_request' ]]; then
-#             SONAR_PARAMETERS="$SONAR_PARAMETERS -Dsonar.pullrequest.key=${{ github.event.pull_request.number }} -Dsonar.pullrequest.branch=${{ github.event.pull_request.head.ref }} -Dsonar.pullrequest.github.repository=$GITHUB_REPOSITORY"
-#           fi
+      - name: sonarqube scan
+        run: |
+          if [[ ${{ github.event_name }} == 'pull_request' ]]; then
+            SONAR_PARAMETERS="$SONAR_PARAMETERS -Dsonar.pullrequest.key=${{ github.event.pull_request.number }} -Dsonar.pullrequest.branch=${{ github.event.pull_request.head.ref }} -Dsonar.pullrequest.github.repository=$GITHUB_REPOSITORY"
+          fi
 
-#           ./gradlew --no-daemon --parallel sonarqube ${SONAR_PARAMETERS}
+          ./gradlew --no-daemon --parallel sonarqube ${SONAR_PARAMETERS}
 
-#       - name: sonarqube quality gate check
-#         uses: sonarsource/sonarqube-quality-gate-action@master
-#         timeout-minutes: 5
-#         with:
-#           scanMetadataReportFile: build/sonar/report-task.txt
+      - name: sonarqube quality gate check
+        uses: sonarsource/sonarqube-quality-gate-action@master
+        timeout-minutes: 5
+        with:
+          scanMetadataReportFile: build/sonar/report-task.txt
 
   package:
     name: package
@@ -143,7 +143,7 @@ jobs:
       - lint
       - unit_tests
       - integration_tests
-#       - sonarqube
+      - sonarqube
     if: ${{ (github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'tag') }}
     steps:
       - name: checkout
