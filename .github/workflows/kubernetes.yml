@@ -27,8 +27,6 @@ jobs:
   deploy:
     name: deploy
     runs-on: ${{ inputs.environment }}
-    needs:
-      - validate_branch_name
     environment: ${{ inputs.environment }}
     env:
       ENV: ${{ inputs.environment }}
