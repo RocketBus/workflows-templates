@@ -59,7 +59,7 @@ jobs:
 
           environment=${{ inputs.environment }}          
           squad=${{ inputs.squad }}
-          if [[ $squad != '' ]]; then
+          if [[ $squad = 'cabal' || $squad = 'hive' || $squad = 'fallen' || $squad = 'vex' || $squad = 'eval' ]]; then
             environment=${{ inputs.squad }}
           fi
           echo "ENVIRONMENT=$environment" >> $GITHUB_OUTPUT
