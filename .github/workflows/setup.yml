@@ -11,7 +11,7 @@ on:
         type: string
         required: false
         default: 'false'
-      squad_name:
+      squad:
         type: string
         required: false
     outputs:
@@ -27,7 +27,7 @@ jobs:
     if: ${{ inputs.validate_branch_name == 'true' }}
     steps:
       - name: validate branch name
-        if: ${{ !(inputs.squad_name == 'cabal' || inputs.squad_name == 'hive' || inputs.squad_name == 'fallen' || inputs.squad_name == 'vex' || inputs.squad_name == 'eval') }}
+        if: ${{ !(inputs.squad == 'cabal' || inputs.squad == 'hive' || inputs.squad == 'fallen' || inputs.squad == 'vex' || inputs.squad == 'eval') }}
         run: |
              echo "::error::Branch name doesn't match the required pattern"
              exit 1
