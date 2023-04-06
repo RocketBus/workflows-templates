@@ -24,9 +24,23 @@ on:
         required: true
 
 jobs:
+  validate_branch_name:
+    name: validate branch name 
+    runs-on: ${{ inputs.environment }}
+    environment: ${{ inputs.environment }}
+    env:
+      ENV: ${{ inputs.environment }}
+    steps:
+      - name: validate branch name
+        if: ${{ !(env.squad == 'cabal' || env.squad == 'hive' || env.squad == 'fallen' || env.squad == 'vex' || env.squad == 'eval') }}
+        run: echo::error 'Branch name doesn't match the required pattern'
+          - exit 1
+
   deploy:
     name: deploy
     runs-on: ${{ inputs.environment }}
+    needs:
+      - validate_branch_name
     environment: ${{ inputs.environment }}
     env:
       ENV: ${{ inputs.environment }}
@@ -56,13 +70,8 @@ jobs:
           echo RELEASE_NAME=${{ inputs.project_name }} >> $GITHUB_ENV
           echo NAMESPACE=${{ inputs.project_name }} >> $GITHUB_ENV
           echo CHART_PATH=charts/${{ inputs.project_name }} >> $GITHUB_ENV
-
-          environment=${{ inputs.environment }}          
-          squad=${{ inputs.squad }}
-          if [[ $squad = 'cabal' || $squad = 'hive' || $squad = 'fallen' || $squad = 'vex' || $squad = 'eval' ]]; then
-            environment=${{ inputs.squad }}
-          fi
-          echo "ENVIRONMENT=$environment" >> $GITHUB_OUTPUT
+                
+          echo "ENVIRONMENT=${{ inputs.squad }}" >> $GITHUB_OUTPUT
 
       - name: configure AWS credentials for Helm
         uses: aws-actions/configure-aws-credentials@v1-node16
@@ -115,14 +124,7 @@ jobs:
         run: |
           aws eks update-kubeconfig --name ${{ steps.job_properties.outputs.eks_cluster }}
 
-          squad=${{ inputs.squad }}
-          if [[ $squad = 'cabal' || $squad = 'hive' || $squad = 'fallen' || $squad = 'vex' || $squad = 'eval' ]]; then
-            RELEASE_NAME=${{ inputs.squad }}-${{ inputs.project_name }}          
-          else
-            PREFIX=pr-${{ github.event.number }}
-            RELEASE_NAME=${PREFIX}-${RELEASE_NAME}
-            HELM_ARGS="--set prefixName=${PREFIX}"
-          fi
+          RELEASE_NAME=${{ inputs.squad }}-${{ inputs.project_name }}
 
           if [[ -f ${CHART_PATH}/environments/dev/values_common.yaml ]]; then
             HELM_ARGS="$HELM_ARGS --values -f ${CHART_PATH}/environments/dev/values_common.yaml"
