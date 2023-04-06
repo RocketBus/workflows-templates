@@ -24,18 +24,6 @@ on:
         required: true
 
 jobs:
-  validate_branch_name:
-    name: validate branch name 
-    runs-on: ${{ inputs.environment }}
-    environment: ${{ inputs.environment }}
-    env:
-      ENV: ${{ inputs.environment }}
-    steps:
-      - name: validate branch name
-        if: ${{ !(inputs.squad == 'cabal' || inputs.squad == 'hive' || inputs.squad == 'fallen' || inputs.squad == 'vex' || inputs.squad == 'eval') }}
-        run: echo::error 'Branch name doesn't match the required pattern'
-          - exit 1
-
   deploy:
     name: deploy
     runs-on: ${{ inputs.environment }}

@@ -7,6 +7,10 @@ on:
         type: string
         required: false
         default: ''
+      validate_branch_name:
+        type: string
+        required: false
+        default: 'false'
     outputs:
       project_name:
         value: ${{ jobs.preflight_checklist.outputs.project_name }}
@@ -14,9 +18,22 @@ on:
         value: ${{ jobs.preflight_checklist.outputs.gitversion }}
 
 jobs:
+  validate_branch_name:
+    name: validate branch name 
+    runs-on: ${{ inputs.environment }}
+    if: ${{ inputs.validate_branch_name == 'true' }}
+    steps:
+      - name: validate branch name
+        if: ${{ !(inputs.squad == 'cabal' || inputs.squad == 'hive' || inputs.squad == 'fallen' || inputs.squad == 'vex' || inputs.squad == 'eval') }}
+        run: echo::error 'Branch name doesn't match the required pattern'
+          - exit 1
+      # - name: squad name output
+      #   run: 
+
   preflight_checklist:
     name: preflight checklist
     runs-on: live
+    needs: validate_branch_name
     if: ${{ github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref_type == 'branch') || (github.event_name == 'push' && github.ref_type == 'tag') || github.event_name == 'workflow_dispatch' }}
     steps:
       - name: checkout
