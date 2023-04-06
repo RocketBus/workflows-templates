@@ -27,9 +27,12 @@ jobs:
     steps:
       - name: squad name output
         id: squad_name_output
-        run: echo "squad_name=$(echo "${{ github.event.pull_request.head.ref }}" | cut -d "-" -f 1)" >> $GITHUB_OUTPUT
+        run: |
+          squad_name=$(echo "${{ github.event.pull_request.head.ref }}" | cut -d "-" -f 1)
+          echo "SQUAD_NAME=$squad_name" >> $GITHUB_OUTPUT
+
       - name: validate branch name
-        if: ${{ !($squad_name == 'cabal' || $squad_name == 'hive' || $squad_name == 'fallen' || $squad_name == 'vex' || $squad_name == 'eval') }}
+        if: ${{ !($SQUAD_NAME == 'cabal' || $SQUAD_NAME == 'hive' || $SQUAD_NAME == 'fallen' || $SQUAD_NAME == 'vex' || $SQUAD_NAME == 'eval') }}
         run: |
              echo "::error::Branch name doesn't match the required pattern"
              exit 1
