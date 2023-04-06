@@ -30,6 +30,9 @@ jobs:
         id: set-squad
         run: echo "SQUAD=${{ github.event.inputs.squad }}" >> $GITHUB_ENV
 
+      - name: Print squad variable
+        run: echo $SQUAD
+
       - name: validate branch name
         if: ${{ env.SQUAD != 'cabal' && env.SQUAD != 'hive' && env.SQUAD != 'fallen' }}
         run: |
