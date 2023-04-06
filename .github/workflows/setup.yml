@@ -28,10 +28,10 @@ jobs:
     steps:
       - name: Set squad variable
         id: set-squad
-        run: echo "::set-output name=squad::${{ github.event.inputs.squad }}"
+        run: echo "SQUAD=${{ github.event.inputs.squad }}" >> $GITHUB_ENV
 
       - name: validate branch name
-        if: ${{ steps.set-squad.outputs.squad != 'cabal' && steps.set-squad.outputs.squad != 'hive' && steps.set-squad.outputs.squad != 'fallen' }}
+        if: ${{ env.SQUAD != 'cabal' && env.SQUAD != 'hive' && env.SQUAD != 'fallen' }}
         run: |
              echo "::error::Branch name doesn't match the required pattern"
              exit 1
