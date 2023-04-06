@@ -29,7 +29,7 @@ jobs:
       - name: Set squad variable
         id: set-squad
         run: |
-          evnsquad=${{ github.event.inputs.squad }}
+          evnsquad=${{ inputs.squad }}
           echo "SQUAD=$evnsquad" >> $GITHUB_ENV
 
       - name: Print squad variable
