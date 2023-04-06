@@ -30,11 +30,10 @@ jobs:
         run: echo ${{ inputs.squad }}
 
       - name: validate branch name
+        if: ${{ github.event.inputs.squad != 'cabal' && github.event.inputs.squad != 'hive' && github.event.inputs.squad != 'fallen' }}
         run: |
-          if [[ !${{ inputs.squad }} == 'cabal' || ${{ inputs.squad }} == 'hive' || ${{ inputs.squad }} == 'fallen' || ${{ inputs.squad }} == 'vex' || ${{ inputs.squad }} == 'eval' ]]; then
-               echo "::error::Branch name doesn't match the required pattern"
-               exit 0
-          fi
+             echo "::error::Branch name doesn't match the required pattern"
+             exit 1
 
   preflight_checklist:
     name: preflight checklist
