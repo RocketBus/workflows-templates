@@ -36,7 +36,7 @@ jobs:
         run: echo $SQUAD
 
       - name: validate branch name
-        if: ${{ env.SQUAD != 'cabal' && env.SQUAD != 'hive' && env.SQUAD != 'fallen' }}
+        if: ${{ env.SQUAD != 'cabal' && env.SQUAD != 'hive' && env.SQUAD != 'fallen' && env.SQUAD != 'vex' && env.SQUAD != 'taken'}}
         run: |
              echo "::error::Branch name doesn't match the required pattern"
              exit 1
