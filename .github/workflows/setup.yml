@@ -30,10 +30,10 @@ jobs:
     steps:
       - name: squad name output
         id: squad_name_output
-        run: echo "squad_name=${{ inputs.squad_name }}" >> "$GITHUB_OUTPUT"
+        run: echo "squad_name=${{ github.event.inputs.squad_name }}" >> "$GITHUB_OUTPUT"
 
       - name: validate branch name
-        if: ${{ !(inputs.squad_name == 'cabal' || inputs.squad_name == 'hive' || inputs.squad_name == 'fallen' || inputs.squad_name == 'vex' || inputs.squad_name == 'eval') }}
+        if: ${{ !(github.event.inputs.squad_name == 'cabal' || github.event.inputs.squad_name == 'hive' || github.event.inputs.squad_name == 'fallen' || github.event.inputs.squad_name == 'vex' || github.event.inputs.squad_name == 'eval') }}
         run: |
              echo "::error::Branch name doesn't match the required pattern"
              exit 1
