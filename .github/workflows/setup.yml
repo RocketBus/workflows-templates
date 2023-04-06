@@ -27,7 +27,7 @@ jobs:
     if: ${{ inputs.validate_branch_name == 'true' }}
     steps:
       - name: validate branch name
-        if: ${{ !(github.event.inputs.squad_name == 'cabal' || github.event.inputs.squad_name == 'hive' || github.event.inputs.squad_name == 'fallen' || github.event.inputs.squad_name == 'vex' || github.event.inputs.squad_name == 'eval') }}
+        if: ${{ !(inputs.squad_name == 'cabal' || inputs.squad_name == 'hive' || inputs.squad_name == 'fallen' || inputs.squad_name == 'vex' || inputs.squad_name == 'eval') }}
         run: |
              echo "::error::Branch name doesn't match the required pattern"
              exit 1
