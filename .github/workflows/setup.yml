@@ -25,14 +25,14 @@ jobs:
     runs-on: live
     if: ${{ inputs.validate_branch_name == 'true' }}
     steps:
-      - name: validate branch name
-        if: ${{ !(inputs.squad == 'cabal' || inputs.squad == 'hive' || inputs.squad == 'fallen' || inputs.squad == 'vex' || inputs.squad == 'eval') }}
-        run: |
-             echo "::error::Branch name doesn't match the required pattern"
-             exit 1
       - name: squad name output
         id: squad_name_output
         run: echo "squad_name=$(echo "${{ github.event.pull_request.head.ref }}" | cut -d "-" -f 1)" >> $GITHUB_OUTPUT
+      - name: validate branch name
+        if: ${{ !($squad_name == 'cabal' || $squad_name == 'hive' || $squad_name == 'fallen' || $squad_name == 'vex' || $squad_name == 'eval') }}
+        run: |
+             echo "::error::Branch name doesn't match the required pattern"
+             exit 1
     outputs:
       squad_name: ${{ steps.squad_name_output.outputs.squad_name }}
 
