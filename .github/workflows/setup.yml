@@ -11,6 +11,9 @@ on:
         type: string
         required: false
         default: 'false'
+      squad:
+        type: string
+        required: false
     outputs:
       project_name:
         value: ${{ jobs.preflight_checklist.outputs.project_name }}
@@ -27,9 +30,7 @@ jobs:
     steps:
       - name: squad name output
         id: squad_name_output
-        run: |
-          squad_input=$(echo "${{ github.event.pull_request.head.ref }}" | cut -d "-" -f 1)
-          echo "squad_name=$squad_input" >> "$GITHUB_OUTPUT"
+        run: echo "squad_name=${{ inputs.project_name }}" >> "$GITHUB_OUTPUT"
 
       - name: squad name output
         run: echo $squad_name
