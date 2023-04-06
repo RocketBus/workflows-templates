@@ -20,7 +20,7 @@ on:
 jobs:
   validate_branch_name:
     name: validate branch name 
-    runs-on: ${{ inputs.environment }}
+    runs-on: live
     if: ${{ inputs.validate_branch_name == 'true' }}
     steps:
       - name: validate branch name
