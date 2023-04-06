@@ -28,8 +28,8 @@ jobs:
       - name: squad name output
         id: squad_name_output
         run: |
-          squad_name=$(echo "${{ github.event.pull_request.head.ref }}" | cut -d "-" -f 1)
-          echo "SQUAD_NAME=$squad_name" >> $GITHUB_OUTPUT
+          squad_input=$(echo "${{ github.event.pull_request.head.ref }}" | cut -d "-" -f 1)
+          echo "squad_name=$squad_input" >> "$GITHUB_OUTPUT"
 
       - name: squad name output
         run: echo $SQUAD_NAME
