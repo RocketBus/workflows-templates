@@ -32,7 +32,7 @@ jobs:
           echo "squad_name=$squad_input" >> "$GITHUB_OUTPUT"
 
       - name: squad name output
-        run: echo $SQUAD_NAME
+        run: echo $squad_name
 
       # - name: validate branch name
       #   if: ${{ !($SQUAD_NAME == 'cabal' || $SQUAD_NAME == 'hive' || $SQUAD_NAME == 'fallen' || $SQUAD_NAME == 'vex' || $SQUAD_NAME == 'eval') }}
