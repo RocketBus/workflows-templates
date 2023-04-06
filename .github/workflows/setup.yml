@@ -16,6 +16,8 @@ on:
         value: ${{ jobs.preflight_checklist.outputs.project_name }}
       gitversion:
         value: ${{ jobs.preflight_checklist.outputs.gitversion }}
+      squad_name:
+        value: ${{ jobs.squad_name_output.outputs.squad_name }}
 
 jobs:
   validate_branch_name:
@@ -28,8 +30,11 @@ jobs:
         run: |
              echo "::error::Branch name doesn't match the required pattern"
              exit 1
-      # - name: squad name output
-      #   run: 
+      - name: squad name output
+        id: squad_name_output
+        run: echo "squad_name=$(echo "${{ github.event.pull_request.head.ref }}" | cut -d "-" -f 1)" >> $GITHUB_OUTPUT
+    outputs:
+      squad_name: ${{ steps.squad_name_output.outputs.squad_name }}
 
   preflight_checklist:
     name: preflight checklist
