@@ -31,7 +31,7 @@ jobs:
 
       - name: validate branch name
         run: |
-          if [[ !inputs.squad == 'cabal' || inputs.squad == 'hive' || inputs.squad == 'fallen' || inputs.squad == 'vex' || inputs.squad == 'eval' ]]; then
+          if [[ !${{ inputs.squad }} == 'cabal' || ${{ inputs.squad }} == 'hive' || ${{ inputs.squad }} == 'fallen' || ${{ inputs.squad }} == 'vex' || ${{ inputs.squad }} == 'eval' ]]; then
                echo "::error::Branch name doesn't match the required pattern"
                exit 1
           fi
