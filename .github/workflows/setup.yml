@@ -26,11 +26,12 @@ jobs:
     runs-on: live
     if: ${{ inputs.validate_branch_name == 'true' }}
     steps:
-      - name: validate branch name
-        run: echo ${{ inputs.squad }}
+      - name: Set squad variable
+        id: set-squad
+        run: echo "::set-output name=squad::${{ github.event.inputs.squad }}"
 
       - name: validate branch name
-        if: ${{ github.event.inputs.squad != 'cabal' && github.event.inputs.squad != 'hive' && github.event.inputs.squad != 'fallen' }}
+        if: ${{ steps.set-squad.outputs.squad != 'cabal' && steps.set-squad.outputs.squad != 'hive' && steps.set-squad.outputs.squad != 'fallen' }}
         run: |
              echo "::error::Branch name doesn't match the required pattern"
              exit 1
