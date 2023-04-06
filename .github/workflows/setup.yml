@@ -32,7 +32,6 @@ jobs:
           echo "SQUAD_NAME=$squad_name" >> $GITHUB_OUTPUT
 
       - name: squad name output
-        id: squad_name_output
         run: echo $SQUAD_NAME
 
       # - name: validate branch name
