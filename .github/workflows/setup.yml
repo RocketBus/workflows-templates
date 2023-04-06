@@ -24,7 +24,7 @@ jobs:
   validate_branch_name:
     name: validate branch name 
     runs-on: live
-    if: ${{ inputs.squad != '' }}
+    if: ${{ inputs.squad }}
     steps:
       - name: Set squad variable
         id: set-squad
