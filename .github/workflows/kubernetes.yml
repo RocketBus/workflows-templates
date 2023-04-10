@@ -57,7 +57,11 @@ jobs:
           echo NAMESPACE=${{ inputs.project_name }} >> $GITHUB_ENV
           echo CHART_PATH=charts/${{ inputs.project_name }} >> $GITHUB_ENV
                 
-          echo "ENVIRONMENT=${{ inputs.squad }}" >> $GITHUB_OUTPUT
+          if [[ ${{ inputs.squad }} == 'cabal' || ${{ inputs.squad }} == 'fallen' || ${{ inputs.squad }} == 'vex' || ${{ inputs.squad }} == 'taken' || ${{ inputs.squad }} == 'hive']]; then
+            echo "ENVIRONMENT=${{ inputs.squad }}" >> $GITHUB_OUTPUT
+          else
+            echo "ENVIRONMENT=${{ inputs.environment }}" >> $GITHUB_OUTPUT
+          fi
 
       - name: configure AWS credentials for Helm
         uses: aws-actions/configure-aws-credentials@v1-node16
@@ -110,7 +114,10 @@ jobs:
         run: |
           aws eks update-kubeconfig --name ${{ steps.job_properties.outputs.eks_cluster }}
 
-          RELEASE_NAME=${{ inputs.squad }}-${{ inputs.project_name }}
+          if [[ ${{ inputs.squad }} == 'cabal' || ${{ inputs.squad }} == 'fallen' || ${{ inputs.squad }} == 'vex' || ${{ inputs.squad }} == 'taken' || ${{ inputs.squad }} == 'hive']]; then
+            RELEASE_NAME=${{ steps.job_properties.outputs.environment }}-${{ inputs.project_name }}
+          else
+            RELEASE_NAME=${{ inputs.project_name }}
 
           if [[ -f ${CHART_PATH}/environments/dev/values_common.yaml ]]; then
             HELM_ARGS="$HELM_ARGS --values -f ${CHART_PATH}/environments/dev/values_common.yaml"
