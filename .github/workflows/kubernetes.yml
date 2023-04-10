@@ -141,11 +141,10 @@ jobs:
           #   --wait \
           #   --values ${CHART_PATH}/environments/${{ steps.job_properties.outputs.environment }}/values.yaml $HELM_ARGS
 
-          helm upgrade \
-            --install platform-general charts/platform-general \
-            --create-namespace --namespace platform-general \
-            --wait \
-            --values charts/platform-general/environments/stg/values.yaml --values charts/platform-general/environments/stg/secrets.yaml.dec 
+          echo $RELEASE_NAME
+          echo $CHART_PATH
+          echo $NAMESPACE
+          echo $HELM_ARGS
 
   cleanup:
     name: cleanup
