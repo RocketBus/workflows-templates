@@ -135,15 +135,17 @@ jobs:
             HELM_ARGS="$HELM_ARGS --values ${CHART_PATH}/environments/${{ steps.job_properties.outputs.environment }}/secrets.yaml.dec"
           fi
 
-          ls -la ./${CHART_PATH}/environments/stg/
-
           helm upgrade \
             --install $RELEASE_NAME $CHART_PATH \
             --create-namespace --namespace $NAMESPACE \
             --wait \
-            --values ${CHART_PATH}/environments/${{ steps.job_properties.outputs.environment }}/values.yaml --values ${CHART_PATH}/environments/stg/secrets.yaml.dec
-          
-          echo "teste"
+            --values ${CHART_PATH}/environments/${{ steps.job_properties.outputs.environment }}/values.yaml $HELM_ARGS
+
+          helm upgrade \
+            --install platform-general charts/platform-general \
+            --create-namespace --namespace platform-general \
+            --wait \
+            --values charts/platform-general/environments/stg/values.yaml --values charts/platform-general/environments/stg/secrets.yaml.dec 
 
   cleanup:
     name: cleanup
