@@ -57,7 +57,8 @@ jobs:
           echo NAMESPACE=${{ inputs.project_name }} >> $GITHUB_ENV
           echo CHART_PATH=charts/${{ inputs.project_name }} >> $GITHUB_ENV
                 
-          if [[ ${{ inputs.squad }} == 'cabal' || ${{ inputs.squad }} == 'fallen' || ${{ inputs.squad }} == 'vex' || ${{ inputs.squad }} == 'taken' || ${{ inputs.squad }} == 'hive']]; then
+          SQUAD=${{ inputs.squad }}
+          if [[ $SQUAD == 'cabal' || $SQUAD == 'fallen' || $SQUAD == 'vex' || $SQUAD == 'taken' || $SQUAD == 'hive']]; then
             echo "ENVIRONMENT=${{ inputs.squad }}" >> $GITHUB_OUTPUT
           else
             echo "ENVIRONMENT=${{ inputs.environment }}" >> $GITHUB_OUTPUT
@@ -114,7 +115,8 @@ jobs:
         run: |
           aws eks update-kubeconfig --name ${{ steps.job_properties.outputs.eks_cluster }}
 
-          if [[ ${{ inputs.squad }} == 'cabal' || ${{ inputs.squad }} == 'fallen' || ${{ inputs.squad }} == 'vex' || ${{ inputs.squad }} == 'taken' || ${{ inputs.squad }} == 'hive']]; then
+          SQUAD=${{ inputs.squad }}
+          if [[ $SQUAD == 'cabal' || $SQUAD == 'fallen' || $SQUAD == 'vex' || $SQUAD == 'taken' || $SQUAD == 'hive']]; then
             RELEASE_NAME=${{ steps.job_properties.outputs.environment }}-${{ inputs.project_name }}
           else
             RELEASE_NAME=${{ inputs.project_name }}
