@@ -28,7 +28,6 @@ jobs:
     name: deploy
     runs-on: ${{ inputs.environment }}
     environment: ${{ inputs.environment }}
-    if: ${{ !(github.event_name == 'pull_request' && github.event.action == 'closed') }}
     env:
       ENV: ${{ inputs.environment }}
     steps:
@@ -57,13 +56,13 @@ jobs:
           echo RELEASE_NAME=${{ inputs.project_name }} >> $GITHUB_ENV
           echo NAMESPACE=${{ inputs.project_name }} >> $GITHUB_ENV
           echo CHART_PATH=charts/${{ inputs.project_name }} >> $GITHUB_ENV
-
-          environment=${{ inputs.environment }}          
-          squad=${{ inputs.squad }}
-          if [[ $squad != '' ]]; then
-            environment=${{ inputs.squad }}
+                
+          SQUAD=${{ inputs.squad }}
+          if [[ $SQUAD == 'cabal' || $SQUAD == 'fallen' || $SQUAD == 'vex' || $SQUAD == 'taken' || $SQUAD == 'hive' ]]; then
+            echo "ENVIRONMENT=${{ inputs.squad }}" >> $GITHUB_OUTPUT
+          else
+            echo "ENVIRONMENT=${{ inputs.environment }}" >> $GITHUB_OUTPUT
           fi
-          echo "ENVIRONMENT=$environment" >> $GITHUB_OUTPUT
 
       - name: configure AWS credentials for Helm
         uses: aws-actions/configure-aws-credentials@v1-node16
@@ -102,6 +101,9 @@ jobs:
           if [[ -f ${CHART_PATH}/Chart.yaml ]]; then
             yq -i '.appVersion = env(APP_VERSION)' ${CHART_PATH}/Chart.yaml
           fi
+          if [[ $(yq '.nginx.image.tag' ${CHART_PATH}/environments/${{ steps.job_properties.outputs.environment }}/values.yaml) != null ]]; then
+            yq -i '.nginx.image.tag = env(APP_VERSION)' ${CHART_PATH}/environments/${{ steps.job_properties.outputs.environment }}/values.yaml
+          fi
           yq -i '.image.tag = env(APP_VERSION)' ${CHART_PATH}/environments/${{ steps.job_properties.outputs.environment }}/values.yaml
 #          git config user.email "github-actions@clickbus.com"
 #          git config user.name "Github Actions"
@@ -113,15 +115,20 @@ jobs:
         run: |
           aws eks update-kubeconfig --name ${{ steps.job_properties.outputs.eks_cluster }}
 
-          if [[ ${{ github.event_name }} == 'pull_request' ]]; then
-             PREFIX=pr-${{ github.event.number }}
-             RELEASE_NAME=${PREFIX}-${RELEASE_NAME}
-             HELM_ARGS="--set prefixName=${PREFIX}"
+          SQUAD=${{ inputs.squad }}
+          if [[ $SQUAD == 'cabal' || $SQUAD == 'fallen' || $SQUAD == 'vex' || $SQUAD == 'taken' || $SQUAD == 'hive' ]]; then
+            RELEASE_NAME=${{ steps.job_properties.outputs.environment }}-${{ inputs.project_name }}
+          else
+            RELEASE_NAME=${{ inputs.project_name }}
           fi
 
-          squad=${{ inputs.squad }}
-          if [[ $squad != '' ]]; then
-            RELEASE_NAME=${{ inputs.squad }}-${RELEASE_NAME}
+          if [[ -f ${CHART_PATH}/environments/dev/values_common.yaml ]]; then
+            HELM_ARGS="$HELM_ARGS --values -f ${CHART_PATH}/environments/dev/values_common.yaml"
+          fi
+
+          if [[ -f ${CHART_PATH}/environments/dev/secrets_common.yaml ]]; then
+            sops -d ${CHART_PATH}/environments/dev/secrets_common.yaml > ${CHART_PATH}/environments/dev/secrets_common.yaml.dec
+            HELM_ARGS="$HELM_ARGS --values ${CHART_PATH}/environments/dev/secrets_common.yaml.dec"
           fi
 
           if [[ -f ${CHART_PATH}/environments/${{ steps.job_properties.outputs.environment }}/secrets.yaml ]]; then

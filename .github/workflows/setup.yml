@@ -7,6 +7,9 @@ on:
         type: string
         required: false
         default: ''
+      squad:
+        type: string
+        required: false
     outputs:
       project_name:
         value: ${{ jobs.preflight_checklist.outputs.project_name }}
@@ -14,10 +17,28 @@ on:
         value: ${{ jobs.preflight_checklist.outputs.gitversion }}
 
 jobs:
+  validate_branch_name:
+    name: validate branch name 
+    runs-on: live
+    if: ${{ inputs.squad }}
+    steps:
+      - name: Set squad variable
+        id: set-squad
+        run: |
+          input_squad=${{ inputs.squad }}
+          echo "SQUAD=$input_squad" >> $GITHUB_ENV
+
+      - name: validate branch name
+        if: ${{ env.SQUAD != 'cabal' && env.SQUAD != 'hive' && env.SQUAD != 'fallen' && env.SQUAD != 'vex' && env.SQUAD != 'taken'}}
+        run: |
+             echo "::error::Branch name doesn't match the required pattern"
+             exit 1
+
   preflight_checklist:
     name: preflight checklist
     runs-on: live
-    if: ${{ github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref_type == 'branch') || (github.event_name == 'push' && github.ref_type == 'tag') || github.event_name == 'workflow_dispatch' }}
+    needs: validate_branch_name
+    if: ${{ always() || github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref_type == 'branch') || (github.event_name == 'push' && github.ref_type == 'tag') || github.event_name == 'workflow_dispatch' }}
     steps:
       - name: checkout
         uses: actions/checkout@v3

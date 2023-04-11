@@ -1,0 +1,56 @@
+name: PHP release prepare
+
+on:
+  workflow_call:
+    inputs:
+      gitversion:
+        type: string
+        required: true
+      node_version:
+        type: string
+        required: true
+    secrets:
+      git_access_token:
+        required: true
+
+jobs:
+  release_prepare:
+    name: release prepare
+    runs-on: live
+    if: ${{ github.ref_name == github.event.repository.default_branch }}
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.git_access_token }}
+
+      - name: setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ inputs.node_version }}
+          cache: npm
+
+      - name: install Yarn
+        run: npm install --global yarn
+
+      - name: release prepare
+        id: release_prepare
+        run: |
+          RELEASE_VERSION=$(echo '${{ inputs.gitversion }}' | jq -r '.SemVer')
+          export APP_VERSION=${RELEASE_VERSION//[v\-\.]/}runid${{ github.run_id }}
+          yq -i '.parameters.version = env(APP_VERSION)' app/config/parameters.yml
+          yarn version --new-version $RELEASE_VERSION --no-git-tag-version
+          git config user.email "github-actions@clickbus.com"
+          git config user.name "Github Actions"
+          git commit -a -m "chore: release v$RELEASE_VERSION" || echo "nothing to commit, proceed"
+          git tag v$RELEASE_VERSION
+          git push origin v$RELEASE_VERSION
+
+      - name: bump version
+        run: |
+          yarn version --patch --no-git-tag-version
+          git config user.email "github-actions@clickbus.com"
+          git config user.name "Github Actions"
+          git commit -a -m "chore: bump version [skip ci]" || echo "nothing to commit, proceed"
+          git push

@@ -13,6 +13,9 @@ on:
       environment:
         type: string
         required: true
+      image_tag:
+        type: string
+        required: false
     secrets:
       git_access_token:
         required: true
@@ -217,6 +220,13 @@ jobs:
       - name: install dependency with gulp
         run: node_modules/gulp/bin/gulp.js build
 
+      - name: assigning version to parameters.yml file
+        if: ${{ always() && !(github.event_name == 'push' && github.ref_type == 'tag') }}
+        run: |
+          IMAGE_TAG=${{ inputs.image_tag }}
+          export APP_VERSION=${IMAGE_TAG//[v\-\.]/}runid${{ github.run_id }}
+          yq -i '.parameters.version = env(APP_VERSION)' app/config/parameters.yml
+
       - name: Cleanup ./vendor/
         run: find ./vendor -name ".git" -type d | xargs rm -rf
 
@@ -234,7 +244,7 @@ jobs:
     runs-on: ${{ inputs.environment }}
     needs:
       - package
-    if: ${{ always() && (needs.package.result == 'success' || needs.package.result == 'skipped') && (github.event_name == 'push' && github.ref_type == 'tag') }}
+    if: ${{ always() && (needs.package.result == 'success' || needs.package.result == 'skipped') && (github.event_name == 'push' && github.ref_type == 'tag' && github.ref == 'refs/heads/master') }}
     steps:
       - name: checkout
         uses: actions/checkout@v3
