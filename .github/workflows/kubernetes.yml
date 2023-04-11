@@ -193,7 +193,12 @@ jobs:
         run: |
           aws eks update-kubeconfig --name ${{ steps.job_properties.outputs.eks_cluster }}
 
-          PREFIX=pr-${{ github.event.number }}
-          RELEASE_NAME=${PREFIX}-${RELEASE_NAME}
-
-          helm uninstall $RELEASE_NAME -n $NAMESPACE
+          SQUAD=${{ inputs.squad }}
+          if [[ $SQUAD == 'cabal' || $SQUAD == 'fallen' || $SQUAD == 'vex' || $SQUAD == 'taken' || $SQUAD == 'hive' ]]; then
+            echo "This is a fixed dev environment"
+          else
+            PREFIX=pr-${{ github.event.number }}
+            RELEASE_NAME=${PREFIX}-${RELEASE_NAME}
+            helm uninstall $RELEASE_NAME -n $NAMESPACE
+          fi
+          
