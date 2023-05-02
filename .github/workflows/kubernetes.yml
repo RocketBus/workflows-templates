@@ -119,10 +119,11 @@ jobs:
           SQUAD=${{ inputs.squad }}
           if [[ $SQUAD == 'cabal' || $SQUAD == 'fallen' || $SQUAD == 'vex' || $SQUAD == 'taken' || $SQUAD == 'hive' ]]; then
             RELEASE_NAME=${{ steps.job_properties.outputs.environment }}-${{ inputs.project_name }}
-          elif [[ ${{ github.event_name }} == 'pull_request' ]]; then
-            PREFIX=pr-${{ github.event.number }}
-            RELEASE_NAME=${PREFIX}-${{ inputs.project_name }}
-            HELM_ARGS="--set prefixName=${PREFIX}"
+          # removido pr acme-3327
+          # elif [[ ${{ github.event_name }} == 'pull_request' ]]; then
+          #   PREFIX=pr-${{ github.event.number }}
+          #   RELEASE_NAME=${PREFIX}-${{ inputs.project_name }}
+          #   HELM_ARGS="--set prefixName=${PREFIX}"
           else
             RELEASE_NAME=${{ inputs.project_name }}
           fi
