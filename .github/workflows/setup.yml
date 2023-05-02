@@ -17,22 +17,22 @@ on:
         value: ${{ jobs.preflight_checklist.outputs.gitversion }}
 
 jobs:
-  # validate_branch_name:
-  #   name: validate branch name 
-  #   runs-on: live
-  #   if: ${{ inputs.squad }}
-  #   steps:
-  #     - name: Set squad variable
-  #       id: set-squad
-  #       run: |
-  #         input_squad=${{ inputs.squad }}
-  #         echo "SQUAD=$input_squad" >> $GITHUB_ENV
+  validate_branch_name:
+    name: validate branch name 
+    runs-on: live
+    if: ${{ inputs.squad }}
+    steps:
+      - name: Set squad variable
+        id: set-squad
+        run: |
+          input_squad=${{ inputs.squad }}
+          echo "SQUAD=$input_squad" >> $GITHUB_ENV
 
-  #     - name: validate branch name
-  #       if: ${{ env.SQUAD != 'cabal' && env.SQUAD != 'hive' && env.SQUAD != 'fallen' && env.SQUAD != 'vex' && env.SQUAD != 'taken'}}
-  #       run: |
-  #            echo "::error::Branch name doesn't match the required pattern"
-  #            exit 1
+      - name: validate branch name
+        if: ${{ env.SQUAD != 'cabal' && env.SQUAD != 'hive' && env.SQUAD != 'fallen' && env.SQUAD != 'vex' && env.SQUAD != 'taken'}}
+        run: |
+             echo "::error::Branch name doesn't match the required pattern"
+             exit 1
 
   preflight_checklist:
     name: preflight checklist
