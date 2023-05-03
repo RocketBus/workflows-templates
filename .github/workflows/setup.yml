@@ -20,13 +20,12 @@ jobs:
   validate_branch_name:
     name: validate branch name 
     runs-on: live
-    if: ${{ inputs.squad }}
+    if: ${{ inputs.squad && (github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref_type == 'branch')) }}
     steps:
       - name: Set squad variable
         id: set-squad
         run: |
-          input_squad=${{ inputs.squad }}
-          echo "SQUAD=$input_squad" >> $GITHUB_ENV
+          echo "SQUAD=${{ inputs.squad }}" >> $GITHUB_ENV
 
       - name: validate branch name
         if: ${{ env.SQUAD != 'cabal' && env.SQUAD != 'hive' && env.SQUAD != 'fallen' && env.SQUAD != 'vex' && env.SQUAD != 'taken'}}
