@@ -64,7 +64,7 @@ jobs:
           overwrite-settings: false
 
       - name: execute unit tests
-        run: ./gradlew --no-daemon --parallel test jacocoRootReport
+        run: ./gradlew --no-daemon --parallel test jacocoTestReport
 
       - name: archive unit tests report
         uses: actions/upload-artifact@v3
