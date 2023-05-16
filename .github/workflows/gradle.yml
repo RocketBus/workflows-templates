@@ -123,18 +123,25 @@ jobs:
           name: unit-tests-report
 
       - name: sonarqube scan
+        env:
+          SONAR_PARAMETERS: ""
         run: |
           if [[ ${{ github.event_name }} == 'pull_request' ]]; then
             SONAR_PARAMETERS="$SONAR_PARAMETERS -Dsonar.pullrequest.key=${{ github.event.pull_request.number }} -Dsonar.pullrequest.branch=${{ github.event.pull_request.head.ref }} -Dsonar.pullrequest.github.repository=$GITHUB_REPOSITORY"
           fi
 
+          if [[ ${{ github.event_name }} == 'push' && ${{ github.ref_type }} == 'tag' ]]; then
+            SONAR_PARAMETERS="$SONAR_PARAMETERS -Dsonar.branch.name=${{ github.event.repository.default_branch }}"
+          fi
+
           ./gradlew --no-daemon --parallel sonar ${SONAR_PARAMETERS}
 
       - name: sonarqube quality gate check
+        if: (github.event_name == 'pull_request') && (! inputs.skip_quality_gate_check)
         uses: sonarsource/sonarqube-quality-gate-action@master
         timeout-minutes: 5
         with:
-          scanMetadataReportFile: build/sonar/report-task.txt
+          scanMetadataReportFile: target/sonar/report-task.txt
 
   package:
     name: package
