@@ -7,6 +7,10 @@ on:
         type: string
         required: false
         default: 11
+      skip_quality_gate_check:
+        type: boolean
+        required: false
+        default: true
     secrets:
       nexus_username:
         required: true
