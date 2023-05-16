@@ -71,7 +71,7 @@ jobs:
         with:
           name: unit-tests-report
           path: |
-            **/build/reports/jacoco/jacocoRootReport
+            **/build/reports/jacoco/jacocoTestReport
 
   integration_tests:
     name: integration tests
