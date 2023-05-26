@@ -60,7 +60,7 @@ jobs:
         run: echo ${{ secrets.maven_settings }} | base64 -d > ~/.m2/settings.xml
 
       - name: lint code
-        run: ./mvnw $MAVEN_CLI_OPTS clean spotless:apply
+        run: ./mvnw $MAVEN_CLI_OPTS clean spotless:check
 
   unit_tests:
     name: unit tests
