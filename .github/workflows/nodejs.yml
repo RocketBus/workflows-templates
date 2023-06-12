@@ -19,6 +19,10 @@ on:
         type: string
         required: false
         default: ""
+      skip_quality_gate_check:
+        type: boolean
+        required: false
+        default: false
     secrets:
       nexus_username:
         required: true
@@ -255,7 +259,7 @@ jobs:
             ${{ steps.set_sonar_parameters.outputs.args }}
 
       - name: sonarqube quality gate check
-        if: github.event_name == 'pull_request'
+        if: (github.event_name == 'pull_request') && (! inputs.skip_quality_gate_check)
         uses: sonarsource/sonarqube-quality-gate-action@master
         timeout-minutes: 5
 
