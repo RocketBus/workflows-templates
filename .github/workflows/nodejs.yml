@@ -18,7 +18,7 @@ on:
       environment:
         type: string
         required: false
-        default: ""
+        default: "live"
       skip_quality_gate_check:
         type: boolean
         required: false
@@ -41,7 +41,7 @@ env:
 jobs:
   lint:
     name: lint
-    runs-on: live
+    runs-on: ${{ inputs.environment }}
     if: ${{ (github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'tag') }}
     steps:
       - name: checkout
@@ -82,7 +82,7 @@ jobs:
 
   unit_tests:
     name: unit tests
-    runs-on: live
+    runs-on: ${{ inputs.environment }}
     if: ${{ (github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'tag') }}
     steps:
       - name: checkout
@@ -129,7 +129,7 @@ jobs:
 
   integration_tests:
     name: integration tests
-    runs-on: live
+    runs-on: ${{ inputs.environment }}
     if: ${{ (github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'tag') }}
     steps:
       - name: checkout
@@ -171,7 +171,7 @@ jobs:
 
   audit:
     name: audit dependencies
-    runs-on: live
+    runs-on: ${{ inputs.environment }}
     if: ${{ (github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'tag') }}
     steps:
       - name: checkout
@@ -198,7 +198,7 @@ jobs:
 
   sonarqube:
     name: sonarqube
-    runs-on: live
+    runs-on: ${{ inputs.environment }}
     needs:
       - lint
       - unit_tests
@@ -265,7 +265,7 @@ jobs:
 
   package:
     name: package
-    runs-on: live
+    runs-on: ${{ inputs.environment }}
     needs:
       - sonarqube
     if: ${{ !inputs.package_disabled && ((github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'tag')) }}
@@ -322,7 +322,7 @@ jobs:
 
   release:
     name: release
-    runs-on: live
+    runs-on: ${{ inputs.environment }}
     needs:
       - package
     if: ${{ always() && (needs.package.result == 'success' || needs.package.result == 'skipped') && (github.event_name == 'push' && github.ref_type == 'tag') }}
