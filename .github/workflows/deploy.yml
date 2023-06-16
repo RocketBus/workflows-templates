@@ -1,0 +1,52 @@
+name: Deploy Workflow
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        type: string
+        required: true
+      helm_charts_path:
+        type: string
+        required: true
+    secrets:
+      aws_access_key_id:
+        required: true
+      aws_secret_access_key:
+        required: true
+
+jobs:
+  development:
+    uses: RocketBus/workflows-templates/.github/workflows/eks.yml@v2
+    with:
+      environment: dev
+      eks_name: ${{ vars.DEV_EKS_NAME }}
+      eks_region: ${{ vars.DEV_EKS_REGION }}
+      eks_iam_role: ${{ vars.DEV_EKS_IAM_ROLE }}
+      helm_charts_path: ${{ inputs.helm_charts_path }}
+      version: ${{ inputs.version }}
+    secrets: inherit
+
+  staging:
+    uses: RocketBus/workflows-templates/.github/workflows/eks.yml@v2
+    with:
+      environment: stg
+      eks_name: ${{ vars.STG_EKS_NAME }}
+      eks_region: ${{ vars.STG_EKS_REGION }}
+      eks_iam_role: ${{ vars.STG_EKS_IAM_ROLE }}
+      helm_charts_path: ${{ inputs.helm_charts_path }}
+      version: ${{ inputs.version }}
+    secrets: inherit
+
+  live:
+    uses: RocketBus/workflows-templates/.github/workflows/eks.yml@v2
+    with:
+      environment: live
+      eks_name: ${{ vars.LIVE_EKS_NAME }}
+      eks_region: ${{ vars.LIVE_EKS_REGION }}
+      eks_iam_role: ${{ vars.LIVE_EKS_IAM_ROLE }}
+      helm_charts_path: ${{ inputs.helm_charts_path }}
+      version: ${{ inputs.version }}
+      requires_approval: true
+      approvers: team-acme
+    secrets: inherit
