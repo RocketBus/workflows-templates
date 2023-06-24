@@ -140,7 +140,10 @@ jobs:
           distribution: 'temurin'
           cache: 'maven'
           overwrite-settings: false
-          
+
+      - name: create settings.xml
+        run: echo ${{ secrets.maven_settings }} | base64 -d > ~/.m2/settings.xml
+
       - name: compile classes
         run: ./mvnw $MAVEN_CLI_OPTS package -Dmaven.test.skip=true
 
@@ -156,9 +159,6 @@ jobs:
           distribution: 'temurin'
           cache: 'maven'
           overwrite-settings: false
-
-      - name: create settings.xml
-        run: echo ${{ secrets.maven_settings }} | base64 -d > ~/.m2/settings.xml
 
       - name: sonarqube scan
         env:
