@@ -136,15 +136,26 @@ jobs:
       - name: setup JDK
         uses: actions/setup-java@v3
         with:
-          java-version: 11
+          java-version: ${{ inputs.jdk_version }}
           distribution: 'temurin'
           cache: 'maven'
           overwrite-settings: false
+          
+      - name: compile classes
+        run: ./mvnw $MAVEN_CLI_OPTS package -Dmaven.test.skip=true
 
       - name: download unit tests report
         uses: actions/download-artifact@v3
         with:
           name: unit-tests-report
+          
+      - name: setup JDK for SonarQube
+        uses: actions/setup-java@v3
+        with:
+          java-version: 11
+          distribution: 'temurin'
+          cache: 'maven'
+          overwrite-settings: false
 
       - name: create settings.xml
         run: echo ${{ secrets.maven_settings }} | base64 -d > ~/.m2/settings.xml
