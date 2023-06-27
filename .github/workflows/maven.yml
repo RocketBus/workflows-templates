@@ -84,7 +84,7 @@ jobs:
         run: echo ${{ secrets.maven_settings }} | base64 -d > ~/.m2/settings.xml
 
       - name: execute unit tests
-        run: ./mvnw $MAVEN_CLI_OPTS clean test -DskipITs=true
+        run: ./mvnw $MAVEN_CLI_OPTS test -DskipITs=true
 
       - name: archive unit tests report
         uses: actions/upload-artifact@v3
@@ -93,7 +93,6 @@ jobs:
           path: |
             **/target/surefire-reports/TEST-***.xml
             **/target/jacoco.exec
-            **/target/site/jacoco/jacoco.xml
 
   integration_tests:
     name: integration tests
@@ -118,7 +117,14 @@ jobs:
 
       - name: execute integration tests
         continue-on-error: false
-        run: ./mvnw $MAVEN_CLI_OPTS clean test-compile failsafe:integration-test failsafe:verify
+        run: ./mvnw $MAVEN_CLI_OPTS verify -DskipTests=true
+        
+      - name: archive integration tests report
+        uses: actions/upload-artifact@v3
+        with:
+          name: integration-tests-report
+          path: |
+            **/target/site/jacoco/jacoco.xml
 
   sonarqube:
     name: sonarqube
@@ -151,6 +157,11 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: unit-tests-report
+          
+      - name: download integration tests report
+        uses: actions/download-artifact@v3
+        with:
+          name: integration-tests-report
           
       - name: setup JDK for SonarQube
         uses: actions/setup-java@v3
