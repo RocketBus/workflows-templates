@@ -45,8 +45,6 @@ jobs:
     steps:
       - name: checkout
         uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
 
       - name: setup JDK
         uses: actions/setup-java@v3
@@ -60,17 +58,15 @@ jobs:
         run: echo ${{ secrets.maven_settings }} | base64 -d > ~/.m2/settings.xml
 
       - name: lint code
-        run: ./mvnw $MAVEN_CLI_OPTS clean spotless:check
+        run: ./mvnw $MAVEN_CLI_OPTS spotless:check
 
-  unit_tests:
-    name: unit tests
+  test:
+    name: test
     runs-on: live
     if: ${{ ((github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'tag')) && (! inputs.skip_tests) }}
     steps:
       - name: checkout
         uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
 
       - name: setup JDK
         uses: actions/setup-java@v3
@@ -85,84 +81,11 @@ jobs:
 
       - name: execute unit tests
         run: ./mvnw $MAVEN_CLI_OPTS test -DskipITs=true
-
-      - name: archive unit tests report
-        uses: actions/upload-artifact@v3
-        with:
-          name: unit-tests-report
-          path: |
-            **/target/surefire-reports/TEST-***.xml
-            **/target/jacoco.exec
-
-  integration_tests:
-    name: integration tests
-    runs-on: live
-    if: ${{ ((github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'tag')) && (! inputs.skip_tests) }}
-    steps:
-      - name: checkout
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-
-      - name: setup JDK
-        uses: actions/setup-java@v3
-        with:
-          java-version: ${{ inputs.jdk_version }}
-          distribution: 'temurin'
-          cache: 'maven'
-          overwrite-settings: false
-
-      - name: create settings.xml
-        run: echo ${{ secrets.maven_settings }} | base64 -d > ~/.m2/settings.xml
-
+  
       - name: execute integration tests
         continue-on-error: false
         run: ./mvnw $MAVEN_CLI_OPTS verify -DskipTests=true
-        
-      - name: archive integration tests report
-        uses: actions/upload-artifact@v3
-        with:
-          name: integration-tests-report
-          path: |
-            **/target/site/jacoco/jacoco.xml
 
-  sonarqube:
-    name: sonarqube
-    runs-on: live
-    needs:
-      - unit_tests
-      - integration_tests
-    if: ${{ (github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'tag') }}
-    steps:
-      - name: checkout
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-
-      - name: setup JDK
-        uses: actions/setup-java@v3
-        with:
-          java-version: ${{ inputs.jdk_version }}
-          distribution: 'temurin'
-          cache: 'maven'
-          overwrite-settings: false
-
-      - name: create settings.xml
-        run: echo ${{ secrets.maven_settings }} | base64 -d > ~/.m2/settings.xml
-
-      - name: compile classes
-        run: ./mvnw $MAVEN_CLI_OPTS package -Dmaven.test.skip=true
-
-      - name: download unit tests report
-        uses: actions/download-artifact@v3
-        with:
-          name: unit-tests-report
-          
-      - name: download integration tests report
-        uses: actions/download-artifact@v3
-        with:
-          name: integration-tests-report
-          
       - name: setup JDK for SonarQube
         uses: actions/setup-java@v3
         with:
@@ -172,8 +95,6 @@ jobs:
           overwrite-settings: false
 
       - name: sonarqube scan
-        env:
-          SONAR_PARAMETERS: "-DskipTests"
         run: |
           if [[ ${{ github.event_name }} == 'pull_request' ]]; then
             SONAR_PARAMETERS="$SONAR_PARAMETERS -Dsonar.pullrequest.key=${{ github.event.pull_request.number }} -Dsonar.pullrequest.branch=${{ github.event.pull_request.head.ref }} -Dsonar.pullrequest.github.repository=$GITHUB_REPOSITORY"
@@ -196,13 +117,11 @@ jobs:
     name: package
     runs-on: live
     needs:
-      - sonarqube
+      - tests
     if: ${{ (github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'tag') }}
     steps:
       - name: checkout
         uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
 
       - name: setup JDK
         uses: actions/setup-java@v3
@@ -217,7 +136,7 @@ jobs:
 
       - name: package artifact
         id: package_artifact
-        run: ./mvnw $MAVEN_CLI_OPTS clean package -Dmaven.test.skip=true
+        run: ./mvnw $MAVEN_CLI_OPTS package -Dmaven.test.skip=true
 
       - name: archive artifact
         uses: actions/upload-artifact@v3
