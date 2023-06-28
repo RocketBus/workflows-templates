@@ -45,6 +45,8 @@ jobs:
         uses: gittools/actions/gitversion/setup@v0
         with:
           versionSpec: '5.x'
+        env:
+          DOTNET_INSTALL_DIR: tools/dotnet
 
       - name: Determine Version
         id: gitversion
