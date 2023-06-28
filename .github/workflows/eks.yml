@@ -15,7 +15,16 @@ on:
       environment:
         type: string
         required: true
+      helm_charts_path:
+        type: string
+        required: true
+      project_name:
+        type: string
+        required: true
       version:
+        type: string
+        required: true
+      project_namemespace:
         type: string
         required: true
       requires_approval:
@@ -25,9 +34,6 @@ on:
       approvers:
         type: string
         required: false
-      helm_charts_path:
-        type: string
-        required: true
     secrets:
       aws_access_key_id:
         required: true
@@ -35,22 +41,10 @@ on:
         required: true
 
 jobs:
-  deploy:
-    name: deploy
+  eks:
+    name: eks
     runs-on: ubuntu-latest
     steps:
-      - uses: trstringer/manual-approval@v1
-        if: ${{ inputs.requires_approval }}
-        with:
-          secret: ${{ github.token }}
-          approvers: ${{ inputs.approvers }}
-          minimum-approvals: 1
-          issue-title: "Deploying v${{ inputs.version }} to ${{ inputs.environment }}"
-          issue-body: "Please approve or deny the deployment of version v${{ inputs.version }}."
-          exclude-workflow-initiator-as-approver: false
-          additional-approved-words: ''
-          additional-denied-words: ''
-
       - name: Checkout
         uses: actions/checkout@v3
 
@@ -94,4 +88,10 @@ jobs:
         run: |
           aws eks update-kubeconfig --name ${{ inputs.eks_name }}
 
-          helm --version
+          helm upgrade ${{ inputs.project_name }} ${{ inputs.helm_charts_path }} \
+            --atomic \
+            --cleanup-on-fail \
+            --history-max 4 \
+            --install \
+            --namespace ${{ inputs.project_namemespace }} \
+            ${HELM_ARGS}

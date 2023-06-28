@@ -71,6 +71,8 @@ jobs:
 
       - name: Build
         run: ./mvnw $MAVEN_CLI_OPTS compile
+    outputs:
+      version: ${{ steps.gitversion.outputs.semVer }}
 
   test:
     name: Test
