@@ -1,0 +1,178 @@
+name: Maven CI
+
+on:
+  workflow_call:
+    inputs:
+      jdk_version:
+        type: string
+        required: false
+        default: 11
+      skip_quality_gate_check:
+        type: boolean
+        required: false
+        default: false
+    secrets:
+      nexus_username:
+        required: true
+      nexus_password:
+        required: true
+      sonar_token:
+        required: true
+
+env:
+  MAVEN_CLI_OPTS: "-B -e -fae -ntp -U -V"
+  MAVEN_OPTS: "-Xmx1024m -Xms512m -Dhttps.protocols=TLSv1.2 -Dorg.slf4j.simpleLogger.showDateTime=true -Dorg.slf4j.simpleLogger.dateTimeFormat=HH:mm:ss,SSS -Dstyle.color=always"
+  MAVEN_SETTINGS: ${{ vars.MAVEN_SETTINGS }}
+  NEXUS_USERNAME: ${{ secrets.nexus_username }}
+  NEXUS_PASSWORD: ${{ secrets.nexus_password }}
+
+jobs:
+  build:
+    name: Build
+    runs-on: live
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Set up .NET cli
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '6.0.x'
+
+      - name: Set up GitVersion
+        uses: gittools/actions/gitversion/setup@v0
+        with:
+          versionSpec: '5.x'
+
+      - name: Determine Version
+        id: gitversion
+        uses: gittools/actions/gitversion/execute@v0
+        with:
+          additionalArguments: >
+            /overrideconfig mode=ContinuousDelivery
+
+      - name: Set up JDK
+        uses: actions/setup-java@v3
+        with:
+          java-version: ${{ inputs.jdk_version }}
+          distribution: 'corretto'
+          cache: 'maven'
+          overwrite-settings: false
+
+      - name: Create settings.xml
+        run: echo $MAVEN_SETTINGS > ~/.m2/settings.xml
+
+      - name: Lint
+        run: ./mvnw $MAVEN_CLI_OPTS spotless:check
+
+      - name: Build
+        run: ./mvnw $MAVEN_CLI_OPTS compile
+
+  test:
+    name: Test
+    runs-on: live
+    needs:
+      - build
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK
+        uses: actions/setup-java@v3
+        with:
+          java-version: ${{ inputs.jdk_version }}
+          distribution: 'corretto'
+          cache: 'maven'
+          overwrite-settings: false
+
+      - name: Create settings.xml
+        run: echo $MAVEN_SETTINGS > ~/.m2/settings.xml
+
+      - if: ${{ github.ref_name == github.event.repository.default_branch }}
+        name: Release Prepare
+        run: |
+          ./mvnw $MAVEN_CLI_OPTS org.codehaus.mojo:versions-maven-plugin:2.11.0:set -DnewVersion=${{ needs.build.outputs.version }}
+          ./mvnw $MAVEN_CLI_OPTS org.codehaus.mojo:versions-maven-plugin:2.11.0:set-property -Dproperty=revision -DnewVersion=${{ needs.build.outputs.version }}
+          ./mvnw $MAVEN_CLI_OPTS org.codehaus.mojo:versions-maven-plugin:2.11.0:commit
+
+      - name: Run Tests
+        run: ./mvnw $MAVEN_CLI_OPTS verify -Dspotless.check.skip=true -Dsonar.skip=true
+
+      - name: Set up JDK for SonarQube
+        uses: actions/setup-java@v3
+        with:
+          java-version: 11
+          distribution: 'corretto'
+          cache: 'maven'
+          overwrite-settings: false
+
+      - name: SonarQube Scan
+        run: |
+          if [[ ${{ github.event_name }} == 'pull_request' ]]; then
+            SONAR_PARAMETERS="-Dsonar.pullrequest.key=${{ github.event.pull_request.number }} -Dsonar.pullrequest.branch=${{ github.event.pull_request.head.ref }} -Dsonar.pullrequest.github.repository=$GITHUB_REPOSITORY"
+          fi
+
+          ./mvnw $MAVEN_CLI_OPTS sonar:sonar ${SONAR_PARAMETERS}
+        env:
+          SONAR_TOKEN: ${{ secrets.sonar_token }}
+          SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL }}
+
+      - name: SonarQube Quality Gate
+        uses: sonarsource/sonarqube-quality-gate-action@master
+        if: ${{ ! inputs.skip_quality_gate_check }}
+        timeout-minutes: 5
+        with:
+          scanMetadataReportFile: target/sonar/report-task.txt
+        env:
+          SONAR_TOKEN: ${{ secrets.sonar_token }}
+          SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL }}
+
+  release:
+    name: Release
+    runs-on: live
+    needs:
+      - build
+      - test
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Set up JDK
+        uses: actions/setup-java@v3
+        with:
+          java-version: ${{ inputs.jdk_version }}
+          distribution: 'corretto'
+          cache: 'maven'
+          overwrite-settings: false
+
+      - name: Create settings.xml
+        run: echo $MAVEN_SETTINGS > ~/.m2/settings.xml
+
+      - if: ${{ github.ref_name == github.event.repository.default_branch }}
+        name: Release Prepare
+        run: |
+          ./mvnw $MAVEN_CLI_OPTS org.codehaus.mojo:versions-maven-plugin:2.11.0:set -DnewVersion=${{ needs.build.outputs.version }}
+          ./mvnw $MAVEN_CLI_OPTS org.codehaus.mojo:versions-maven-plugin:2.11.0:set-property -Dproperty=revision -DnewVersion=${{ needs.build.outputs.version }}
+          ./mvnw $MAVEN_CLI_OPTS org.codehaus.mojo:versions-maven-plugin:2.11.0:commit
+          git config user.email "actions@clickbus.com"
+          git config user.name "GitHub Actions"
+          git commit -a -m "chore: release v${{ needs.build.outputs.version }} [skip ci]" || echo "nothing to commit, proceed"
+          git tag v${{ needs.build.outputs.version }}
+          git push origin v${{ needs.build.outputs.version }}
+
+      - name: Release Artifact
+        run: ./mvnw $MAVEN_CLI_OPTS deploy -Dspotless.check.skip=true -Dmaven.test.skip=true
+
+      - if: ${{ github.ref_name == github.event.repository.default_branch }}
+        name: Bump Version
+        run: |
+          ./mvnw $MAVEN_CLI_OPTS build-helper:parse-version org.codehaus.mojo:versions-maven-plugin:2.11.0:set -DnewVersion=\${parsedVersion.majorVersion}.\${parsedVersion.minorVersion}.\${parsedVersion.nextIncrementalVersion}-SNAPSHOT
+          ./mvnw $MAVEN_CLI_OPTS build-helper:parse-version org.codehaus.mojo:versions-maven-plugin:2.11.0:set-property -Dproperty=revision -DnewVersion=\${parsedVersion.majorVersion}.\${parsedVersion.minorVersion}.\${parsedVersion.incrementalVersion}-SNAPSHOT
+          ./mvnw $MAVEN_CLI_OPTS org.codehaus.mojo:versions-maven-plugin:2.11.0:commit
+          VERSION=$(./mvnw $MAVEN_CLI_OPTS org.apache.maven.plugins:maven-help-plugin:3.3.0:evaluate -Dexpression=project.version -q -DforceStdout)
+          git config user.email "actions@clickbus.com"
+          git config user.name "GitHub Actions"
+          git commit -a -m "chore: bump version to $VERSION [skip ci]" || echo "nothing to commit, proceed"
+          git push
