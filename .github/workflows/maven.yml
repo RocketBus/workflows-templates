@@ -20,8 +20,8 @@ on:
         required: true
 
 env:
-  MAVEN_CLI_OPTS: "-B -e -fae -ntp -U -V"
-  MAVEN_OPTS: "-Xmx1024m -Xms512m -Dhttps.protocols=TLSv1.2 -Dorg.slf4j.simpleLogger.showDateTime=true -Dorg.slf4j.simpleLogger.dateTimeFormat=HH:mm:ss,SSS -Dstyle.color=always"
+  MAVEN_CLI_OPTS: "-B -Dstyle.color=always -e -fae -ntp -U -V"
+  MAVEN_OPTS: "-Xmx1024m -Xms512m -Dhttps.protocols=TLSv1.2 -Dorg.slf4j.simpleLogger.showDateTime=true -Dorg.slf4j.simpleLogger.dateTimeFormat=HH:mm:ss,SSS"
   MAVEN_SETTINGS: ${{ vars.MAVEN_SETTINGS }}
   NEXUS_USERNAME: ${{ secrets.nexus_username }}
   NEXUS_PASSWORD: ${{ secrets.nexus_password }}
