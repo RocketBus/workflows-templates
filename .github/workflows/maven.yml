@@ -40,13 +40,13 @@ jobs:
         uses: actions/setup-dotnet@v3
         with:
           dotnet-version: '6.0.x'
+        env:
+          DOTNET_INSTALL_DIR: tools/dotnet
 
       - name: Set up GitVersion
         uses: gittools/actions/gitversion/setup@v0
         with:
           versionSpec: '5.x'
-        env:
-          DOTNET_INSTALL_DIR: tools/dotnet
 
       - name: Determine Version
         id: gitversion
