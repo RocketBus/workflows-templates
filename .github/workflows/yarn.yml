@@ -1,0 +1,201 @@
+name: Node.js CI
+
+on:
+  workflow_call:
+    inputs:
+      node_version:
+        type: string
+        required: false
+        default: 11
+      environment:
+        type: string
+        required: false
+        default: ""
+      package_disabled:
+        type: boolean
+        required: false
+        default: false
+      skip_quality_gate_check:
+        type: boolean
+        required: false
+        default: false
+    secrets:
+      nexus_username:
+        required: true
+      nexus_password:
+        required: true
+      sonar_token:
+        required: true
+
+env:
+  NODE_OPTIONS: "--max_old_space_size=4096"
+  NPMRC: ${{ vars.NPMRC }}
+
+jobs:
+  build:
+    name: Build
+    runs-on: live
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Set up .NET cli
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '6.0.x'
+        env:
+          DOTNET_INSTALL_DIR: tools/dotnet
+
+      - name: Set up GitVersion
+        uses: gittools/actions/gitversion/setup@v0
+        with:
+          versionSpec: '5.x'
+
+      - name: Determine Version
+        id: gitversion
+        uses: gittools/actions/gitversion/execute@v0
+        with:
+          additionalArguments: >
+            /overrideconfig mode=ContinuousDelivery
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ inputs.node_version }}
+          cache: yarn
+
+      - name: Create .npmrc
+        run: echo $NPMRC > ~/.npmrc
+
+      - name: Install Yarn
+        run: npm install --global yarn
+
+      - name: Install Dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Lint Code
+        run: yarn run lint
+
+      - name: Audit Dependencies
+        run: yarn audit --level high
+
+      - if: ${{ !inputs.package_disabled }}
+        name: Build
+        run: yarn run build${NODE_ENV_SCRIPT:+:$NODE_ENV_SCRIPT}
+        env:
+          NODE_ENV_SCRIPT: ${{ inputs.environment }}
+
+      - name: Archive Application Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: app-artifact
+          path: |
+            build/
+            dist/
+          if-no-files-found: ignore
+    outputs:
+      version: ${{ steps.gitversion.outputs.semVer }}
+
+  test:
+    name: Test
+    runs-on: live
+    needs:
+      - build
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ inputs.node_version }}
+          cache: yarn
+
+      - name: Create .npmrc
+        run: echo $NPMRC > ~/.npmrc
+
+      - name: Install Yarn
+        run: npm install --global yarn
+
+      - name: Install Dependencies
+        run: yarn install --frozen-lockfile
+
+      - if: ${{ github.ref_name == github.event.repository.default_branch }}
+        name: Release Prepare
+        run: yarn version --new-version ${{ needs.build.outputs.version }} --no-git-tag-version
+
+      - name: Run Tests
+        run: yarn run test
+
+      - if: ${{ github.event_name == 'pull_request' }}
+        name: Set Sonar Parameters
+        id: set_sonar_parameters
+        run: |
+          SONAR_PARAMETERS="-Dsonar.pullrequest.key=${{ github.event.pull_request.number }} \
+            -Dsonar.pullrequest.branch=${{ github.event.pull_request.head.ref }} \
+            -Dsonar.pullrequest.github.repository=$GITHUB_REPOSITORY"
+
+          echo "args=$SONAR_PARAMETERS" >> $GITHUB_OUTPUT
+
+      - name: SonarQube Scan
+        uses: sonarsource/sonarqube-scan-action@master
+        with:
+          args: >
+            ${{ steps.set_sonar_parameters.outputs.args }}
+        env:
+          SONAR_TOKEN: ${{ secrets.sonar_token }}
+          SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL }}
+
+      - if: ${{ ! inputs.skip_quality_gate_check }}
+        name: SonarQube Quality Gate
+        uses: sonarsource/sonarqube-quality-gate-action@master
+        timeout-minutes: 5
+        env:
+          SONAR_TOKEN: ${{ secrets.sonar_token }}
+          SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL }}
+
+  release:
+    name: Release
+    runs-on: live
+    needs:
+      - build
+      - test
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ inputs.node_version }}
+          cache: yarn
+
+      - name: Create .npmrc
+        run: echo $NPMRC > ~/.npmrc
+
+      - name: Install Yarn
+        run: npm install --global yarn
+
+      - if: ${{ github.ref_name == github.event.repository.default_branch }}
+        name: Release Prepare
+        run: |
+          yarn version --new-version ${{ needs.build.outputs.version }} --no-git-tag-version
+          git config user.email "actions@clickbus.com"
+          git config user.name "GitHub Actions"
+          git commit -a -m "chore: release v${{ needs.build.outputs.version }} [skip ci]" || echo "nothing to commit, proceed"
+          git tag v${{ needs.build.outputs.version }}
+          git push origin v${{ needs.build.outputs.version }}
+
+      - name: Release Artifact
+        run: yarn publish
+
+      - if: ${{ github.ref_name == github.event.repository.default_branch }}
+        name: Bump Version
+        run: |
+          yarn version --patch --no-git-tag-version
+          git config user.email "github-actions@clickbus.com"
+          git config user.name "Github Actions"
+          git commit -a -m "chore: bump version [skip ci]" || echo "nothing to commit, proceed"
+          git push

@@ -1,39 +1,17 @@
-name: EKS Workflow
+name: EKS CD
 
 on:
   workflow_call:
     inputs:
-      eks_name:
-        type: string
-        required: true
-      eks_region:
-        type: string
-        required: true
-      eks_iam_role:
-        type: string
-        required: true
-      environment:
-        type: string
-        required: true
       helm_charts_path:
         type: string
         required: true
       project_name:
         type: string
         required: true
-      version:
-        type: string
-        required: true
       project_namemespace:
         type: string
         required: true
-      requires_approval:
-        type: boolean
-        required: false
-        default: false
-      approvers:
-        type: string
-        required: false
     secrets:
       aws_access_key_id:
         required: true
@@ -41,57 +19,21 @@ on:
         required: true
 
 jobs:
-  eks:
-    name: eks
-    runs-on: ubuntu-latest
+  deploy:
+    name: deploy
+    runs-on: live
     steps:
       - name: Checkout
         uses: actions/checkout@v3
 
-      - name: Set up Helm
-        uses: azure/setup-helm@v3
-        with:
-          version: ${{ vars.HELM_VERSION }}
+      - name : machine echo env
+        env : { CONTENT : "${{ toJson(env) }}" }
+        run : "echo $CONTENT"
 
-      - name: Configure AWS credentials
-        id: aws_credentials_helm
-        uses: aws-actions/configure-aws-credentials@v2
-        with:
-          aws-access-key-id: ${{ secrets.aws_access_key_id }}
-          aws-secret-access-key: ${{ secrets.aws_secret_access_key }}
-          aws-region: ${{ vars.HELM_REGISTRY_REGION }}
-          mask-aws-account-id: false
+      - name : machine echo secrets
+        env : { CONTENT : "${{ toJson(secrets) }}" }
+        run : "echo $CONTENT"
 
-      - name: Helm dependency update
-        env:
-          AWS_ACCOUNT_ID: ${{ steps.aws_credentials_helm.outputs.aws-account-id }}
-          AWS_REGION: ${{ vars.HELM_REGISTRY_REGION }}
-        run: |
-          aws ecr get-login-password | helm registry login \
-            --username AWS \
-            --password-stdin ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
-
-          helm dep up ${{ inputs.helm_charts_path }}
-
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v2
-        with:
-          aws-access-key-id: ${{ secrets.aws_access_key_id }}
-          aws-secret-access-key: ${{ secrets.aws_secret_access_key }}
-          aws-region: ${{ inputs.eks_region }}
-          role-skip-session-tagging: true
-          role-to-assume: ${{ inputs.eks_iam_role }}
-          role-duration-seconds: 1200
-          role-session-name: GitHubActionsDeploySession
-
-      - name: Helm upgrade
-        run: |
-          aws eks update-kubeconfig --name ${{ inputs.eks_name }}
-
-          helm upgrade ${{ inputs.project_name }} ${{ inputs.helm_charts_path }} \
-            --atomic \
-            --cleanup-on-fail \
-            --history-max 4 \
-            --install \
-            --namespace ${{ inputs.project_namemespace }} \
-            ${HELM_ARGS}
+      - name : machine echo github
+        env : { CONTENT : "${{ toJson(github) }}" }
+        run : "echo $CONTENT"
