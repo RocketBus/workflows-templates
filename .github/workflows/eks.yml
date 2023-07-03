@@ -9,7 +9,7 @@ on:
       project_name:
         type: string
         required: true
-      project_namemespace:
+      project_namespace:
         type: string
         required: true
     secrets:
