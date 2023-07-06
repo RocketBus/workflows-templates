@@ -82,9 +82,9 @@ jobs:
           fi
 
           if [[ -n ${{ inputs.app_version }} ]]; then
-            echo "APP_VERSION=${{ inputs.app_version }}" >> $GITHUB_ENV
+            export "APP_VERSION=${{ inputs.app_version }}"
           else
-            echo "APP_VERSION=$VERSION" >> $GITHUB_ENV
+            export "APP_VERSION=$VERSION"
           fi
 
           if [[ ${{ github.ref_name }} == ${{ github.event.repository.default_branch }} ]]; then

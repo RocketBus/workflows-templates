@@ -29,7 +29,7 @@ on:
       scan_severity_cutoff:
         type: string
         required: false
-        default: low
+        default: high
       scan_fail_build:
         type: boolean
         required: false
@@ -78,6 +78,8 @@ jobs:
 
       - name: Download Application Artifact
         uses: actions/download-artifact@v3
+        with:
+          name: app-artifact
 
       - name: Uncompress Application Artifact
         run: |
