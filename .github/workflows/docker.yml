@@ -41,13 +41,13 @@ on:
         required: true
     outputs:
       image_repository:
-        value: ${{ jobs.build.outputs.image_repository }}
+        value: ${{ jobs.release.outputs.image_repository }}
       image_tag:
-        value: ${{ jobs.build.outputs.image_tag }}
+        value: ${{ jobs.release.outputs.image_tag }}
 
 jobs:
-  build:
-    name: Build
+  release:
+    name: Release
     runs-on: 
       - self-hosted
       - live
