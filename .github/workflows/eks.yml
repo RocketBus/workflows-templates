@@ -100,8 +100,10 @@ jobs:
             HELM_ARGS="$HELM_ARGS -f $ENVIRONMENT_VALUES"
           fi
 
-          APP_VERSION=$(cat version.txt)
-          yq -i '.appVersion = env(APP_VERSION)' Chart.yaml
+          if [[ -f environments/${{ inputs.environment }}/version.txt ]]; then
+            APP_VERSION=$(cat environments/${{ inputs.environment }}/version.txt)
+            yq -i '.appVersion = env(APP_VERSION)' Chart.yaml
+          fi
 
           helm upgrade ${{ inputs.release_name || github.event.repository.name }} . \
             --install \
