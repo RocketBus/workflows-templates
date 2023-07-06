@@ -60,7 +60,6 @@ jobs:
 
       - if: ${{ github.ref_name == github.event.repository.default_branch }}
         name: Configure AWS Credentials
-        id: aws_credentials_helm
         uses: aws-actions/configure-aws-credentials@v2
         with:
           aws-access-key-id: ${{ secrets.aws_access_key_id }}
@@ -69,14 +68,9 @@ jobs:
           mask-aws-account-id: false
 
       - if: ${{ github.ref_name == github.event.repository.default_branch }}
-        name: Helm Registry Login
-        run: |
-          aws ecr get-login-password | helm registry login \
-            --username AWS \
-            --password-stdin ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
-        env:
-          AWS_ACCOUNT_ID: ${{ steps.aws_credentials_helm.outputs.aws-account-id }}
-          AWS_REGION: ${{ vars.HELM_REGISTRY_REGION }}
+        name: Login to Amazon ECR
+        id: login_ecr
+        uses: aws-actions/amazon-ecr-login@v1
 
       - name: Package & Release
         working-directory: ${{ env.HELM_CHARTS_PATH }}
@@ -112,13 +106,10 @@ jobs:
             git add Chart.yaml
             helm package . -u --app-version $APP_VERSION --version $VERSION
             CHART_NAME=$(yq .name Chart.yaml)
-            helm push ${CHART_NAME}-${VERSION}.tgz oci://${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/helm-charts
+            helm push ${CHART_NAME}-${VERSION}.tgz oci://${{ steps.login_ecr.outputs.registry }}/helm-charts
           fi
 
           git config user.email "actions@clickbus.com"
           git config user.name "GitHub Actions"
           git commit -m "chore: release Helm Charts version $VERSION" || echo "nothing to commit, proceed"
           git push
-        env:
-          AWS_ACCOUNT_ID: ${{ steps.aws_credentials_helm.outputs.aws-account-id }}
-          AWS_REGION: ${{ vars.HELM_REGISTRY_REGION }}
