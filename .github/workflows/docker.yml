@@ -148,6 +148,8 @@ jobs:
           image: ${{ steps.image_properties.outputs.image }}
           fail-build: ${{ inputs.scan_fail_build }}
           severity-cutoff: ${{ inputs.scan_severity_cutoff }}
+          output-format: table
+          only-fixed: true
     outputs:
       image_repository: ${{ steps.image_properties.outputs.image_repository }}
       image_tag: ${{ steps.image_properties.outputs.image_tag }}
