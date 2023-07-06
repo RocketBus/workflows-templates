@@ -21,7 +21,7 @@ on:
         default: ""
       image_name:
         type: string
-        required: true
+        required: false
       image_tag_suffix:
         type: string
         required: false
@@ -39,11 +39,18 @@ on:
         required: true
       aws_secret_access_key:
         required: true
+    outputs:
+      image_repository:
+        value: ${{ jobs.build.outputs.image_repository }}
+      image_tag:
+        value: ${{ jobs.build.outputs.image_tag }}
 
 jobs:
   build:
     name: Build
-    runs-on: live
+    runs-on: 
+      - self-hosted
+      - live
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -73,6 +80,12 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: app-artifact
+
+      - name: Uncompress Application Artifact
+        run: |
+          if [[ -f app-artifact.tar.gz ]]; then
+            tar -zxf app-artifact.tar.gz
+          fi
 
       - name: Lint
         uses: hadolint/hadolint-action@v3.1.0
@@ -104,9 +117,9 @@ jobs:
         id: docker_metadata
         uses: docker/metadata-action@v4
         with:
-          images: ${{ steps.login_ecr.outputs.registry }}/${{ inputs.image_name }}
+          images: ${{ steps.login_ecr.outputs.registry }}/${{ inputs.image_name || github.event.repository.name }}
           tags: |
-            type=ref,event=pr,prefix=${{ steps.gitversion.outputs.semVer }}-,suffix=.{{sha}}
+            type=ref,event=pr,prefix=${{ steps.gitversion.outputs.MajorMinorPatch }}-,suffix=.{{sha}}
             type=raw,value=${{ steps.gitversion.outputs.semVer }},suffix=${{ inputs.image_tag_suffix }}
 
       - name: Set Image Properties
@@ -116,53 +129,7 @@ jobs:
           FIRST_IMAGE_TAG=${IMAGE_TAGS[0]}
           IMAGE_TAG=${FIRST_IMAGE_TAG##*:}
 
-          echo "image_tag=$IMAGE_TAG" >> $GITHUB_OUTPUT
-          echo "image=$FIRST_IMAGE_TAG" >> $GITHUB_OUTPUT
-
-      - name: Set up ECR Repository
-        run: |
-          aws ecr describe-repositories \
-            --repository-names ${{ inputs.image_name }} 2> /dev/null || \
-          aws ecr create-repository \
-            --repository-name ${{ inputs.image_name }} \
-            --image-scanning-configuration scanOnPush=true 
-
-          aws ecr set-repository-policy \
-            --repository-name ${{ inputs.image_name }} \
-            --policy-text '
-              {
-                "Version": "2012-10-17",
-                "Statement": [
-                  {
-                    "Sid": "AllowPull",
-                    "Action": [
-                      "ecr:GetAuthorizationToken",
-                      "ecr:BatchCheckLayerAvailability",
-                      "ecr:GetDownloadUrlForLayer",
-                      "ecr:GetRepositoryPolicy",
-                      "ecr:DescribeRepositories",
-                      "ecr:ListImages",
-                      "ecr:DescribeImages",
-                      "ecr:BatchGetImage",
-                      "ecr:GetLifecyclePolicy",
-                      "ecr:GetLifecyclePolicyPreview",
-                      "ecr:ListTagsForResource",
-                      "ecr:DescribeImageScanFindings"
-                    ],
-                    "Effect": "Allow",
-                    "Principal": {
-                      "AWS": [
-                        "arn:aws:iam::180811438061:root",
-                        "arn:aws:iam::406026015868:root",
-                        "arn:aws:iam::114395709799:root"
-                      ]
-                    }
-                  }
-                ]
-              }
-            '
-
-      - name: Docker Build
+      - name: Build
         uses: docker/build-push-action@v3
         with:
           cache-from: type=gha
@@ -173,58 +140,14 @@ jobs:
           build-args: ${{ inputs.docker_build_args }}
           labels: ${{ steps.docker_metadata.outputs.labels }}
           tags: ${{ steps.image_properties.outputs.image }}
-          outputs: type=docker,dest=/tmp/image.tar.gz
+          load: true
 
-      - name: Docker Push
-        run: |
-          echo "Pushing image to ECR..."
-          docker load -i /tmp/image.tar.gz
-          docker push ${{ steps.image_properties.outputs.image }}
-
-      - name: Check Image Scan
-        run: |
-          IMAGE_REPOSITORY=${{ inputs.image_name }}
-          IMAGE_TAG=${{ steps.image_properties.outputs.image_tag }}
-
-          aws ecr wait image-scan-complete --repository-name $IMAGE_REPOSITORY --image-id imageTag=$IMAGE_TAG
-
-          if [[ $? -eq 0 ]]; then
-            SEVERITY_CUTOFF=${{ inputs.scan_severity_cutoff }}
-            SEVERITY_CUTOFF=${SEVERITY_CUTOFF^^}
-
-            SCAN_FINDINGS=$(aws ecr describe-image-scan-findings --repository-name $IMAGE_REPOSITORY --image-id imageTag=$IMAGE_TAG --query imageScanFindings.findingSeverityCounts)
-
-            case $SEVERITY_CUTOFF in
-              CRITICAL)
-                SCAN_FINDINGS_COUNT=$(echo $SCAN_FINDINGS | jq -r '[.CRITICAL, .HIGH, .MEDIUM, .LOW, .INFORMATIONAL, .UNDEFINED] | add')
-              ;;
-              HIGH)
-                SCAN_FINDINGS_COUNT=$(echo $SCAN_FINDINGS | jq -r '[.HIGH, .MEDIUM, .LOW, .INFORMATIONAL, .UNDEFINED] | add')
-              ;;
-              MEDIUM)
-                SCAN_FINDINGS_COUNT=$(echo $SCAN_FINDINGS | jq -r '[.MEDIUM, .LOW, .INFORMATIONAL, .UNDEFINED] | add')
-              ;;
-              LOW)
-                SCAN_FINDINGS_COUNT=$(echo $SCAN_FINDINGS | jq -r '[.LOW, .INFORMATIONAL, .UNDEFINED] | add')
-              ;;
-              INFORMATIONAL)
-                SCAN_FINDINGS_COUNT=$(echo $SCAN_FINDINGS | jq -r '[.INFORMATIONAL, .UNDEFINED] | add')
-              ;;
-              UNDEFINED)
-                SCAN_FINDINGS_COUNT=$(echo $SCAN_FINDINGS | jq -r '[.UNDEFINED] | add')
-              ;;
-            esac
-
-            echo "## Vulnerability summary :shield:" >> $GITHUB_STEP_SUMMARY
-            aws ecr describe-image-scan-findings --repository-name $IMAGE_REPOSITORY --image-id imageTag=$IMAGE_TAG --query "imageScanFindings.findings[].{Name: name, Severity: severity, Package: join(':', [attributes[?key=='package_name'].value | join('', @), attributes[?key=='package_version'].value | join('', @)])}" --output table | sed s/'+'/'|'/g | tail -n +4 | head -n -1 >> $GITHUB_STEP_SUMMARY
-
-            if [[ $SCAN_FINDINGS_COUNT -gt 0 ]]; then
-              if ${{ inputs.scan_fail_build }}; then
-                aws ecr batch-delete-image --repository-name $IMAGE_REPOSITORY --image-ids imageTag=$IMAGE_TAG
-                echo "::error title=image scan::Failed minimum severity level. Found vulnerabilities with level ${SEVERITY_CUTOFF,,} or higher"
-                exit 1
-              else
-                echo "::warning title=image scan::Warning minimum severity level. Found vulnerabilities with level ${SEVERITY_CUTOFF,,} or higher"
-              fi
-            fi
-          fi
+      - name: Scan Image
+        uses: anchore/scan-action@v3
+        with:
+          image: ${{ steps.image_properties.outputs.image }}
+          fail-build: ${{ inputs.scan_fail_build }}
+          severity-cutoff: ${{ inputs.scan_severity_cutoff }}
+    outputs:
+      image_repository: ${{ steps.image_properties.outputs.image_repository }}
+      image_tag: ${{ steps.image_properties.outputs.image_tag }}

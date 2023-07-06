@@ -1,0 +1,124 @@
+name: Helm CI
+
+on:
+  workflow_call:
+    inputs:
+      helm_charts_path:
+        type: string
+        required: false
+      app_version:
+        type: string
+        required: false
+    secrets:
+      aws_access_key_id:
+        required: true
+      aws_secret_access_key:
+        required: true
+
+env:
+  HELM_CHARTS_PATH: ${{ inputs.helm_charts_path || format('charts/{0}', github.event.repository.name) }}
+
+jobs:
+  release:
+    name: Release
+    runs-on: 
+      - self-hosted
+      - live
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Set up .NET cli
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '6.0.x'
+        env:
+          DOTNET_INSTALL_DIR: tools/dotnet
+
+      - name: Set up GitVersion
+        uses: gittools/actions/gitversion/setup@v0
+        with:
+          versionSpec: '5.x'
+
+      - name: Determine Version
+        id: gitversion
+        uses: gittools/actions/gitversion/execute@v0
+        with:
+          additionalArguments: >
+            /overrideconfig mode=ContinuousDelivery
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v3
+        with:
+          version: ${{ vars.HELM_VERSION }}
+
+      - name: Lint
+        working-directory: ${{ env.HELM_CHARTS_PATH }}
+        run: helm lint --strict .
+
+      - if: ${{ github.ref_name == github.event.repository.default_branch }}
+        name: Configure AWS Credentials
+        id: aws_credentials_helm
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.aws_access_key_id }}
+          aws-secret-access-key: ${{ secrets.aws_secret_access_key }}
+          aws-region: ${{ vars.HELM_REGISTRY_REGION }}
+          mask-aws-account-id: false
+
+      - if: ${{ github.ref_name == github.event.repository.default_branch }}
+        name: Helm Registry Login
+        run: |
+          aws ecr get-login-password | helm registry login \
+            --username AWS \
+            --password-stdin ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
+        env:
+          AWS_ACCOUNT_ID: ${{ steps.aws_credentials_helm.outputs.aws-account-id }}
+          AWS_REGION: ${{ vars.HELM_REGISTRY_REGION }}
+
+      - name: Package & Release
+        working-directory: ${{ env.HELM_CHARTS_PATH }}
+        run: |
+          if [[ ${{ github.event_name }} == 'pull_request' ]]; then
+            export VERSION=${{ steps.gitversion.outputs.MajorMinorPatch }}-${{ github.event.number }}.${{ steps.gitversion.outputs.ShortSha }}
+          else
+            export VERSION=${{ steps.gitversion.outputs.semVer }}
+          fi
+
+          if [[ -n ${{ inputs.app_version }} ]]; then
+            echo "APP_VERSION=${{ inputs.app_version }}" >> $GITHUB_ENV
+          else
+            echo "APP_VERSION=$VERSION" >> $GITHUB_ENV
+          fi
+
+          if [[ ${{ github.ref_name }} == ${{ github.event.repository.default_branch }} ]]; then
+            ENVIRONMENT=stg
+          elif [[ ${{ github.ref_name }} =~ "^(cabal|fallen|hive|taken|vex)" ]]; then
+            ENVIRONMENT=$(echo ${{ github.ref_name }} | grep -E -o '^(cabal|fallen|hive|taken|vex)')
+          else
+            ENVIRONMENT=dev
+          fi
+
+          if [[ -n $ENVIRONMENT && -d environments/$ENVIRONMENT ]]; then
+            echo $APP_VERSION > environments/${ENVIRONMENT}/version.txt
+            git add environments/${ENVIRONMENT}/version.txt
+          fi
+
+          if [[ ${{ github.ref_name }} == ${{ github.event.repository.default_branch }} ]]; then
+            yq -i '.appVersion = env(APP_VERSION)' Chart.yaml
+            yq -i '.version = env(VERSION)' Chart.yaml
+            git add Chart.yaml
+            helm package . -u --app-version $APP_VERSION --version $VERSION
+            CHART_NAME=$(yq .name Chart.yaml)
+            helm push ${CHART_NAME}-${VERSION}.tgz oci://${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/helm-charts
+          fi
+
+          git config user.email "actions@clickbus.com"
+          git config user.name "GitHub Actions"
+          git commit -m "chore: release Helm Charts version $VERSION" || echo "nothing to commit, proceed"
+          git push
+        env:
+          AWS_ACCOUNT_ID: ${{ steps.aws_credentials_helm.outputs.aws-account-id }}
+          AWS_REGION: ${{ vars.HELM_REGISTRY_REGION }}
