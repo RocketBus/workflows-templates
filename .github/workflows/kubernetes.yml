@@ -145,7 +145,7 @@ jobs:
           helm upgrade \
             --install $RELEASE_NAME $CHART_PATH \
             --create-namespace --namespace $NAMESPACE \
-            --atomic --cleanup-on-fail \
+            --cleanup-on-fail \
             --values ${CHART_PATH}/environments/${{ steps.job_properties.outputs.environment }}/values.yaml $HELM_ARGS
 
   cleanup:
