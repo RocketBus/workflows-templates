@@ -106,7 +106,7 @@ jobs:
             git add Chart.yaml
             helm package . -u --app-version $APP_VERSION --version $VERSION
             CHART_NAME=$(yq .name Chart.yaml)
-            helm push ${CHART_NAME}-${VERSION}.tgz oci://${{ steps.login_ecr.outputs.registry }}/helm-charts
+            helm push ${CHART_NAME}-${VERSION}.tgz oci://${{ steps.login_ecr.outputs.registry }}/charts
           fi
 
           git config user.email "actions@clickbus.com"
