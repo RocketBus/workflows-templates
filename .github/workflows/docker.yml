@@ -127,7 +127,7 @@ jobs:
           FIRST_IMAGE_TAG=${IMAGE_TAGS[0]}
           IMAGE_TAG=${FIRST_IMAGE_TAG##*:}
 
-      - name: Build
+      - name: Build Image
         uses: docker/build-push-action@v3
         with:
           cache-from: type=gha
@@ -148,6 +148,9 @@ jobs:
           severity-cutoff: ${{ inputs.scan_severity_cutoff }}
           output-format: table
           only-fixed: true
+
+      - name: Push Image
+        run: docker push ${{ steps.image_properties.outputs.image }}
     outputs:
       image_repository: ${{ steps.image_properties.outputs.image_repository }}
       image_tag: ${{ steps.image_properties.outputs.image_tag }}
