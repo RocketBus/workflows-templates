@@ -260,8 +260,7 @@ jobs:
           ./mvnw $MAVEN_CLI_OPTS build-helper:parse-version org.codehaus.mojo:versions-maven-plugin:2.11.0:set -DnewVersion=\${parsedVersion.majorVersion}.\${parsedVersion.minorVersion}.\${parsedVersion.nextIncrementalVersion}-SNAPSHOT
           ./mvnw $MAVEN_CLI_OPTS build-helper:parse-version org.codehaus.mojo:versions-maven-plugin:2.11.0:set-property -Dproperty=revision -DnewVersion=\${parsedVersion.majorVersion}.\${parsedVersion.minorVersion}.\${parsedVersion.incrementalVersion}-SNAPSHOT
           ./mvnw $MAVEN_CLI_OPTS org.codehaus.mojo:versions-maven-plugin:2.11.0:commit
-          VERSION=$(./mvnw $MAVEN_CLI_OPTS org.apache.maven.plugins:maven-help-plugin:3.3.0:evaluate -Dexpression=project.version -q -DforceStdout)
           git config user.email "actions@clickbus.com"
           git config user.name "GitHub Actions"
-          git commit -a -m "chore: bump version to $VERSION [skip ci]" || echo "nothing to commit, proceed"
+          git commit -a -m "chore: bump version [skip ci]" || echo "nothing to commit, proceed"
           git push
