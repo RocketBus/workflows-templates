@@ -82,7 +82,7 @@ jobs:
         run: echo ${{ secrets.maven_settings }} | base64 -d > ~/.m2/settings.xml
 
       - name: execute unit tests
-        run: ./mvnw $MAVEN_CLI_OPTS verify -Dskip.sonar=true
+        run: ./mvnw $MAVEN_CLI_OPTS verify -Dsonar.skip=true
 
       - name: setup JDK for SonarQube
         uses: actions/setup-java@v3
