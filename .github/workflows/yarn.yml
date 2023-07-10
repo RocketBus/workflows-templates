@@ -55,11 +55,13 @@ jobs:
         id: gitversion
         uses: gittools/actions/gitversion/execute@v0
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v3
+      - name: Configure AWS Credentials
+        id: aws_credentials_helm
+        uses: aws-actions/configure-aws-credentials@v2
         with:
-          node-version: ${{ inputs.node_version }}
-          cache: yarn
+          aws-access-key-id: ${{ secrets.aws_access_key_id }}
+          aws-secret-access-key: ${{ secrets.aws_secret_access_key }}
+          aws-region: ${{ vars.CODEARTIFACT_REGION }}
 
       - name: Create .yarnrc.yml
         run: |
@@ -71,8 +73,20 @@ jobs:
           CODEARTIFACT_DOMAIN: ${{ vars.CODEARTIFACT_DOMAIN }}
           CODEARTIFACT_DOMAIN_OWNER: ${{ vars.CODEARTIFACT_DOMAIN_OWNER }}
 
+      - name: Set up Node.js (npm)
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ inputs.node_version }}
+          cache: npm
+
       - name: Install Yarn
         run: npm install --global yarn
+
+      - name: Set up Node.js (yarn)
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ inputs.node_version }}
+          cache: yarn
 
       - name: Install Dependencies
         run: yarn install --frozen-lockfile
@@ -109,12 +123,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: ${{ inputs.node_version }}
-          cache: yarn
-
       - name: Configure AWS Credentials
         id: aws_credentials_helm
         uses: aws-actions/configure-aws-credentials@v2
@@ -133,8 +141,20 @@ jobs:
           CODEARTIFACT_DOMAIN: ${{ vars.CODEARTIFACT_DOMAIN }}
           CODEARTIFACT_DOMAIN_OWNER: ${{ vars.CODEARTIFACT_DOMAIN_OWNER }}
 
+      - name: Set up Node.js (npm)
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ inputs.node_version }}
+          cache: npm
+
       - name: Install Yarn
         run: npm install --global yarn
+
+      - name: Set up Node.js (yarn)
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ inputs.node_version }}
+          cache: yarn
 
       - name: Install Dependencies
         run: yarn install --frozen-lockfile
@@ -185,12 +205,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: ${{ inputs.node_version }}
-          cache: yarn
-
       - name: Configure AWS Credentials
         id: aws_credentials_helm
         uses: aws-actions/configure-aws-credentials@v2
@@ -209,8 +223,20 @@ jobs:
           CODEARTIFACT_DOMAIN: ${{ vars.CODEARTIFACT_DOMAIN }}
           CODEARTIFACT_DOMAIN_OWNER: ${{ vars.CODEARTIFACT_DOMAIN_OWNER }}
 
+      - name: Set up Node.js (npm)
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ inputs.node_version }}
+          cache: npm
+
       - name: Install Yarn
         run: npm install --global yarn
+
+      - name: Set up Node.js (yarn)
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ inputs.node_version }}
+          cache: yarn
 
       - name: Release Prepare
         run: |
