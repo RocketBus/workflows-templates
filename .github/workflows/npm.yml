@@ -7,22 +7,18 @@ on:
         type: string
         required: false
         default: 11
-      environment:
-        type: string
-        required: false
-        default: ""
-      package_disabled:
-        type: boolean
-        required: false
-        default: false
       skip_quality_gate_check:
         type: boolean
         required: false
         default: false
+      artifact_path:
+        type: string
+        required: false
+        default: 'build/'
     secrets:
-      nexus_username:
+      aws_access_key_id:
         required: true
-      nexus_password:
+      aws_secret_access_key:
         required: true
       sonar_token:
         required: true
@@ -58,15 +54,20 @@ jobs:
       - name: Determine Version
         id: gitversion
         uses: gittools/actions/gitversion/execute@v0
-        with:
-          additionalArguments: >
-            /overrideconfig mode=ContinuousDelivery
 
       - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
           node-version: ${{ inputs.node_version }}
           cache: npm
+
+      - name: Configure AWS Credentials
+        id: aws_credentials_helm
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.aws_access_key_id }}
+          aws-secret-access-key: ${{ secrets.aws_secret_access_key }}
+          aws-region: ${{ vars.CODEARTIFACT_REGION }}
 
       - name: Create .npmrc
         run: |
@@ -87,19 +88,17 @@ jobs:
       - name: Audit Dependencies
         run: npm audit --audit-level=high
 
-      - if: ${{ !inputs.package_disabled }}
-        name: Build
-        run: npm run build${NODE_ENV_SCRIPT:+:$NODE_ENV_SCRIPT}
-        env:
-          NODE_ENV_SCRIPT: ${{ inputs.environment }}
+      - name: Build Artifact
+        run: |
+          if [[ $(jq -e '.scripts | has("build")' package.json) ]]; then
+            npm run build
+          fi
 
       - name: Archive Application Artifact
         uses: actions/upload-artifact@v3
         with:
           name: app-artifact
-          path: |
-            build/
-            dist/
+          path: ${{ inputs.artifact_path }}
           if-no-files-found: ignore
     outputs:
       version: ${{ steps.gitversion.outputs.semVer }}
@@ -120,6 +119,14 @@ jobs:
         with:
           node-version: ${{ inputs.node_version }}
           cache: npm
+
+      - name: Configure AWS Credentials
+        id: aws_credentials_helm
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.aws_access_key_id }}
+          aws-secret-access-key: ${{ secrets.aws_secret_access_key }}
+          aws-region: ${{ vars.CODEARTIFACT_REGION }}
 
       - name: Create .npmrc
         run: |
@@ -169,12 +176,12 @@ jobs:
           SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL }}
 
   release:
+    if: ${{ github.ref_name == github.event.repository.default_branch }}
     name: Release
     runs-on: 
       - self-hosted
       - live
     needs:
-      - build
       - test
     steps:
       - name: Checkout
@@ -186,6 +193,14 @@ jobs:
           node-version: ${{ inputs.node_version }}
           cache: npm
 
+      - name: Configure AWS Credentials
+        id: aws_credentials_helm
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.aws_access_key_id }}
+          aws-secret-access-key: ${{ secrets.aws_secret_access_key }}
+          aws-region: ${{ vars.CODEARTIFACT_REGION }}
+
       - name: Create .npmrc
         run: |
           CODEARTIFACT_AUTH_TOKEN=$(aws codeartifact get-authorization-token --domain $CODEARTIFACT_DOMAIN --domain-owner $CODEARTIFACT_DOMAIN_OWNER --query authorizationToken --output text)
@@ -196,8 +211,7 @@ jobs:
           CODEARTIFACT_DOMAIN: ${{ vars.CODEARTIFACT_DOMAIN }}
           CODEARTIFACT_DOMAIN_OWNER: ${{ vars.CODEARTIFACT_DOMAIN_OWNER }}
 
-      - if: ${{ github.ref_name == github.event.repository.default_branch }}
-        name: Release Prepare
+      - name: Release Prepare
         run: |
           npm version ${{ needs.build.outputs.version }} --no-git-tag-version --allow-same-version
           git config user.email "actions@clickbus.com"
@@ -211,12 +225,10 @@ jobs:
         with:
           name: app-artifact
 
-      - if: ${{ !inputs.package_disabled }}
-        name: Release Artifact
+      - name: Release Artifact
         run: npm publish
 
-      - if: ${{ github.ref_name == github.event.repository.default_branch }}
-        name: Bump Version
+      - name: Bump Version
         run: |
           npm version patch --no-git-tag-version
           git config user.email "github-actions@clickbus.com"

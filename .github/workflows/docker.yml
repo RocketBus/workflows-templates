@@ -14,18 +14,15 @@ on:
       docker_target:
         type: string
         required: false
-        default: ""
       docker_build_args:
         type: string
         required: false
-        default: ""
       image_name:
         type: string
         required: false
       image_tag_suffix:
         type: string
         required: false
-        default: ""
       scan_severity_cutoff:
         type: string
         required: false
@@ -46,8 +43,8 @@ on:
         value: ${{ jobs.release.outputs.image_tag }}
 
 jobs:
-  release:
-    name: Release
+  build:
+    name: Build
     runs-on: 
       - self-hosted
       - live
@@ -72,9 +69,6 @@ jobs:
       - name: Determine Version
         id: gitversion
         uses: gittools/actions/gitversion/execute@v0
-        with:
-          additionalArguments: >
-            /overrideconfig mode=ContinuousDelivery
 
       - name: Download Application Artifact
         uses: actions/download-artifact@v3

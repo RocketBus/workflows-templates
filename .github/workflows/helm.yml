@@ -3,7 +3,7 @@ name: Helm CI
 on:
   workflow_call:
     inputs:
-      helm_charts_path:
+      chart_path:
         type: string
         required: false
       app_version:
@@ -16,7 +16,7 @@ on:
         required: true
 
 env:
-  HELM_CHARTS_PATH: ${{ inputs.helm_charts_path || format('charts/{0}', github.event.repository.name) }}
+  CHART_PATH: ${{ inputs.chart_path || format('charts/{0}', github.event.repository.name) }}
 
 jobs:
   release:
@@ -45,21 +45,13 @@ jobs:
       - name: Determine Version
         id: gitversion
         uses: gittools/actions/gitversion/execute@v0
-        with:
-          additionalArguments: >
-            /overrideconfig mode=ContinuousDelivery
 
       - name: Set up Helm
         uses: azure/setup-helm@v3
         with:
           version: ${{ vars.HELM_VERSION }}
 
-      - name: Lint
-        working-directory: ${{ env.HELM_CHARTS_PATH }}
-        run: helm lint --strict .
-
-      - if: ${{ github.ref_name == github.event.repository.default_branch }}
-        name: Configure AWS Credentials
+      - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
           aws-access-key-id: ${{ secrets.aws_access_key_id }}
@@ -67,49 +59,43 @@ jobs:
           aws-region: ${{ vars.HELM_REGISTRY_REGION }}
           mask-aws-account-id: false
 
-      - if: ${{ github.ref_name == github.event.repository.default_branch }}
-        name: Login to Amazon ECR
+      - name: Login to Amazon ECR
         id: login_ecr
         uses: aws-actions/amazon-ecr-login@v1
 
-      - name: Package & Release
-        working-directory: ${{ env.HELM_CHARTS_PATH }}
+      - name: Dependency Update
+        working-directory: ${{ env.CHART_PATH }}
+        run: helm dep up
+
+      - name: Lint
+        working-directory: ${{ env.CHART_PATH }}
+        run: helm lint --strict .
+
+      - if: ${{ inputs.app_version }}
+        name: Update App Version
+        working-directory: ${{ env.CHART_PATH }}
         run: |
-          if [[ ${{ github.event_name }} == 'pull_request' ]]; then
-            export VERSION=${{ steps.gitversion.outputs.MajorMinorPatch }}-${{ github.event.number }}.${{ steps.gitversion.outputs.ShortSha }}
-          else
-            export VERSION=${{ steps.gitversion.outputs.semVer }}
-          fi
+          export "APP_VERSION=${{ inputs.app_version }}"
+          yq -i '.appVersion = env(APP_VERSION)' Chart.yaml
 
-          if [[ -n ${{ inputs.app_version }} ]]; then
-            export "APP_VERSION=${{ inputs.app_version }}"
-          else
-            export "APP_VERSION=$VERSION"
-          fi
+      - name: Update Helm Charts Version
+        working-directory: ${{ env.CHART_PATH }}
+        run: |
+          export VERSION=${{ steps.gitversion.outputs.semVer }}
+          yq -i '.version = env(VERSION)' Chart.yaml
 
-          if [[ ${{ github.ref_name }} == ${{ github.event.repository.default_branch }} ]]; then
-            ENVIRONMENT=stg
-          elif [[ ${{ github.ref_name }} =~ "^(cabal|fallen|hive|taken|vex)" ]]; then
-            ENVIRONMENT=$(echo ${{ github.ref_name }} | grep -E -o '^(cabal|fallen|hive|taken|vex)')
-          else
-            ENVIRONMENT=dev
-          fi
+      - if: ${{ github.ref_name == github.event.repository.default_branch }}
+        name: Release
+        working-directory: ${{ env.CHART_PATH }}
+        run: |
+          CHART_NAME=$(yq .name Chart.yaml)
+          CHART_VERSION=$(yq .version Chart.yaml)
 
-          if [[ -n $ENVIRONMENT && -d environments/$ENVIRONMENT ]]; then
-            echo $APP_VERSION > environments/${ENVIRONMENT}/version.txt
-            git add environments/${ENVIRONMENT}/version.txt
-          fi
+          helm package . -u
 
-          if [[ ${{ github.ref_name }} == ${{ github.event.repository.default_branch }} ]]; then
-            yq -i '.appVersion = env(APP_VERSION)' Chart.yaml
-            yq -i '.version = env(VERSION)' Chart.yaml
-            git add Chart.yaml
-            helm package . -u --app-version $APP_VERSION --version $VERSION
-            CHART_NAME=$(yq .name Chart.yaml)
-            helm push ${CHART_NAME}-${VERSION}.tgz oci://${{ steps.login_ecr.outputs.registry }}/charts
-          fi
-
+          helm push ${CHART_NAME}-${CHART_VERSION}.tgz oci://${{ steps.login_ecr.outputs.registry }}/helm-charts
           git config user.email "actions@clickbus.com"
           git config user.name "GitHub Actions"
-          git commit -m "chore: release Helm Charts version $VERSION" || echo "nothing to commit, proceed"
+          git add Chart.yaml
+          git commit -m "chore: release helm charts $CHART_VERSION" || echo "nothing to commit, proceed"
           git push

@@ -11,6 +11,10 @@ on:
         type: boolean
         required: false
         default: false
+      artifact_path:
+        type: string
+        required: false
+        default: '**/target/*.jar'
     secrets:
       aws_access_key_id:
         required: true
@@ -21,7 +25,7 @@ on:
 
 env:
   MAVEN_CLI_OPTS: "-B -Dstyle.color=always -e -fae -ntp -U -V"
-  MAVEN_OPTS: "-Xmx1024m -Xms512m -Dhttps.protocols=TLSv1.2 -Dorg.slf4j.simpleLogger.showDateTime=true -Dorg.slf4j.simpleLogger.dateTimeFormat=HH:mm:ss,SSS"
+  MAVEN_OPTS: "-Xmx1024m -Xms512m -Dhttps.protocols=TLSv1.2 -Dorg.slf4j.simpleLogger.showDateTime=true -Dorg.slf4j.simpleLogger.dateTimeFormat=HH:mm:ss,SSS -Djava.awt.headless=true"
   MAVEN_SETTINGS: ${{ vars.MAVEN_SETTINGS }}
 
 jobs:
@@ -51,9 +55,6 @@ jobs:
       - name: Determine Version
         id: gitversion
         uses: gittools/actions/gitversion/execute@v0
-        with:
-          additionalArguments: >
-            /overrideconfig mode=ContinuousDelivery
 
       - name: Set up JDK
         uses: actions/setup-java@v3
@@ -84,16 +85,14 @@ jobs:
       - name: Lint
         run: ./mvnw $MAVEN_CLI_OPTS spotless:check
 
-      - name: Build
+      - name: Build Artifact
         run: ./mvnw $MAVEN_CLI_OPTS package -Dspotless.check.skip=true -Dmaven.test.skip=true
 
       - name: Archive Application Artifact
         uses: actions/upload-artifact@v3
         with:
           name: app-artifact
-          path: |
-            **/target/*.jar
-            **/target/*.war
+          path: ${{ inputs.artifact_path }}
     outputs:
       version: ${{ steps.gitversion.outputs.semVer }}
 
@@ -197,12 +196,12 @@ jobs:
           SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL }}
 
   release:
+    if: ${{ github.ref_name == github.event.repository.default_branch }}
     name: Release
     runs-on: 
       - self-hosted
       - live
     needs:
-      - build
       - test
     steps:
       - name: Checkout
@@ -234,17 +233,11 @@ jobs:
           CODEARTIFACT_DOMAIN: ${{ vars.CODEARTIFACT_DOMAIN }}
           CODEARTIFACT_DOMAIN_OWNER: ${{ vars.CODEARTIFACT_DOMAIN_OWNER }}
 
-      - if: ${{ github.ref_name == github.event.repository.default_branch }}
-        name: Release Prepare
+      - name: Release Prepare
         run: |
           ./mvnw $MAVEN_CLI_OPTS org.codehaus.mojo:versions-maven-plugin:2.11.0:set -DnewVersion=${{ needs.build.outputs.version }}
           ./mvnw $MAVEN_CLI_OPTS org.codehaus.mojo:versions-maven-plugin:2.11.0:set-property -Dproperty=revision -DnewVersion=${{ needs.build.outputs.version }}
           ./mvnw $MAVEN_CLI_OPTS org.codehaus.mojo:versions-maven-plugin:2.11.0:commit
-          git config user.email "actions@clickbus.com"
-          git config user.name "GitHub Actions"
-          git commit -a -m "chore: release v${{ needs.build.outputs.version }} [skip ci]" || echo "nothing to commit, proceed"
-          git tag v${{ needs.build.outputs.version }}
-          git push origin v${{ needs.build.outputs.version }}
 
       - name: Download Application Artifact
         uses: actions/download-artifact@v3
@@ -252,10 +245,14 @@ jobs:
           name: app-artifact
 
       - name: Release Artifact
-        run: ./mvnw $MAVEN_CLI_OPTS deploy -Dspotless.check.skip=true -Dmaven.test.skip=true
+        run: |
+          ./mvnw $MAVEN_CLI_OPTS deploy -Dspotless.check.skip=true -Dmaven.test.skip=true
+          git config user.email "actions@clickbus.com"
+          git config user.name "GitHub Actions"
+          git tag v${{ needs.build.outputs.version }}
+          git push origin v${{ needs.build.outputs.version }}
 
-      - if: ${{ github.ref_name == github.event.repository.default_branch }}
-        name: Bump Version
+      - name: Bump Version
         run: |
           ./mvnw $MAVEN_CLI_OPTS build-helper:parse-version org.codehaus.mojo:versions-maven-plugin:2.11.0:set -DnewVersion=\${parsedVersion.majorVersion}.\${parsedVersion.minorVersion}.\${parsedVersion.nextIncrementalVersion}-SNAPSHOT
           ./mvnw $MAVEN_CLI_OPTS build-helper:parse-version org.codehaus.mojo:versions-maven-plugin:2.11.0:set-property -Dproperty=revision -DnewVersion=\${parsedVersion.majorVersion}.\${parsedVersion.minorVersion}.\${parsedVersion.incrementalVersion}-SNAPSHOT
