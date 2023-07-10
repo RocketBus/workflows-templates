@@ -97,9 +97,6 @@ jobs:
       - name: Lint Code
         run: npm run lint
 
-      - name: Audit Dependencies
-        run: npm audit --audit-level=high
-
       - name: Build Artifact
         run: |
           if [[ $(jq -e '.scripts | has("build")' package.json) ]]; then

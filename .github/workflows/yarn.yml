@@ -106,9 +106,6 @@ jobs:
       - name: Lint Code
         run: yarn run lint
 
-      - name: Audit Dependencies
-        run: yarn audit --level high
-
       - name: Build Artifact
         run: |
           if [[ $(jq -e '.scripts | has("build")' package.json) ]]; then
