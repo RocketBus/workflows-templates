@@ -18,7 +18,7 @@ on:
       artifact_path:
         type: string
         required: false
-        default: '**/target/*.jar'
+        default: 'build/'
     secrets:
       aws_access_key_id:
         required: true
@@ -28,8 +28,9 @@ on:
         required: true
 
 env:
-  NODE_OPTIONS: "--max_old_space_size=4096"
+  NODE_OPTIONS: "--max_old_space_size=3072"
   YARNRC: ${{ vars.YARNRC }}
+  CI: true
 
 jobs:
   build:
@@ -99,6 +100,9 @@ jobs:
         with:
           node-version: ${{ inputs.node_version }}
           cache: yarn
+
+      # - name: Audit Dependencies
+      #   run: yarn audit --level moderate
 
       - name: Install Dependencies
         run: yarn install --frozen-lockfile

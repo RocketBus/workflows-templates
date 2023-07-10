@@ -28,8 +28,9 @@ on:
         required: true
 
 env:
-  NODE_OPTIONS: "--max_old_space_size=4096"
+  NODE_OPTIONS: "--max_old_space_size=3072"
   NPMRC: ${{ vars.NPMRC }}
+  CI: true
 
 jobs:
   build:
@@ -90,6 +91,9 @@ jobs:
         env:
           CODEARTIFACT_DOMAIN: ${{ vars.CODEARTIFACT_DOMAIN }}
           CODEARTIFACT_DOMAIN_OWNER: ${{ vars.CODEARTIFACT_DOMAIN_OWNER }}
+
+      # - name: Audit Dependencies
+      #   run: yarn audit --level moderate
 
       - name: Install Dependencies
         run: npm ci --prefer-offline
