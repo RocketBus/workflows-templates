@@ -28,8 +28,6 @@ env:
 jobs:
   deploy:
     name: Deploy
-    needs:
-      - get_environment
     environment: ${{ inputs.environment }}
     runs-on: 
       - self-hosted
