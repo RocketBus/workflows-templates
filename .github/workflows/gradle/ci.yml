@@ -1,0 +1,225 @@
+name: Gradle CI
+
+on:
+  workflow_call:
+    inputs:
+      jdk_version:
+        type: string
+        required: false
+        default: 11
+      skip_quality_gate_check:
+        type: boolean
+        required: false
+        default: false
+      artifact_path:
+        type: string
+        required: false
+        default: '**/build/libs/*.jar'
+    secrets:
+      aws_access_key_id:
+        required: true
+      aws_secret_access_key:
+        required: true
+      sonar_token:
+        required: true
+
+env:
+  GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.parallel=true"
+
+jobs:
+  build:
+    name: Build
+    runs-on: 
+      - self-hosted
+      - live
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Set up .NET cli
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '6.0.x'
+        env:
+          DOTNET_INSTALL_DIR: tools/dotnet
+
+      - name: Set up GitVersion
+        uses: gittools/actions/gitversion/setup@v0
+        with:
+          versionSpec: '5.x'
+
+      - name: Determine Version
+        id: gitversion
+        uses: gittools/actions/gitversion/execute@v0
+
+      - name: Set up JDK
+        uses: actions/setup-java@v3
+        with:
+          java-version: ${{ inputs.jdk_version }}
+          distribution: 'corretto'
+          cache: 'gradle'
+          overwrite-settings: false
+
+      - name: Configure AWS Credentials
+        id: aws_credentials_helm
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.aws_access_key_id }}
+          aws-secret-access-key: ${{ secrets.aws_secret_access_key }}
+          aws-region: ${{ vars.CODEARTIFACT_REGION }}
+
+      - name: Create CODEARTIFACT_AUTH_TOKEN
+        run: |
+          CODEARTIFACT_AUTH_TOKEN=$(aws codeartifact get-authorization-token --domain $CODEARTIFACT_DOMAIN --domain-owner $CODEARTIFACT_DOMAIN_OWNER --query authorizationToken --output text)
+          echo "::add-mask::$CODEARTIFACT_AUTH_TOKEN"
+          echo CODEARTIFACT_AUTH_TOKEN=$CODEARTIFACT_AUTH_TOKEN >> $GITHUB_ENV
+        env:
+          CODEARTIFACT_DOMAIN: ${{ vars.CODEARTIFACT_DOMAIN }}
+          CODEARTIFACT_DOMAIN_OWNER: ${{ vars.CODEARTIFACT_DOMAIN_OWNER }}
+
+      - name: Lint
+        run: ./gradlew spotlessCheck
+
+      - name: Build Artifact
+        run: ./gradlew build -x spotlessCheck -x test
+
+      - name: Archive Application Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: app-artifact
+          path: ${{ inputs.artifact_path }}
+    outputs:
+      version: ${{ steps.gitversion.outputs.semVer }}
+
+  test:
+    name: Test
+    runs-on: 
+      - self-hosted
+      - live
+    needs:
+      - build
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK
+        uses: actions/setup-java@v3
+        with:
+          java-version: ${{ inputs.jdk_version }}
+          distribution: 'corretto'
+          cache: 'gradle'
+          overwrite-settings: false
+
+      - name: Configure AWS Credentials
+        id: aws_credentials_helm
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.aws_access_key_id }}
+          aws-secret-access-key: ${{ secrets.aws_secret_access_key }}
+          aws-region: ${{ vars.CODEARTIFACT_REGION }}
+
+      - name: Create CODEARTIFACT_AUTH_TOKEN
+        run: |
+          CODEARTIFACT_AUTH_TOKEN=$(aws codeartifact get-authorization-token --domain $CODEARTIFACT_DOMAIN --domain-owner $CODEARTIFACT_DOMAIN_OWNER --query authorizationToken --output text)
+          echo "::add-mask::$CODEARTIFACT_AUTH_TOKEN"
+          echo CODEARTIFACT_AUTH_TOKEN=$CODEARTIFACT_AUTH_TOKEN >> $GITHUB_ENV
+        env:
+          CODEARTIFACT_DOMAIN: ${{ vars.CODEARTIFACT_DOMAIN }}
+          CODEARTIFACT_DOMAIN_OWNER: ${{ vars.CODEARTIFACT_DOMAIN_OWNER }}
+
+      - name: Run Unit Tests
+        run: ./gradlew test jacocoTestReport
+
+      - name: Archive Unit Tests Report
+        uses: actions/upload-artifact@v3
+        with:
+          name: unit-tests-report
+          path: |
+            **/build/reports/jacoco/jacocoTestReport
+
+      - name: Set up JDK for SonarQube
+        uses: actions/setup-java@v3
+        with:
+          java-version: 11
+          distribution: 'corretto'
+          cache: 'gradle'
+          overwrite-settings: false
+
+      - name: SonarQube Scan
+        run: |
+          if [[ ${{ github.event_name }} == 'pull_request' ]]; then
+            SONAR_PARAMETERS="-Dsonar.pullrequest.key=${{ github.event.pull_request.number }} \
+              -Dsonar.pullrequest.branch=${{ github.head_ref }} \
+              -Dsonar.pullrequest.base=${{ github.base_ref }}
+              -Dsonar.pullrequest.github.repository=$GITHUB_REPOSITORY"
+          elif [[ ${{ github.event_name }} == 'push' && ${{ github.ref_name }} != ${{ github.event.repository.default_branch }} ]]; then
+            SONAR_PARAMETERS="-Dsonar.branch.name=${{ github.ref_name }}"
+          fi
+
+          ./gradlew sonar ${SONAR_PARAMETERS}
+        env:
+          SONAR_TOKEN: ${{ secrets.sonar_token }}
+          SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL }}
+
+      - name: SonarQube Quality Gate
+        uses: sonarsource/sonarqube-quality-gate-action@master
+        if: ${{ ! inputs.skip_quality_gate_check }}
+        timeout-minutes: 5
+        with:
+          scanMetadataReportFile: target/sonar/report-task.txt
+        env:
+          SONAR_TOKEN: ${{ secrets.sonar_token }}
+          SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL }}
+
+  release:
+    if: ${{ github.ref_name == github.event.repository.default_branch }}
+    name: Release
+    runs-on: 
+      - self-hosted
+      - live
+    needs:
+      - test
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Set up JDK
+        uses: actions/setup-java@v3
+        with:
+          java-version: ${{ inputs.jdk_version }}
+          distribution: 'corretto'
+          cache: 'gradle'
+          overwrite-settings: false
+
+      - name: Configure AWS Credentials
+        id: aws_credentials_helm
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.aws_access_key_id }}
+          aws-secret-access-key: ${{ secrets.aws_secret_access_key }}
+          aws-region: ${{ vars.CODEARTIFACT_REGION }}
+
+      - name: Create CODEARTIFACT_AUTH_TOKEN
+        run: |
+          CODEARTIFACT_AUTH_TOKEN=$(aws codeartifact get-authorization-token --domain $CODEARTIFACT_DOMAIN --domain-owner $CODEARTIFACT_DOMAIN_OWNER --query authorizationToken --output text)
+          echo "::add-mask::$CODEARTIFACT_AUTH_TOKEN"
+          echo CODEARTIFACT_AUTH_TOKEN=$CODEARTIFACT_AUTH_TOKEN >> $GITHUB_ENV
+        env:
+          CODEARTIFACT_DOMAIN: ${{ vars.CODEARTIFACT_DOMAIN }}
+          CODEARTIFACT_DOMAIN_OWNER: ${{ vars.CODEARTIFACT_DOMAIN_OWNER }}
+
+      - name: Download Application Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: app-artifact
+
+      - name: Release Artifact
+        run: |
+          git config user.email "actions@clickbus.com"
+          git config user.name "GitHub Actions"
+          git tag v${{ needs.build.outputs.version }}
+          git push origin v${{ needs.build.outputs.version }}

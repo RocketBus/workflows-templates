@@ -1,0 +1,8 @@
+{
+    "yaml.schemas": {
+        "https://json.schemastore.org/github-workflow.json": [
+            "file:///Users/cainafeitosa/Workspace/ClickBus/workflows-templates/.github/workflows/deploy.yml",
+            "file:///Users/cainafeitosa/Workspace/ClickBus/workflows-templates/.github/workflows/helm/deploy.yml"
+        ]
+    }
+}

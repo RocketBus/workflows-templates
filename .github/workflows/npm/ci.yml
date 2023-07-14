@@ -7,10 +7,9 @@ on:
         type: string
         required: false
         default: 18
-      env_vars:
-        description: List of environment variables to set up, given in env=value format.
-        required: false
+      node_env:
         type: string
+        required: false
       skip_quality_gate_check:
         type: boolean
         required: false
@@ -28,8 +27,9 @@ on:
         required: true
 
 env:
+  NPMRC: ${{ vars.NPMRC }}
   NODE_OPTIONS: "--max_old_space_size=3072"
-  YARNRC: ${{ vars.YARNRC }}
+  NODE_ENV: ${{ inputs.node_env || "production" }}
   CI: true
 
 jobs:
@@ -43,14 +43,6 @@ jobs:
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
-
-      - if: ${{ inputs.env_vars }}
-        name: Set Environment Variables
-        run: |
-          for i in "${{ inputs.env_vars }}"
-          do
-            printf "%s\n" $i >> $GITHUB_ENV
-          done
 
       - name: Set up .NET cli
         uses: actions/setup-dotnet@v3
@@ -68,6 +60,12 @@ jobs:
         id: gitversion
         uses: gittools/actions/gitversion/execute@v0
 
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ inputs.node_version }}
+          cache: npm
+
       - name: Configure AWS Credentials
         id: aws_credentials_helm
         uses: aws-actions/configure-aws-credentials@v2
@@ -76,45 +74,40 @@ jobs:
           aws-secret-access-key: ${{ secrets.aws_secret_access_key }}
           aws-region: ${{ vars.CODEARTIFACT_REGION }}
 
-      - name: Create .yarnrc.yml
+      - name: Create .npmrc
         run: |
           CODEARTIFACT_AUTH_TOKEN=$(aws codeartifact get-authorization-token --domain $CODEARTIFACT_DOMAIN --domain-owner $CODEARTIFACT_DOMAIN_OWNER --query authorizationToken --output text)
           echo "::add-mask::$CODEARTIFACT_AUTH_TOKEN"
           echo CODEARTIFACT_AUTH_TOKEN=$CODEARTIFACT_AUTH_TOKEN >> $GITHUB_ENV
-          echo $YARNRC > ~/.yarnrc.yml
+          echo $NPMRC > ~/.npmrc
         env:
           CODEARTIFACT_DOMAIN: ${{ vars.CODEARTIFACT_DOMAIN }}
           CODEARTIFACT_DOMAIN_OWNER: ${{ vars.CODEARTIFACT_DOMAIN_OWNER }}
 
-      - name: Set up Node.js (npm)
-        uses: actions/setup-node@v3
-        with:
-          node-version: ${{ inputs.node_version }}
-          cache: npm
-
-      - name: Install Yarn
-        run: npm install --global yarn
-
-      - name: Set up Node.js (yarn)
-        uses: actions/setup-node@v3
-        with:
-          node-version: ${{ inputs.node_version }}
-          cache: yarn
-
-      # - name: Audit Dependencies
-      #   run: yarn audit --level moderate
-
       - name: Install Dependencies
-        run: yarn install --frozen-lockfile
+        run: |
+          npm ci --prefer-offline
+
+          if [[ -f bower.json ]]; then
+            npm install -g bower
+            bower install
+          fi
 
       - name: Lint Code
-        run: yarn run lint
+        run: npm run lint
 
       - name: Build Artifact
         run: |
-          if [[ $(jq -e '.scripts | has("build")' package.json) ]]; then
-            yarn run build
+          if [[ $(jq -e ".scripts | has(\"build${BUILD_ENV:+:$BUILD_ENV}\")" package.json) ]]; then
+            npm run build${BUILD_ENV:+:$BUILD_ENV}
           fi
+
+          if [[ -f gulpfile.js ]]; then
+            npm install -g gulp-cli
+            gulp build
+          fi
+        env:
+          BUILD_ENV: ${{ inputs.node_env }}
 
       - name: Archive Application Artifact
         uses: actions/upload-artifact@v3
@@ -136,13 +129,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
-      - if: ${{ inputs.env_vars }}
-        name: Set Environment Variables
-        run: |
-          for i in "${{ inputs.env_vars }}"
-          do
-            printf "%s\n" $i >> $GITHUB_ENV
-          done
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ inputs.node_version }}
+          cache: npm
 
       - name: Configure AWS Credentials
         id: aws_credentials_helm
@@ -152,48 +143,37 @@ jobs:
           aws-secret-access-key: ${{ secrets.aws_secret_access_key }}
           aws-region: ${{ vars.CODEARTIFACT_REGION }}
 
-      - name: Create .yarnrc.yml
+      - name: Create .npmrc
         run: |
           CODEARTIFACT_AUTH_TOKEN=$(aws codeartifact get-authorization-token --domain $CODEARTIFACT_DOMAIN --domain-owner $CODEARTIFACT_DOMAIN_OWNER --query authorizationToken --output text)
           echo "::add-mask::$CODEARTIFACT_AUTH_TOKEN"
           echo CODEARTIFACT_AUTH_TOKEN=$CODEARTIFACT_AUTH_TOKEN >> $GITHUB_ENV
-          echo $YARNRC > ~/.yarnrc.yml
+          echo $NPMRC > ~/.npmrc
         env:
           CODEARTIFACT_DOMAIN: ${{ vars.CODEARTIFACT_DOMAIN }}
           CODEARTIFACT_DOMAIN_OWNER: ${{ vars.CODEARTIFACT_DOMAIN_OWNER }}
 
-      - name: Set up Node.js (npm)
-        uses: actions/setup-node@v3
-        with:
-          node-version: ${{ inputs.node_version }}
-          cache: npm
-
-      - name: Install Yarn
-        run: npm install --global yarn
-
-      - name: Set up Node.js (yarn)
-        uses: actions/setup-node@v3
-        with:
-          node-version: ${{ inputs.node_version }}
-          cache: yarn
-
       - name: Install Dependencies
-        run: yarn install --frozen-lockfile
+        run: npm ci --prefer-offline
 
       - if: ${{ github.ref_name == github.event.repository.default_branch }}
         name: Release Prepare
-        run: yarn version --new-version ${{ needs.build.outputs.version }} --no-git-tag-version
+        run: npm version ${{ needs.build.outputs.version }} --no-git-tag-version --allow-same-version
 
       - name: Run Tests
-        run: yarn run test
+        run: npm run test
 
-      - if: ${{ github.event_name == 'pull_request' }}
-        name: Set Sonar Parameters
+      - name: Set Sonar Parameters
         id: set_sonar_parameters
         run: |
-          SONAR_PARAMETERS="-Dsonar.pullrequest.key=${{ github.event.pull_request.number }} \
-            -Dsonar.pullrequest.branch=${{ github.event.pull_request.head.ref }} \
-            -Dsonar.pullrequest.github.repository=$GITHUB_REPOSITORY"
+          if [[ ${{ github.event_name }} == 'pull_request' ]]; then
+            SONAR_PARAMETERS="-Dsonar.pullrequest.key=${{ github.event.pull_request.number }} \
+              -Dsonar.pullrequest.branch=${{ github.head_ref }} \
+              -Dsonar.pullrequest.base=${{ github.base_ref }}
+              -Dsonar.pullrequest.github.repository=$GITHUB_REPOSITORY"
+          elif [[ ${{ github.event_name }} == 'push' && ${{ github.ref_name }} != ${{ github.event.repository.default_branch }} ]]; then
+            SONAR_PARAMETERS="-Dsonar.branch.name=${{ github.ref_name }}"
+          fi
 
           echo "args=$SONAR_PARAMETERS" >> $GITHUB_OUTPUT
 
@@ -226,13 +206,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
-      - if: ${{ inputs.env_vars }}
-        name: Set Environment Variables
-        run: |
-          for i in "${{ inputs.env_vars }}"
-          do
-            printf "%s\n" $i >> $GITHUB_ENV
-          done
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ inputs.node_version }}
+          cache: npm
 
       - name: Configure AWS Credentials
         id: aws_credentials_helm
@@ -242,34 +220,19 @@ jobs:
           aws-secret-access-key: ${{ secrets.aws_secret_access_key }}
           aws-region: ${{ vars.CODEARTIFACT_REGION }}
 
-      - name: Create .yarnrc.yml
+      - name: Create .npmrc
         run: |
           CODEARTIFACT_AUTH_TOKEN=$(aws codeartifact get-authorization-token --domain $CODEARTIFACT_DOMAIN --domain-owner $CODEARTIFACT_DOMAIN_OWNER --query authorizationToken --output text)
           echo "::add-mask::$CODEARTIFACT_AUTH_TOKEN"
           echo CODEARTIFACT_AUTH_TOKEN=$CODEARTIFACT_AUTH_TOKEN >> $GITHUB_ENV
-          echo $YARNRC > ~/.yarnrc.yml
+          echo $NPMRC > ~/.npmrc
         env:
           CODEARTIFACT_DOMAIN: ${{ vars.CODEARTIFACT_DOMAIN }}
           CODEARTIFACT_DOMAIN_OWNER: ${{ vars.CODEARTIFACT_DOMAIN_OWNER }}
 
-      - name: Set up Node.js (npm)
-        uses: actions/setup-node@v3
-        with:
-          node-version: ${{ inputs.node_version }}
-          cache: npm
-
-      - name: Install Yarn
-        run: npm install --global yarn
-
-      - name: Set up Node.js (yarn)
-        uses: actions/setup-node@v3
-        with:
-          node-version: ${{ inputs.node_version }}
-          cache: yarn
-
       - name: Release Prepare
         run: |
-          yarn version --new-version ${{ needs.build.outputs.version }} --no-git-tag-version
+          npm version ${{ needs.build.outputs.version }} --no-git-tag-version --allow-same-version
           git config user.email "actions@clickbus.com"
           git config user.name "GitHub Actions"
           git commit -a -m "chore: release v${{ needs.build.outputs.version }} [skip ci]" || echo "nothing to commit, proceed"
@@ -282,11 +245,11 @@ jobs:
           name: app-artifact
 
       - name: Release Artifact
-        run: yarn publish
+        run: npm publish
 
       - name: Bump Version
         run: |
-          yarn version --patch --no-git-tag-version
+          npm version patch --no-git-tag-version
           git config user.email "github-actions@clickbus.com"
           git config user.name "Github Actions"
           git commit -a -m "chore: bump version [skip ci]" || echo "nothing to commit, proceed"

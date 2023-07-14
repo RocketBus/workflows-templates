@@ -177,7 +177,12 @@ jobs:
       - name: SonarQube Scan
         run: |
           if [[ ${{ github.event_name }} == 'pull_request' ]]; then
-            SONAR_PARAMETERS="-Dsonar.pullrequest.key=${{ github.event.pull_request.number }} -Dsonar.pullrequest.branch=${{ github.event.pull_request.head.ref }} -Dsonar.pullrequest.github.repository=$GITHUB_REPOSITORY"
+            SONAR_PARAMETERS="-Dsonar.pullrequest.key=${{ github.event.pull_request.number }} \
+              -Dsonar.pullrequest.branch=${{ github.head_ref }} \
+              -Dsonar.pullrequest.base=${{ github.base_ref }}
+              -Dsonar.pullrequest.github.repository=$GITHUB_REPOSITORY"
+          elif [[ ${{ github.event_name }} == 'push' && ${{ github.ref_name }} != ${{ github.event.repository.default_branch }} ]]; then
+            SONAR_PARAMETERS="-Dsonar.branch.name=${{ github.ref_name }}"
           fi
 
           ./mvnw $MAVEN_CLI_OPTS sonar:sonar ${SONAR_PARAMETERS}

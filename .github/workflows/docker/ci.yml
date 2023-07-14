@@ -37,8 +37,6 @@ on:
       aws_secret_access_key:
         required: true
     outputs:
-      image_repository:
-        value: ${{ jobs.release.outputs.image_repository }}
       image_tag:
         value: ${{ jobs.release.outputs.image_tag }}
 
@@ -113,15 +111,9 @@ jobs:
         with:
           images: ${{ steps.login_ecr.outputs.registry }}/${{ inputs.image_name || github.event.repository.name }}
           tags: |
-            type=ref,event=pr,prefix=${{ steps.gitversion.outputs.MajorMinorPatch }}-,suffix=.{{sha}}
-            type=raw,value=${{ steps.gitversion.outputs.semVer }},suffix=${{ inputs.image_tag_suffix }}
-
-      - name: Set Image Properties
-        id: image_properties
-        run: |
-          IMAGE_TAGS=(${{ steps.docker_metadata.outputs.tags }})
-          FIRST_IMAGE_TAG=${IMAGE_TAGS[0]}
-          IMAGE_TAG=${FIRST_IMAGE_TAG##*:}
+            type=ref,event=pr,prefix=${{ steps.gitversion.outputs.MajorMinorPatch }}-,suffix=.{{ steps.gitversion.outputs.PreReleaseNumber }}
+            type=raw,priority=300,value=${{ steps.gitversion.outputs.semVer }},suffix=${{ inputs.image_tag_suffix }},enable={{is_default_branch}}
+            type=raw,value=${{ steps.gitversion.outputs.semVer }}
 
       - name: Build Image
         uses: docker/build-push-action@v3
@@ -133,20 +125,19 @@ jobs:
           target: ${{ inputs.docker_target }}
           build-args: ${{ inputs.docker_build_args }}
           labels: ${{ steps.docker_metadata.outputs.labels }}
-          tags: ${{ steps.image_properties.outputs.image }}
+          tags: ${{ fromJSON(steps.docker_metadata.outputs.json).tags[0] }}
           load: true
 
       - name: Scan Image
         uses: anchore/scan-action@v3
         with:
-          image: ${{ steps.image_properties.outputs.image }}
+          image: ${{ fromJSON(steps.docker_metadata.outputs.json).tags[0] }}
           fail-build: ${{ inputs.scan_fail_build }}
           severity-cutoff: ${{ inputs.scan_severity_cutoff }}
           output-format: table
           only-fixed: true
 
       - name: Push Image
-        run: docker push ${{ steps.image_properties.outputs.image }}
+        run: docker push ${{ fromJSON(steps.docker_metadata.outputs.json).tags[0] }}
     outputs:
-      image_repository: ${{ steps.image_properties.outputs.image_repository }}
-      image_tag: ${{ steps.image_properties.outputs.image_tag }}
+      image_tag: ${{ steps.docker_metadata.outputs.version }}
