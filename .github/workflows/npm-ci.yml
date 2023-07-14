@@ -93,6 +93,10 @@ jobs:
             bower install
           fi
 
+      - if: ${{ github.ref_name == github.event.repository.default_branch }}
+        name: Update Version
+        run: npm version ${{ steps.gitversion.outputs.semVer }} --no-git-tag-version --allow-same-version
+
       - name: Lint Code
         run: npm run lint
 
@@ -157,7 +161,7 @@ jobs:
         run: npm ci --prefer-offline
 
       - if: ${{ github.ref_name == github.event.repository.default_branch }}
-        name: Release Prepare
+        name: Update Version
         run: npm version ${{ needs.build.outputs.version }} --no-git-tag-version --allow-same-version
 
       - name: Run Tests
@@ -232,13 +236,7 @@ jobs:
           CODEARTIFACT_DOMAIN_OWNER: ${{ vars.CODEARTIFACT_DOMAIN_OWNER }}
 
       - name: Release Prepare
-        run: |
-          npm version ${{ needs.build.outputs.version }} --no-git-tag-version --allow-same-version
-          git config user.email "actions@clickbus.com"
-          git config user.name "GitHub Actions"
-          git commit -a -m "chore: release v${{ needs.build.outputs.version }} [skip ci]" || echo "nothing to commit, proceed"
-          git tag v${{ needs.build.outputs.version }}
-          git push origin v${{ needs.build.outputs.version }}
+        run: npm version ${{ needs.build.outputs.version }} --no-git-tag-version --allow-same-version
 
       - name: Download Application Artifact
         uses: actions/download-artifact@v3
@@ -247,6 +245,11 @@ jobs:
 
       - name: Release Artifact
         run: npm publish
+
+      - name: GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ needs.build.outputs.version }}
 
       - name: Bump Version
         run: |

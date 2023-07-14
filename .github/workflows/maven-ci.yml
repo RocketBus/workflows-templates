@@ -82,6 +82,13 @@ jobs:
           CODEARTIFACT_DOMAIN: ${{ vars.CODEARTIFACT_DOMAIN }}
           CODEARTIFACT_DOMAIN_OWNER: ${{ vars.CODEARTIFACT_DOMAIN_OWNER }}
 
+      - if: ${{ github.ref_name == github.event.repository.default_branch }}
+        name: Update Version
+        run: |
+          ./mvnw $MAVEN_CLI_OPTS org.codehaus.mojo:versions-maven-plugin:2.11.0:set -DnewVersion=${{ steps.gitversion.outputs.semVer }}
+          ./mvnw $MAVEN_CLI_OPTS org.codehaus.mojo:versions-maven-plugin:2.11.0:set-property -Dproperty=revision -DnewVersion=${{ steps.gitversion.outputs.semVer }}
+          ./mvnw $MAVEN_CLI_OPTS org.codehaus.mojo:versions-maven-plugin:2.11.0:commit
+
       - name: Lint
         run: ./mvnw $MAVEN_CLI_OPTS spotless:check
 
@@ -136,7 +143,7 @@ jobs:
           CODEARTIFACT_DOMAIN_OWNER: ${{ vars.CODEARTIFACT_DOMAIN_OWNER }}
 
       - if: ${{ github.ref_name == github.event.repository.default_branch }}
-        name: Release Prepare
+        name: Update Version
         run: |
           ./mvnw $MAVEN_CLI_OPTS org.codehaus.mojo:versions-maven-plugin:2.11.0:set -DnewVersion=${{ needs.build.outputs.version }}
           ./mvnw $MAVEN_CLI_OPTS org.codehaus.mojo:versions-maven-plugin:2.11.0:set-property -Dproperty=revision -DnewVersion=${{ needs.build.outputs.version }}
@@ -251,12 +258,12 @@ jobs:
           name: app-artifact
 
       - name: Release Artifact
-        run: |
-          ./mvnw $MAVEN_CLI_OPTS deploy -Dspotless.check.skip=true -Dmaven.test.skip=true
-          git config user.email "actions@clickbus.com"
-          git config user.name "GitHub Actions"
-          git tag v${{ needs.build.outputs.version }}
-          git push origin v${{ needs.build.outputs.version }}
+        run: ./mvnw $MAVEN_CLI_OPTS deploy -Dspotless.check.skip=true -Dmaven.test.skip=true
+
+      - name: GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ needs.build.outputs.version }}
 
       - name: Bump Version
         run: |

@@ -218,9 +218,7 @@ jobs:
         with:
           name: app-artifact
 
-      - name: Release Artifact
-        run: |
-          git config user.email "actions@clickbus.com"
-          git config user.name "GitHub Actions"
-          git tag v${{ needs.build.outputs.version }}
-          git push origin v${{ needs.build.outputs.version }}
+      - name: GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ needs.build.outputs.version }}
