@@ -17,7 +17,6 @@ on:
 
 env:
   CHART_PATH: ${{ inputs.chart_path || format('charts/{0}', github.event.repository.name) }}
-  ENVIRONMENTS_PATH: ${{ format('{0}/environments', env.CHART_PATH) }}
   ENVIRONMENT: ${{ inputs.environment }}
 
 jobs:
@@ -63,6 +62,7 @@ jobs:
         run: |
           aws eks update-kubeconfig --name $CLUSTER_NAME
 
+          ENVIRONMENTS_PATH=${CHART_PATH}/environments
           ENVIRONMENT_PATH=${ENVIRONMENTS_PATH}/${ENVIRONMENT}
           ENVIRONMENT_SECRETS_DIR=${ENVIRONMENT_PATH}/secrets.d
           ENVIRONMENT_VALUES_DIR=${ENVIRONMENT_PATH}/values.d
