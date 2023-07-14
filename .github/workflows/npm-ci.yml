@@ -201,6 +201,7 @@ jobs:
       - self-hosted
       - live
     needs:
+      - build
       - test
     steps:
       - name: Checkout
