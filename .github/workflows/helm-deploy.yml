@@ -9,6 +9,12 @@ on:
       chart_path:
         type: string
         required: false
+      chart_version:
+        type: string
+        required: false
+      app_version:
+        type: string
+        required: false
     secrets:
       aws_access_key_id:
         required: true
@@ -100,6 +106,9 @@ jobs:
             RELEASE_NAME=$REPOSITORY_NAME
             RELEASE_NAMESPACE=$REPOSITORY_NAME
           fi 
+
+          yq -i '.version = ${{ inputs.chart_version }}' Chart.yaml
+          yq -i '.appVersion = ${{ inputs.app_version }}' Chart.yaml
 
           helm upgrade $RELEASE_NAME . \
             --install \
