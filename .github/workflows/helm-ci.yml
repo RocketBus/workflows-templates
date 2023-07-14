@@ -15,7 +15,8 @@ on:
       aws_secret_access_key:
         required: true
     outputs:
-      chart_version: ${{ jobs.release.outputs.chart_version }}
+      chart_version:
+        value: ${{ jobs.release.outputs.chart_version }}
 
 env:
   CHART_PATH: ${{ inputs.chart_path || format('charts/{0}', github.event.repository.name) }}
