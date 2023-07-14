@@ -6,18 +6,23 @@ on:
       jdk_version:
         type: string
         required: false
+        default: 19
       skip_quality_gate_check:
         type: boolean
         required: false
+        default: false
       artifact_path:
         type: string
         required: false
+        default: '**/target/*.jar'
       dockerfile_path:
         type: string
         required: false
+        default: Dockerfile
       docker_context:
         type: string
         required: false
+        default: .
       docker_target:
         type: string
         required: false
@@ -33,9 +38,11 @@ on:
       scan_severity_cutoff:
         type: string
         required: false
+        default: high
       scan_fail_build:
         type: boolean
         required: false
+        default: true
       chart_path:
         type: string
         required: false
