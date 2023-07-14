@@ -1,9 +1,12 @@
-name: Gradle Auto-Devops
+name: Node.js Auto-Devops
 
 on:
   workflow_call:
     inputs:
-      jdk_version:
+      node_version:
+        type: string
+        required: false
+      node_env:
         type: string
         required: false
       skip_quality_gate_check:
@@ -11,6 +14,7 @@ on:
         required: false
       artifact_path:
         type: string
+        required: false
       dockerfile_path:
         type: string
         required: false
@@ -50,17 +54,18 @@ on:
         required: true
 
 jobs:
-  gradle:
-    name: Gradle
-    uses: RocketBus/workflows-templates/.github/workflows/gradle/ci.yml@v2
+  nodejs:
+    name: Node.js
+    uses: RocketBus/workflows-templates/.github/workflows/yarn-ci.yml@v2
     with:
-      jdk_version: ${{ inputs.jdk_version }}
+      node_version: ${{ inputs.node_version }}
+      node_env: ${{ inputs.node_env }}
       artifact_path: ${{ inputs.artifact_path }}
       skip_quality_gate_check: ${{ inputs.skip_quality_gate_check }}
     secrets: inherit
   docker:
     name: Docker
-    uses: RocketBus/workflows-templates/.github/workflows/docker/ci.yml@v2
+    uses: RocketBus/workflows-templates/.github/workflows/docker-ci.yml@v2
     needs:
       - maven
     with:
@@ -75,7 +80,7 @@ jobs:
     secrets: inherit
   helm:
     name: Helm
-    uses: RocketBus/workflows-templates/.github/workflows/helm/ci.yml@v2
+    uses: RocketBus/workflows-templates/.github/workflows/helm-ci.yml@v2
     needs:
       - docker
     with:
@@ -85,7 +90,7 @@ jobs:
   development:
     if: ${{ startsWith(github.ref_name, 'cabal') || startsWith(github.ref_name, 'fallen') || startsWith(github.ref_name, 'hive') || startsWith(github.ref_name, 'taken') || startsWith(github.ref_name, 'vex') }}
     name: Development
-    uses: RocketBus/workflows-templates/.github/workflows/helm/deploy.yml@v2
+    uses: RocketBus/workflows-templates/.github/workflows/helm-deploy.yml@v2
     needs:
       - docker
       - helm
@@ -97,7 +102,7 @@ jobs:
   staging:
     if: ${{ github.ref_name == github.event.repository.default_branch }}
     name: Staging
-    uses: RocketBus/workflows-templates/.github/workflows/helm/deploy.yml@v2
+    uses: RocketBus/workflows-templates/.github/workflows/helm-deploy.yml@v2
     needs:
       - docker
       - helm

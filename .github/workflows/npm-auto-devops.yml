@@ -56,7 +56,7 @@ on:
 jobs:
   nodejs:
     name: Node.js
-    uses: RocketBus/workflows-templates/.github/workflows/yarn/ci.yml@v2
+    uses: RocketBus/workflows-templates/.github/workflows/npm-ci.yml@v2
     with:
       node_version: ${{ inputs.node_version }}
       node_env: ${{ inputs.node_env }}
@@ -65,7 +65,7 @@ jobs:
     secrets: inherit
   docker:
     name: Docker
-    uses: RocketBus/workflows-templates/.github/workflows/docker/ci.yml@v2
+    uses: RocketBus/workflows-templates/.github/workflows/docker-ci.yml@v2
     needs:
       - maven
     with:
@@ -90,7 +90,7 @@ jobs:
   development:
     if: ${{ startsWith(github.ref_name, 'cabal') || startsWith(github.ref_name, 'fallen') || startsWith(github.ref_name, 'hive') || startsWith(github.ref_name, 'taken') || startsWith(github.ref_name, 'vex') }}
     name: Development
-    uses: RocketBus/workflows-templates/.github/workflows/helm/deploy.yml@v2
+    uses: RocketBus/workflows-templates/.github/workflows/helm-deploy.yml@v2
     needs:
       - docker
       - helm
@@ -102,7 +102,7 @@ jobs:
   staging:
     if: ${{ github.ref_name == github.event.repository.default_branch }}
     name: Staging
-    uses: RocketBus/workflows-templates/.github/workflows/helm/deploy.yml@v2
+    uses: RocketBus/workflows-templates/.github/workflows/helm-deploy.yml@v2
     needs:
       - docker
       - helm
