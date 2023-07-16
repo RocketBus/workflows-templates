@@ -99,7 +99,7 @@ jobs:
 
           yq -i '.version = env(VERSION)' Chart.yaml
 
-          helm package $CHART_NAME -u
+          helm package . -u
 
           helm push ${CHART_NAME}-${VERSION}.tgz oci://${{ steps.login_ecr.outputs.registry }}/helm-charts
 
