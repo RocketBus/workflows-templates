@@ -107,7 +107,7 @@ jobs:
             git config user.email "actions@clickbus.com"
             git config user.name "GitHub Actions"
             git add Chart.yaml
-            git commit -m "chore: release helm charts $CHART_VERSION" [skip ci] || echo "nothing to commit, proceed"
+            git commit -m "chore: release helm charts $CHART_VERSION [skip ci]" || echo "nothing to commit, proceed"
             git push
           fi
 
