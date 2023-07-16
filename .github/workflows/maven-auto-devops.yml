@@ -58,29 +58,29 @@ on:
         required: true
 
 jobs:
-  maven:
-    name: Maven
-    uses: RocketBus/workflows-templates/.github/workflows/maven-ci.yml@v2
-    with:
-      jdk_version: ${{ inputs.jdk_version }}
-      artifact_path: ${{ inputs.artifact_path }}
-      skip_quality_gate_check: ${{ inputs.skip_quality_gate_check }}
-    secrets: inherit
-  docker:
-    name: Docker
-    uses: RocketBus/workflows-templates/.github/workflows/docker-ci.yml@v2
-    needs:
-      - maven
-    with:
-      dockerfile_path: ${{ inputs.dockerfile_path }}
-      docker_context: ${{ inputs.docker_context }}
-      docker_target: ${{ inputs.docker_target }}
-      docker_build_args: ${{ inputs.docker_build_args }}
-      image_name: ${{ inputs.image_name }}
-      image_tag_suffix: ${{ inputs.image_tag_suffix }}
-      scan_severity_cutoff: ${{ inputs.scan_severity_cutoff }}
-      scan_fail_build: ${{ inputs.scan_fail_build }}
-    secrets: inherit
+  # maven:
+  #   name: Maven
+  #   uses: RocketBus/workflows-templates/.github/workflows/maven-ci.yml@v2
+  #   with:
+  #     jdk_version: ${{ inputs.jdk_version }}
+  #     artifact_path: ${{ inputs.artifact_path }}
+  #     skip_quality_gate_check: ${{ inputs.skip_quality_gate_check }}
+  #   secrets: inherit
+  # docker:
+  #   name: Docker
+  #   uses: RocketBus/workflows-templates/.github/workflows/docker-ci.yml@v2
+  #   needs:
+  #     - maven
+  #   with:
+  #     dockerfile_path: ${{ inputs.dockerfile_path }}
+  #     docker_context: ${{ inputs.docker_context }}
+  #     docker_target: ${{ inputs.docker_target }}
+  #     docker_build_args: ${{ inputs.docker_build_args }}
+  #     image_name: ${{ inputs.image_name }}
+  #     image_tag_suffix: ${{ inputs.image_tag_suffix }}
+  #     scan_severity_cutoff: ${{ inputs.scan_severity_cutoff }}
+  #     scan_fail_build: ${{ inputs.scan_fail_build }}
+  #   secrets: inherit
   helm:
     name: Helm
     uses: RocketBus/workflows-templates/.github/workflows/helm-ci.yml@v2
