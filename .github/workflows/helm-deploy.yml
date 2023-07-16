@@ -39,6 +39,20 @@ jobs:
         with:
           version: ${{ vars.HELM_VERSION }}
 
+      - name: Configure AWS Credentials for Helm Package
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.aws_access_key_id }}
+          aws-secret-access-key: ${{ secrets.aws_secret_access_key }}
+          aws-region: ${{ vars.ECR_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login_ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Pull Helm Package
+        run: helm pull --untar --untardir deploy oci://${{ steps.login_ecr.outputs.registry }}/helm-charts/$CHART_NAME
+
       - name: Get Environment Specs
         id: environment_specs
         run: |
@@ -63,17 +77,6 @@ jobs:
         run: aws eks update-kubeconfig --name $CLUSTER_NAME
         env:
           CLUSTER_NAME: ${{ steps.environment_specs.outputs.cluster-name }}
-
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v2
-        with:
-          aws-access-key-id: ${{ secrets.aws_access_key_id }}
-          aws-secret-access-key: ${{ secrets.aws_secret_access_key }}
-          aws-region: ${{ vars.ECR_REGION }}
-
-      - name: Login to Amazon ECR
-        id: login_ecr
-        uses: aws-actions/amazon-ecr-login@v1
 
       - name: Helm Upgrade
         run: |
@@ -122,6 +125,6 @@ jobs:
           RELEASE_NAME=${RELEASE_NAME:-$REPOSITORY_NAME}
           RELEASE_NAMESPACE=${RELEASE_NAMESPACE:-$REPOSITORY_NAME}
 
-          helm upgrade $RELEASE_NAME oci://${{ steps.login_ecr.outputs.registry }}/helm-charts/$CHART_NAME \
+          helm upgrade $RELEASE_NAME deploy/$CHART_NAME \
             --install \
             --namespace $RELEASE_NAMESPACE $HELM_ARGS
