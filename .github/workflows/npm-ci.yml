@@ -94,7 +94,7 @@ jobs:
           fi
 
       - if: ${{ github.ref_name == github.event.repository.default_branch }}
-        name: Update Version
+        name: Release Prepare
         run: npm version ${{ steps.gitversion.outputs.semVer }} --no-git-tag-version --allow-same-version
 
       - name: Lint Code
@@ -161,7 +161,7 @@ jobs:
         run: npm ci --prefer-offline
 
       - if: ${{ github.ref_name == github.event.repository.default_branch }}
-        name: Update Version
+        name: Release Prepare
         run: npm version ${{ needs.build.outputs.version }} --no-git-tag-version --allow-same-version
 
       - name: Run Tests
@@ -235,20 +235,27 @@ jobs:
           CODEARTIFACT_DOMAIN: ${{ vars.CODEARTIFACT_DOMAIN }}
           CODEARTIFACT_DOMAIN_OWNER: ${{ vars.CODEARTIFACT_DOMAIN_OWNER }}
 
-      - name: Release Prepare
-        run: npm version ${{ needs.build.outputs.version }} --no-git-tag-version --allow-same-version
-
       - name: Download Application Artifact
         uses: actions/download-artifact@v3
         with:
           name: app-artifact
 
+      - name: Release Prepare
+        run: npm version ${{ needs.build.outputs.version }} --no-git-tag-version --allow-same-version
+
       - name: Release Artifact
-        run: npm publish
+        run: |
+          npm publish
+          git config user.email "actions@clickbus.com"
+          git config user.name "GitHub Actions"
+          git commit -a -m "chore: release ${{ needs.build.outputs.version }} [skip ci]" || echo "nothing to commit, proceed"
+          git push
+          echo sha=$(git rev-parse HEAD) >> $GITHUB_OUTPUT
 
       - name: GitHub Release
         uses: softprops/action-gh-release@v1
         with:
+          target_commitish: ${{ steps.release.outputs.sha }}
           tag_name: v${{ needs.build.outputs.version }}
 
       - name: Bump Version

@@ -6,13 +6,10 @@ on:
       environment:
         type: string
         required: true
-      chart_path:
+      chart_name:
         type: string
-        required: false
+        required: true
       chart_version:
-        type: string
-        required: false
-      app_version:
         type: string
         required: false
     secrets:
@@ -22,8 +19,9 @@ on:
         required: true
 
 env:
-  CHART_PATH: ${{ inputs.chart_path || format('charts/{0}', github.event.repository.name) }}
+  CHART_NAME: ${{ inputs.chart_name }}
   ENVIRONMENT: ${{ inputs.environment }}
+  REPOSITORY_NAME: ${{ github.event.repository.name }}
 
 jobs:
   deploy:
@@ -61,17 +59,41 @@ jobs:
           role-duration-seconds: 1200
           role-session-name: GitHubActionsDeploySession
 
-      - name: Helm Upgrade
-        working-directory: ${{ env.CHART_PATH }}
-        run: |
-          aws eks update-kubeconfig --name $CLUSTER_NAME
+      - name: Update Kubeconfig
+        run: aws eks update-kubeconfig --name $CLUSTER_NAME
+        env:
+          CLUSTER_NAME: ${{ steps.environment_specs.outputs.cluster-name }}
 
-          ENVIRONMENTS_PATH=${CHART_PATH}/environments
-          ENVIRONMENT_PATH=${ENVIRONMENTS_PATH}/${ENVIRONMENT}
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.aws_access_key_id }}
+          aws-secret-access-key: ${{ secrets.aws_secret_access_key }}
+          aws-region: ${{ vars.ECR_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login_ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Helm Upgrade
+        run: |
+          ENVIRONMENT_PATH=charts/${CHART_NAME}/environments/${ENVIRONMENT}
           ENVIRONMENT_SECRETS_DIR=${ENVIRONMENT_PATH}/secrets.d
           ENVIRONMENT_VALUES_DIR=${ENVIRONMENT_PATH}/values.d
 
           HELM_ARGS="--cleanup-on-fail --history-max 3"
+
+          if [[ -f ${ENVIRONMENT_PATH}/helmspec.yaml ]]; then
+            RELEASE_NAME=$(yq '.releaseName | ""' ${ENVIRONMENT_PATH}/helmspec.yaml)
+            RELEASE_NAMESPACE=$(yq '.releaseNamespace | ""' ${ENVIRONMENT_PATH}/helmspec.yaml)
+            VERSION=$(yq '.version | ""' ${ENVIRONMENT_PATH}/helmspec.yaml)
+          fi
+
+          if [[ -n "$VERSION" ]]; then
+            VERSION=${{ inputs.chart_version }}
+          fi
+          
+          HELM_ARGS="$HELM_ARGS ${VERSION:+--version $VERSION}"
 
           if [[ -d $ENVIRONMENT_SECRETS_DIR ]]; then
             for SECRET_FILE in $(ls $ENVIRONMENT_SECRETS_DIR); do
@@ -97,21 +119,9 @@ jobs:
             HELM_ARGS="$HELM_ARGS -f $ENVIRONMENT_VALUES"
           fi
 
-          if [[ -f ${ENVIRONMENT_PATH}/project.yaml ]]; then
-            RELEASE_NAME=$(yq '.release_name' ${ENVIRONMENT_PATH}/project.yaml)
-            RELEASE_NAMESPACE=$(yq '.release_namespace' ${ENVIRONMENT_PATH}/project.yaml)
-          else
-            RELEASE_NAME=$REPOSITORY_NAME
-            RELEASE_NAMESPACE=$REPOSITORY_NAME
-          fi 
+          RELEASE_NAME=${RELEASE_NAME:-$REPOSITORY_NAME}
+          RELEASE_NAMESPACE=${RELEASE_NAMESPACE:-$REPOSITORY_NAME}
 
-          yq -i '.version = ${{ inputs.chart_version }}' Chart.yaml
-          yq -i '.appVersion = ${{ inputs.app_version }}' Chart.yaml
-
-          helm upgrade $RELEASE_NAME . \
+          helm upgrade $RELEASE_NAME oci://${{ steps.login_ecr.outputs.registry }}/helm-charts/$CHART_NAME \
             --install \
             --namespace $RELEASE_NAMESPACE $HELM_ARGS
-        env:
-          ENVIRONMENT: ${{ inputs.environment }}
-          CLUSTER_NAME: ${{ steps.environment_specs.outputs.cluster-name }}
-          REPOSITORY_NAME: ${{ github.event.repository.name }}

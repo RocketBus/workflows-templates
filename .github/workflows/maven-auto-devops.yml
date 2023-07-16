@@ -43,7 +43,7 @@ on:
         type: boolean
         required: false
         default: true
-      chart_path:
+      chart_name:
         type: string
         required: false
       zapscan_target_url:
@@ -87,7 +87,7 @@ jobs:
     needs:
       - docker
     with:
-      chart_path: ${{ inputs.chart_path }}
+      chart_name: ${{ inputs.chart_name }}
       app_version: ${{ needs.docker.outputs.image_tag }}
     secrets: inherit
   development:
@@ -95,11 +95,10 @@ jobs:
     name: Development
     uses: RocketBus/workflows-templates/.github/workflows/helm-deploy.yml@v2
     needs:
-      - docker
       - helm
     with:
+      chart_name: ${{ inputs.chart_name }}
       chart_version: ${{ needs.helm.outputs.chart_version }}
-      app_version: ${{ needs.docker.outputs.image_tag }}
       environment: ${{ startsWith(github.ref_name, 'cabal') && 'cabal' || startsWith(github.ref_name, 'fallen') && 'fallen' || startsWith(github.ref_name, 'hive') && 'hive' || startsWith(github.ref_name, 'taken') && 'taken' || startsWith(github.ref_name, 'vex') && 'vex' }}
     secrets: inherit
   staging:
@@ -107,11 +106,10 @@ jobs:
     name: Staging
     uses: RocketBus/workflows-templates/.github/workflows/helm-deploy.yml@v2
     needs:
-      - docker
       - helm
     with:
+      chart_name: ${{ inputs.chart_name }}
       chart_version: ${{ needs.helm.outputs.chart_version }}
-      app_version: ${{ needs.docker.outputs.image_tag }}
       environment: stg
     secrets: inherit
   zaproxy:

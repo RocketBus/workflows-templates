@@ -83,7 +83,7 @@ jobs:
           CODEARTIFACT_DOMAIN_OWNER: ${{ vars.CODEARTIFACT_DOMAIN_OWNER }}
 
       - if: ${{ github.ref_name == github.event.repository.default_branch }}
-        name: Update Version
+        name: Release Prepare
         run: |
           ./mvnw $MAVEN_CLI_OPTS org.codehaus.mojo:versions-maven-plugin:2.11.0:set -DnewVersion=${{ steps.gitversion.outputs.semVer }}
           ./mvnw $MAVEN_CLI_OPTS org.codehaus.mojo:versions-maven-plugin:2.11.0:set-property -Dproperty=revision -DnewVersion=${{ steps.gitversion.outputs.semVer }}
@@ -143,7 +143,7 @@ jobs:
           CODEARTIFACT_DOMAIN_OWNER: ${{ vars.CODEARTIFACT_DOMAIN_OWNER }}
 
       - if: ${{ github.ref_name == github.event.repository.default_branch }}
-        name: Update Version
+        name: Release Prepare
         run: |
           ./mvnw $MAVEN_CLI_OPTS org.codehaus.mojo:versions-maven-plugin:2.11.0:set -DnewVersion=${{ needs.build.outputs.version }}
           ./mvnw $MAVEN_CLI_OPTS org.codehaus.mojo:versions-maven-plugin:2.11.0:set-property -Dproperty=revision -DnewVersion=${{ needs.build.outputs.version }}
@@ -246,23 +246,31 @@ jobs:
           CODEARTIFACT_DOMAIN: ${{ vars.CODEARTIFACT_DOMAIN }}
           CODEARTIFACT_DOMAIN_OWNER: ${{ vars.CODEARTIFACT_DOMAIN_OWNER }}
 
+      - name: Download Application Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: app-artifact
+
       - name: Release Prepare
         run: |
           ./mvnw $MAVEN_CLI_OPTS org.codehaus.mojo:versions-maven-plugin:2.11.0:set -DnewVersion=${{ needs.build.outputs.version }}
           ./mvnw $MAVEN_CLI_OPTS org.codehaus.mojo:versions-maven-plugin:2.11.0:set-property -Dproperty=revision -DnewVersion=${{ needs.build.outputs.version }}
           ./mvnw $MAVEN_CLI_OPTS org.codehaus.mojo:versions-maven-plugin:2.11.0:commit
 
-      - name: Download Application Artifact
-        uses: actions/download-artifact@v3
-        with:
-          name: app-artifact
-
       - name: Release Artifact
-        run: ./mvnw $MAVEN_CLI_OPTS deploy -Dspotless.check.skip=true -Dmaven.test.skip=true
+        id: release
+        run: |
+          ./mvnw $MAVEN_CLI_OPTS deploy -Dspotless.check.skip=true -Dmaven.test.skip=true
+          git config user.email "actions@clickbus.com"
+          git config user.name "GitHub Actions"
+          git commit -a -m "chore: release ${{ needs.build.outputs.version }} [skip ci]" || echo "nothing to commit, proceed"
+          git push
+          echo sha=$(git rev-parse HEAD) >> $GITHUB_OUTPUT
 
       - name: GitHub Release
         uses: softprops/action-gh-release@v1
         with:
+          target_commitish: ${{ steps.release.outputs.sha }}
           tag_name: v${{ needs.build.outputs.version }}
 
       - name: Bump Version

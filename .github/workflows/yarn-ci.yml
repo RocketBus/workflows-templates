@@ -103,7 +103,7 @@ jobs:
           fi
 
       - if: ${{ github.ref_name == github.event.repository.default_branch }}
-        name: Update Version
+        name: Release Prepare
         run: yarn version --new-version ${{ steps.gitversion.outputs.semVer }} --no-git-tag-version
 
       - name: Lint Code
@@ -179,7 +179,7 @@ jobs:
         run: yarn install --frozen-lockfile
 
       - if: ${{ github.ref_name == github.event.repository.default_branch }}
-        name: Update Version
+        name: Release Prepare
         run: yarn version --new-version ${{ needs.build.outputs.version }} --no-git-tag-version
 
       - name: Run Tests
@@ -262,20 +262,27 @@ jobs:
           node-version: ${{ inputs.node_version }}
           cache: yarn
 
-      - name: Release Prepare
-        run: yarn version --new-version ${{ needs.build.outputs.version }} --no-git-tag-version
-
       - name: Download Application Artifact
         uses: actions/download-artifact@v3
         with:
           name: app-artifact
 
+      - name: Release Prepare
+        run: yarn version --new-version ${{ needs.build.outputs.version }} --no-git-tag-version
+
       - name: Release Artifact
-        run: yarn publish
+        run: |
+          yarn publish
+          git config user.email "actions@clickbus.com"
+          git config user.name "GitHub Actions"
+          git commit -a -m "chore: release ${{ needs.build.outputs.version }} [skip ci]" || echo "nothing to commit, proceed"
+          git push
+          echo sha=$(git rev-parse HEAD) >> $GITHUB_OUTPUT
 
       - name: GitHub Release
         uses: softprops/action-gh-release@v1
         with:
+          target_commitish: ${{ steps.release.outputs.sha }}
           tag_name: v${{ needs.build.outputs.version }}
 
       - name: Bump Version
