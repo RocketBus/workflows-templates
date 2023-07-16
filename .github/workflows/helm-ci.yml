@@ -84,11 +84,14 @@ jobs:
         id: release
         working-directory: ${{ format('{0}/{1}', inputs.chart_path, env.CHART_NAME) }}
         run: |
-          if [[ -n "${{ inputs.app_version }}" ]]; then
-            yq -i '.appVersion = ${{ inputs.app_version }}' Chart.yaml
+          export APP_VERSION=${{ inputs.app_version }}
+
+          if [[ -n $APP_VERSION ]]; then
+            export APP_VERSION=${{ inputs.app_version }}
+            yq -i '.appVersion = env(APP_VERSION)' Chart.yaml
           fi
 
-          if [[ ${{ github.event_name }} == 'pull_request' ]]; then
+          if [[ ${{ github.event_name }} == pull_request ]]; then
             export VERSION=${{ steps.gitversion.outputs.MajorMinorPatch }}-${{ github.event.pull_request.number }}.${{ steps.gitversion.outputs.PreReleaseNumber }}
           else
             export VERSION=${{ steps.gitversion.outputs.semVer }}
