@@ -244,6 +244,7 @@ jobs:
         run: npm version ${{ needs.build.outputs.version }} --no-git-tag-version --allow-same-version
 
       - name: Release Artifact
+        id: release
         run: |
           npm publish
           git config user.email "actions@clickbus.com"

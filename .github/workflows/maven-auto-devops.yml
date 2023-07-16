@@ -84,11 +84,12 @@ jobs:
   helm:
     name: Helm
     uses: RocketBus/workflows-templates/.github/workflows/helm-ci.yml@v2
-    needs:
-      - docker
+    # needs:
+    #   - docker
     with:
       chart_name: ${{ inputs.chart_name }}
-      app_version: ${{ needs.docker.outputs.image_tag }}
+      # app_version: ${{ needs.docker.outputs.image_tag }}
+      app_version: 1.0.3
     secrets: inherit
   development:
     if: ${{ startsWith(github.ref_name, 'cabal') || startsWith(github.ref_name, 'fallen') || startsWith(github.ref_name, 'hive') || startsWith(github.ref_name, 'taken') || startsWith(github.ref_name, 'vex') }}

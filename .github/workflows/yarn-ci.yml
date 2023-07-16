@@ -271,6 +271,7 @@ jobs:
         run: yarn version --new-version ${{ needs.build.outputs.version }} --no-git-tag-version
 
       - name: Release Artifact
+        id: release
         run: |
           yarn publish
           git config user.email "actions@clickbus.com"
