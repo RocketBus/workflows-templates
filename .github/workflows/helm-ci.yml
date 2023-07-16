@@ -89,7 +89,7 @@ jobs:
           fi
 
           if [[ ${{ github.event_name }} == 'pull_request' ]]; then
-            export VERSION=${{ steps.gitversion.outputs.MajorMinorPatch }}-${{ github.event.pull_request.number }}.{{ steps.gitversion.outputs.PreReleaseNumber }}
+            export VERSION=${{ steps.gitversion.outputs.MajorMinorPatch }}-${{ github.event.pull_request.number }}.${{ steps.gitversion.outputs.PreReleaseNumber }}
           else
             export VERSION=${{ steps.gitversion.outputs.semVer }}
           fi
