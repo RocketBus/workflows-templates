@@ -85,7 +85,7 @@ jobs:
         working-directory: ${{ format('{0}/{1}', inputs.chart_path, env.CHART_NAME) }}
         run: |
           if [[ -n "${{ inputs.app_version }}" ]]; then
-            yq -i '.appVersion = {{ inputs.app_version }}' Chart.yaml
+            yq -i '.appVersion = ${{ inputs.app_version }}' Chart.yaml
           fi
 
           if [[ ${{ github.event_name }} == 'pull_request' ]]; then
