@@ -82,7 +82,7 @@ jobs:
 
       - name: Release
         id: release
-        working-directory: ${{ inputs.chart_path }}
+        working-directory: ${{ format("{0}/{1}", inputs.chart_path, env.CHART_NAME) }}
         run: |
           if [[ -n "${{ inputs.app_version }}" ]]; then
             yq -i '.appVersion = {{ inputs.app_version }}' Chart.yaml
