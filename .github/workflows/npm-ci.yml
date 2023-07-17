@@ -245,7 +245,7 @@ jobs:
       - name: Download Application Artifact
         uses: actions/download-artifact@v3
         with:
-          name: app-artifact
+          name: ${{ format('app-artifact{0}{1}', (inputs.build_env && '-'), inputs.build_env) }}
 
       - name: Release Prepare
         run: npm version ${{ needs.build.outputs.version }} --no-git-tag-version --allow-same-version
