@@ -155,7 +155,7 @@ jobs:
   helm-live:
     if: ${{ github.ref_name == github.event.repository.default_branch }}
     name: Helm
-    uses: RocketBus/workflows-templates/.github/workflows/helm/ci.yml@v2
+    uses: RocketBus/workflows-templates/.github/workflows/helm-ci.yml@v2
     needs:
       - docker-live
     with:
