@@ -101,7 +101,7 @@ jobs:
     needs:
       - helm
     with:
-      chart_name: ${{ inputs.chart_name }}
+      chart_name: ${{ needs.helm.outputs.chart_name }}
       chart_version: ${{ needs.helm.outputs.chart_version }}
       environment: ${{ startsWith(github.ref_name, 'cabal') && 'cabal' || startsWith(github.ref_name, 'fallen') && 'fallen' || startsWith(github.ref_name, 'hive') && 'hive' || startsWith(github.ref_name, 'taken') && 'taken' || startsWith(github.ref_name, 'vex') && 'vex' }}
     secrets: inherit
@@ -112,7 +112,7 @@ jobs:
     needs:
       - helm
     with:
-      chart_name: ${{ inputs.chart_name }}
+      chart_name: ${{ needs.helm.outputs.chart_name }}
       chart_version: ${{ needs.helm.outputs.chart_version }}
       environment: stg
     secrets: inherit
