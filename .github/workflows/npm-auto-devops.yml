@@ -79,7 +79,7 @@ jobs:
     secrets: inherit
   helm:
     name: Helm
-    uses: RocketBus/workflows-templates/.github/workflows/helm/ci.yml@v2
+    uses: RocketBus/workflows-templates/.github/workflows/helm-ci.yml@v2
     needs:
       - docker
     with:
