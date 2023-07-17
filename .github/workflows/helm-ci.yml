@@ -84,6 +84,10 @@ jobs:
         id: release
         working-directory: ${{ format('{0}/{1}', inputs.chart_path, env.CHART_NAME) }}
         run: |
+          if [[ ${{ github.ref_name }} == ${{ github.event.repository.default_branch }} ]]; then
+            git pull
+          fi
+
           export APP_VERSION=${{ inputs.app_version }}
 
           if [[ -n $APP_VERSION ]]; then
@@ -108,7 +112,6 @@ jobs:
             git config user.name "GitHub Actions"
             git add Chart.yaml
             git commit -m "chore: release helm charts $CHART_VERSION [skip ci]" || echo "nothing to commit, proceed"
-            git pull -X ours
             git push
           fi
 
