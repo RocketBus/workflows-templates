@@ -104,11 +104,11 @@ jobs:
           helm push ${CHART_NAME}-${VERSION}.tgz oci://${{ steps.login_ecr.outputs.registry }}/helm-charts
 
           if [[ ${{ github.ref_name }} == ${{ github.event.repository.default_branch }} ]]; then
-            git pull
             git config user.email "actions@clickbus.com"
             git config user.name "GitHub Actions"
             git add Chart.yaml
             git commit -m "chore: release helm charts $CHART_VERSION [skip ci]" || echo "nothing to commit, proceed"
+            git pull -X ours
             git push
           fi
 
