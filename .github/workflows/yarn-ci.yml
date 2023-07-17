@@ -7,17 +7,20 @@ on:
         type: string
         required: false
         default: 18
-      node_env:
+      build_env:
         type: string
         required: false
-      skip_quality_gate_check:
-        type: boolean
-        required: false
-        default: false
       artifact_path:
         type: string
         required: false
         default: 'build/'
+      skip_quality_gate_check:
+        type: boolean
+        required: false
+        default: false
+      skip_tests:
+        type: boolean
+        required: false
     secrets:
       aws_access_key_id:
         required: true
@@ -25,11 +28,14 @@ on:
         required: true
       sonar_token:
         required: true
+    outputs:
+      artifact_name:
+        value: ${{ jobs.build.outputs.artifact_name }}
 
 env:
   YARNRC: ${{ vars.YARNRC }}
   NODE_OPTIONS: "--max_old_space_size=3072"
-  NODE_ENV: ${{ inputs.node_env || "production" }}
+  NODE_ENV: "production"
   CI: true
 
 jobs:
@@ -120,18 +126,20 @@ jobs:
             gulp build
           fi
         env:
-          BUILD_ENV: ${{ inputs.node_env }}
+          BUILD_ENV: ${{ inputs.build_env }}
 
       - name: Archive Application Artifact
         uses: actions/upload-artifact@v3
         with:
-          name: app-artifact
+          name: ${{ format('app-artifact{0}{1}', (inputs.build_env && '-'), inputs.build_env) }}
           path: ${{ inputs.artifact_path }}
           if-no-files-found: ignore
     outputs:
+      artifact_name: ${{ format('app-artifact{0}{1}', (inputs.build_env && '-'), inputs.build_env) }}
       version: ${{ steps.gitversion.outputs.semVer }}
 
   test:
+    if: ${{ ! inputs.skip_tests }}
     name: Test
     runs-on: 
       - self-hosted
@@ -217,7 +225,7 @@ jobs:
           SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL }}
 
   release:
-    if: ${{ github.ref_name == github.event.repository.default_branch }}
+    if: ${{ github.ref_name == github.event.repository.default_branch && ! inputs.skip_release }}
     name: Release
     runs-on: 
       - self-hosted

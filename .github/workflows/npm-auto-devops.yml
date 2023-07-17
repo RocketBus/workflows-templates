@@ -7,9 +7,6 @@ on:
         type: string
         required: false
         default: 18
-      node_env:
-        type: string
-        required: false
       skip_quality_gate_check:
         type: boolean
         required: false
@@ -33,9 +30,6 @@ on:
         type: string
         required: false
       image_name:
-        type: string
-        required: false
-      image_tag_suffix:
         type: string
         required: false
       scan_severity_cutoff:
@@ -66,7 +60,6 @@ jobs:
     uses: RocketBus/workflows-templates/.github/workflows/npm-ci.yml@v2
     with:
       node_version: ${{ inputs.node_version }}
-      node_env: ${{ inputs.node_env }}
       artifact_path: ${{ inputs.artifact_path }}
       skip_quality_gate_check: ${{ inputs.skip_quality_gate_check }}
     secrets: inherit
@@ -74,14 +67,13 @@ jobs:
     name: Docker
     uses: RocketBus/workflows-templates/.github/workflows/docker-ci.yml@v2
     needs:
-      - maven
+      - nodejs
     with:
       dockerfile_path: ${{ inputs.dockerfile_path }}
       docker_context: ${{ inputs.docker_context }}
       docker_target: ${{ inputs.docker_target }}
       docker_build_args: ${{ inputs.docker_build_args }}
       image_name: ${{ inputs.image_name }}
-      image_tag_suffix: ${{ inputs.image_tag_suffix }}
       scan_severity_cutoff: ${{ inputs.scan_severity_cutoff }}
       scan_fail_build: ${{ inputs.scan_fail_build }}
     secrets: inherit

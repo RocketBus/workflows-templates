@@ -70,7 +70,7 @@ jobs:
     name: Docker
     uses: RocketBus/workflows-templates/.github/workflows/docker-ci.yml@v2
     needs:
-      - maven
+      - gradle
     with:
       dockerfile_path: ${{ inputs.dockerfile_path }}
       docker_context: ${{ inputs.docker_context }}

@@ -1,4 +1,4 @@
-name: Node.js Auto-Devops
+name: Node.js Multi-Build
 
 on:
   workflow_call:
@@ -57,9 +57,10 @@ on:
 jobs:
   nodejs:
     name: Node.js
-    uses: RocketBus/workflows-templates/.github/workflows/yarn-ci.yml@v2
+    uses: RocketBus/workflows-templates/.github/workflows/npm-ci.yml@v2
     with:
       node_version: ${{ inputs.node_version }}
+      build_env: ${{ startsWith(github.ref_name, 'cabal') && 'cabal' || startsWith(github.ref_name, 'fallen') && 'fallen' || startsWith(github.ref_name, 'hive') && 'hive' || startsWith(github.ref_name, 'taken') && 'taken' || startsWith(github.ref_name, 'vex') && 'vex' || github.ref_name == github.event.repository.default_branch && 'stg' }}
       artifact_path: ${{ inputs.artifact_path }}
       skip_quality_gate_check: ${{ inputs.skip_quality_gate_check }}
     secrets: inherit
@@ -69,21 +70,24 @@ jobs:
     needs:
       - nodejs
     with:
+      artifact_name: app-artifact${{ startsWith(github.ref_name, 'cabal') && '-cabal' || startsWith(github.ref_name, 'fallen') && '-fallen' || startsWith(github.ref_name, 'hive') && '-hive' || startsWith(github.ref_name, 'taken') && '-taken' || startsWith(github.ref_name, 'vex') && '-vex' || github.ref_name == github.event.repository.default_branch && '-stg' }}
       dockerfile_path: ${{ inputs.dockerfile_path }}
       docker_context: ${{ inputs.docker_context }}
       docker_target: ${{ inputs.docker_target }}
       docker_build_args: ${{ inputs.docker_build_args }}
+      image_tag_suffix: ${{ github.ref_name == github.event.repository.default_branch && '-stg' }}
       image_name: ${{ inputs.image_name }}
       scan_severity_cutoff: ${{ inputs.scan_severity_cutoff }}
       scan_fail_build: ${{ inputs.scan_fail_build }}
     secrets: inherit
   helm:
     name: Helm
-    uses: RocketBus/workflows-templates/.github/workflows/helm-ci.yml@v2
+    uses: RocketBus/workflows-templates/.github/workflows/helm/ci.yml@v2
     needs:
       - docker
     with:
       chart_name: ${{ inputs.chart_name }}
+      chart_version_suffix: ${{ github.ref_name == github.event.repository.default_branch && '-stg' }}
       app_version: ${{ needs.docker.outputs.image_tag }}
     secrets: inherit
   development:
@@ -121,3 +125,40 @@ jobs:
         uses: zaproxy/action-full-scan@v0.5.1
         with:
           target: ${{ inputs.zapscan_target_url }}
+  nodejs-live:
+    if: ${{ github.ref_name == github.event.repository.default_branch }}
+    name: Node.js
+    uses: RocketBus/workflows-templates/.github/workflows/npm-ci.yml@v2
+    with:
+      node_version: ${{ inputs.node_version }}
+      artifact_path: ${{ inputs.artifact_path }}
+      skip_quality_gate_check: ${{ inputs.skip_quality_gate_check }}
+      skip_tests: true
+      skip_release: true
+    secrets: inherit
+  docker-live:
+    if: ${{ github.ref_name == github.event.repository.default_branch }}
+    name: Docker
+    uses: RocketBus/workflows-templates/.github/workflows/docker-ci.yml@v2
+    needs:
+      - nodejs-live
+    with:
+      artifact_name: ${{ needs.nodejs-live.outputs.artifact_name }}
+      dockerfile_path: ${{ inputs.dockerfile_path }}
+      docker_context: ${{ inputs.docker_context }}
+      docker_target: ${{ inputs.docker_target }}
+      docker_build_args: ${{ inputs.docker_build_args }}
+      image_name: ${{ inputs.image_name }}
+      scan_severity_cutoff: ${{ inputs.scan_severity_cutoff }}
+      scan_fail_build: ${{ inputs.scan_fail_build }}
+    secrets: inherit
+  helm-live:
+    if: ${{ github.ref_name == github.event.repository.default_branch }}
+    name: Helm
+    uses: RocketBus/workflows-templates/.github/workflows/helm/ci.yml@v2
+    needs:
+      - docker-live
+    with:
+      chart_name: ${{ inputs.chart_name }}
+      app_version: ${{ needs.docker-live.outputs.image_tag }}
+    secrets: inherit

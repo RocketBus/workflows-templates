@@ -10,6 +10,9 @@ on:
       chart_name:
         type: string
         required: false
+      chart_version_suffix:
+        type: string
+        required: false
       app_version:
         type: string
         required: false
@@ -98,7 +101,7 @@ jobs:
           if [[ ${{ github.event_name }} == pull_request ]]; then
             export VERSION=${{ steps.gitversion.outputs.MajorMinorPatch }}-${{ github.event.pull_request.number }}.${{ steps.gitversion.outputs.PreReleaseNumber }}
           else
-            export VERSION=${{ steps.gitversion.outputs.semVer }}
+            export VERSION=${{ steps.gitversion.outputs.semVer }}${{ inputs.chart_version_suffix }}
           fi
 
           yq -i '.version = env(VERSION)' Chart.yaml

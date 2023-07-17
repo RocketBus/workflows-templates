@@ -3,6 +3,10 @@ name: Docker CI
 on:
   workflow_call:
     inputs:
+      artifact_name:
+        type: string
+        required: false
+        default: 'app-artifact'
       dockerfile_path:
         type: string
         required: false
@@ -71,7 +75,7 @@ jobs:
       - name: Download Application Artifact
         uses: actions/download-artifact@v3
         with:
-          name: app-artifact
+          name: ${{ inputs.artifact_name }}
 
       - name: Uncompress Application Artifact
         run: |
