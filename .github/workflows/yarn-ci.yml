@@ -21,6 +21,9 @@ on:
       skip_tests:
         type: boolean
         required: false
+      skip_release:
+        type: boolean
+        required: false
     secrets:
       aws_access_key_id:
         required: true
@@ -28,22 +31,16 @@ on:
         required: true
       sonar_token:
         required: true
-    outputs:
-      artifact_name:
-        value: ${{ jobs.build.outputs.artifact_name }}
 
 env:
   YARNRC: ${{ vars.YARNRC }}
   NODE_OPTIONS: "--max_old_space_size=3072"
-  NODE_ENV: "production"
   CI: true
 
 jobs:
   build:
     name: Build
-    runs-on: 
-      - self-hosted
-      - live
+    runs-on: actions-runner-set
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -117,33 +114,28 @@ jobs:
 
       - name: Build Artifact
         run: |
-          if [[ $(jq -e ".scripts | has(\"build${BUILD_ENV:+:$BUILD_ENV}\")" package.json) ]]; then
-            yarn run build${BUILD_ENV:+:$BUILD_ENV}
+          if [[ $(jq -e '.scripts | has("build")' package.json) ]]; then
+            yarn run build
           fi
 
           if [[ -f gulpfile.js ]]; then
             yarn install -g gulp-cli
             gulp build
           fi
-        env:
-          BUILD_ENV: ${{ inputs.build_env }}
 
       - name: Archive Application Artifact
         uses: actions/upload-artifact@v3
         with:
-          name: ${{ format('app-artifact{0}{1}', (inputs.build_env && '-'), inputs.build_env) }}
+          name: ${{ format('app-artifact{0}{1}', (inputs.node_env && '-'), inputs.node_env) }}
           path: ${{ inputs.artifact_path }}
           if-no-files-found: ignore
     outputs:
-      artifact_name: ${{ format('app-artifact{0}{1}', (inputs.build_env && '-'), inputs.build_env) }}
       version: ${{ steps.gitversion.outputs.semVer }}
 
   test:
     if: ${{ ! inputs.skip_tests }}
     name: Test
-    runs-on: 
-      - self-hosted
-      - live
+    runs-on: actions-runner-set
     needs:
       - build
     steps:
@@ -227,9 +219,7 @@ jobs:
   release:
     if: ${{ github.ref_name == github.event.repository.default_branch && ! inputs.skip_release }}
     name: Release
-    runs-on: 
-      - self-hosted
-      - live
+    runs-on: actions-runner-set
     needs:
       - build
       - test

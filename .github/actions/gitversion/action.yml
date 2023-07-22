@@ -1,0 +1,29 @@
+name: 'GitVersion'
+description: 'Generates a Semantic Version number based on your Git history'
+outputs:
+  gitversion:
+    description: "GitVersion outputs"
+    value: ${{ fromJSON(steps.gitversion.outputs) }}
+runs:
+  using: "composite"
+  steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+
+    - name: Set up .NET cli
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: '6.0.x'
+      env:
+        DOTNET_INSTALL_DIR: opt/dotnet
+
+    - name: Set up GitVersion
+      uses: gittools/actions/gitversion/setup@v0
+      with:
+        versionSpec: '5.x'
+
+    - name: Determine Version
+      id: gitversion
+      uses: gittools/actions/gitversion/execute@v0

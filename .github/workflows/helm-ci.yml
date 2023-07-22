@@ -33,9 +33,7 @@ env:
 jobs:
   release:
     name: Release
-    runs-on: 
-      - self-hosted
-      - live
+    runs-on: actions-runner-set
     steps:
       - name: Checkout
         uses: actions/checkout@v3

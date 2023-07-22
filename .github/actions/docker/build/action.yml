@@ -1,0 +1,83 @@
+name: 'GitVersion'
+description: 'Generates a Semantic Version number based on your Git history'
+outputs:
+  gitversion:
+    description: "GitVersion outputs"
+    value: ${{ fromJSON(steps.gitversion.outputs) }}
+runs:
+  using: "composite"
+  steps:
+    - name: Download Application Artifact
+      uses: actions/download-artifact@v3
+      with:
+        name: ${{ inputs.artifact_name }}
+
+    - name: Uncompress Application Artifact
+      shell: bash
+      run: |
+        if [[ -f app-artifact.tar.gz ]]; then
+          tar -zxf app-artifact.tar.gz
+        fi
+
+    - name: Lint
+      uses: hadolint/hadolint-action@v3.1.0
+      with:
+        dockerfile: ${{ inputs.dockerfile_path }}
+
+    - name: Set up Docker Context for Buildx
+      shell: bash
+      id: buildx-context
+      run: docker context create builders
+
+    - name: Set up Docker Buildx
+      id: buildx
+      uses: docker/setup-buildx-action@v2
+      with:
+        endpoint: builders
+
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v2
+      with:
+        aws-access-key-id: ${{ secrets.aws_access_key_id }}
+        aws-secret-access-key: ${{ secrets.aws_secret_access_key }}
+        aws-region: ${{ vars.ECR_REGION }}
+
+    - name: Login to Amazon ECR
+      id: login_ecr
+      uses: aws-actions/amazon-ecr-login@v1
+
+    - name: Docker Metadata
+      id: docker_metadata
+      uses: docker/metadata-action@v4
+      with:
+        images: ${{ steps.login_ecr.outputs.registry }}/${{ inputs.image_name || github.event.repository.name }}
+        tags: |
+          type=ref,event=pr,prefix=${{ steps.gitversion.outputs.MajorMinorPatch }}-,suffix=.{{ steps.gitversion.outputs.PreReleaseNumber }}
+          type=raw,priority=300,value=${{ steps.gitversion.outputs.semVer }},suffix=${{ inputs.image_tag_suffix }},enable={{is_default_branch}}
+          type=raw,value=${{ steps.gitversion.outputs.semVer }}
+
+    - name: Build Image
+      uses: docker/build-push-action@v3
+      with:
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+        context: ${{ inputs.docker_context }}
+        file: ${{ inputs.dockerfile_path }}
+        target: ${{ inputs.docker_target }}
+        build-args: ${{ inputs.docker_build_args }}
+        labels: ${{ steps.docker_metadata.outputs.labels }}
+        tags: ${{ fromJSON(steps.docker_metadata.outputs.json).tags[0] }}
+        load: true
+
+    - name: Scan Image
+      uses: anchore/scan-action@v3
+      with:
+        image: ${{ fromJSON(steps.docker_metadata.outputs.json).tags[0] }}
+        fail-build: ${{ inputs.scan_fail_build }}
+        severity-cutoff: ${{ inputs.scan_severity_cutoff }}
+        output-format: table
+        only-fixed: true
+
+    - name: Push Image
+      shell: bash
+      run: docker push ${{ fromJSON(steps.docker_metadata.outputs.json).tags[0] }}

@@ -60,7 +60,7 @@ jobs:
     uses: RocketBus/workflows-templates/.github/workflows/npm-ci.yml@v2
     with:
       node_version: ${{ inputs.node_version }}
-      build_env: ${{ startsWith(github.ref_name, 'cabal') && 'cabal' || startsWith(github.ref_name, 'fallen') && 'fallen' || startsWith(github.ref_name, 'hive') && 'hive' || startsWith(github.ref_name, 'taken') && 'taken' || startsWith(github.ref_name, 'vex') && 'vex' || github.ref_name == github.event.repository.default_branch && 'stg' }}
+      node_env: ${{ startsWith(github.ref_name, 'cabal') && 'cabal' || startsWith(github.ref_name, 'fallen') && 'fallen' || startsWith(github.ref_name, 'hive') && 'hive' || startsWith(github.ref_name, 'taken') && 'taken' || startsWith(github.ref_name, 'vex') && 'vex' || github.ref_name == github.event.repository.default_branch && 'staging' }}
       artifact_path: ${{ inputs.artifact_path }}
       skip_quality_gate_check: ${{ inputs.skip_quality_gate_check }}
     secrets: inherit
