@@ -32,6 +32,8 @@ runs:
       uses: actions/setup-dotnet@v3
       with:
         dotnet-version: '6.0.x'
+      env:
+        DOTNET_INSTALL_DIR: ~/.share/dotnet
 
     - name: Set up GitVersion
       uses: gittools/actions/gitversion/setup@v0
