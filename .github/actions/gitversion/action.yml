@@ -28,6 +28,10 @@ outputs:
 runs:
   using: "composite"
   steps:
+    - name: Group of log lines
+      shell: bash
+      run: echo "::group::Set up GitVersion"
+
     - name: Set up .NET cli
       uses: actions/setup-dotnet@v3
       with:
@@ -40,11 +44,10 @@ runs:
       with:
         versionSpec: '5.x'
 
+    - name: Group of log lines
+      shell: bash
+      run: echo "::endgroup::"
+
     - name: Determine Version
       id: gitversion
       uses: gittools/actions/gitversion/execute@v0
-
-    - if: ${{ 'true' == 'false' }} 
-      name: teste
-      shell: bash
-      run: echo teste
