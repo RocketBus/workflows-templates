@@ -1,17 +1,33 @@
 name: 'GitVersion'
 description: 'Generates a Semantic Version number based on your Git history'
 outputs:
-  gitversion:
-    description: "GitVersion outputs"
-    value: ${{ fromJSON(steps.gitversion.outputs) }}
+  major:
+    description: "GitVersion Major"
+    value: ${{ steps.gitversion.outputs.Major }}
+  minor:
+    description: "GitVersion Minor"
+    value: ${{ steps.gitversion.outputs.Minor }}
+  patch:
+    description: "GitVersion Patch"
+    value: ${{ steps.gitversion.outputs.Patch }}
+  pre_release_number:
+    description: "GitVersion PreReleaseNumber"
+    value: ${{ steps.gitversion.outputs.PreReleaseNumber }}
+  major_minor_patch:
+    description: "GitVersion MajorMinorPatch"
+    value: ${{ steps.gitversion.outputs.MajorMinorPatch }}
+  sem_ver:
+    description: "GitVersion SemVer"
+    value: ${{ steps.gitversion.outputs.SemVer }}
+  escaped_branch_name:
+    description: "GitVersion EscapedBranchName"
+    value: ${{ steps.gitversion.outputs.EscapedBranchName }}
+  short_sha:
+    description: "GitVersion ShortSha"
+    value: ${{ steps.gitversion.outputs.ShortSha }}
 runs:
   using: "composite"
   steps:
-    - name: Checkout
-      uses: actions/checkout@v3
-      with:
-        fetch-depth: 0
-
     - name: Set up .NET cli
       uses: actions/setup-dotnet@v3
       with:
@@ -27,3 +43,8 @@ runs:
     - name: Determine Version
       id: gitversion
       uses: gittools/actions/gitversion/execute@v0
+
+    - if: ${{ 'true' == 'false' }} 
+      name: teste
+      shell: bash
+      run: echo teste
