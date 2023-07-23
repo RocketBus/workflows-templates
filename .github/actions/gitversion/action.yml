@@ -28,25 +28,15 @@ outputs:
 runs:
   using: "composite"
   steps:
-    - name: Group of log lines
-      shell: bash
-      run: echo "::group::Set up GitVersion"
-
     - name: Set up .NET cli
       uses: actions/setup-dotnet@v3
       with:
         dotnet-version: '6.0.x'
-      env:
-        DOTNET_INSTALL_DIR: opt/dotnet
 
     - name: Set up GitVersion
       uses: gittools/actions/gitversion/setup@v0
       with:
         versionSpec: '5.x'
-
-    - name: Group of log lines
-      shell: bash
-      run: echo "::endgroup::"
 
     - name: Determine Version
       id: gitversion
