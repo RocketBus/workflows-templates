@@ -76,8 +76,7 @@ jobs:
       - name: helm history
         if: github.event.inputs.revision <= 0
         run: |
-          helm history -n ${{ steps.job_properties.outputs.namespace }} ${{ steps.job_properties.outputs.service_name }} >> $GITHUB_STEP_SUMMARY
-          echo $GITHUB_STEP_SUMMARY
+          helm history -n ${{ steps.job_properties.outputs.namespace }} ${{ steps.job_properties.outputs.service_name }}
 
       - name: helm rollback
         if: github.event.inputs.revision > 0
