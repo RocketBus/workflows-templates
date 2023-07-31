@@ -1,4 +1,4 @@
-name: 'rollback live'
+name: 'rollback'
 
 on:
   workflow_call:
