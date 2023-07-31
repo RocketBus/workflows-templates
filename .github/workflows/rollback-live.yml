@@ -52,7 +52,7 @@ jobs:
           EKS_CLUSTER=${EKS_CLUSTERS[$ENV]}
 
           echo "aws_region=$AWS_REGION" >> $GITHUB_OUTPUT
-          echo "aws_iam_role=arn:aws:iam::${AWS_ACCOUNT_ID}:role/CrossAccount-Global-Admin" >> $GITHUB_OUTPUT
+          echo "aws_iam_role=arn:aws:iam::${AWS_ACCOUNT_ID}:role/CrossAccount-Global-Admin" >> $GITHUB_STEP_SUMMARY
           echo "eks_cluster=$EKS_CLUSTER" >> $GITHUB_OUTPUT
 
       - name: configure AWS credentials for EKS
