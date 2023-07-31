@@ -22,6 +22,7 @@ on:
 jobs:
   rollback:
     runs-on: ${{ ((inputs.environment != 'stg' && inputs.environment != 'live') && 'dev') || inputs.environment }}
+    environment: ${{ inputs.environment }}
     steps:
       - name: checkout
         uses: actions/checkout@v3
@@ -52,7 +53,7 @@ jobs:
           EKS_CLUSTER=${EKS_CLUSTERS[$ENV]}
 
           echo "aws_region=$AWS_REGION" >> $GITHUB_OUTPUT
-          echo "aws_iam_role=arn:aws:iam::${AWS_ACCOUNT_ID}:role/CrossAccount-Global-Admin" >> $GITHUB_STEP_SUMMARY
+          echo "aws_iam_role=arn:aws:iam::${AWS_ACCOUNT_ID}:role/CrossAccount-Global-Admin" >> $GITHUB_OUTPUT
           echo "eks_cluster=$EKS_CLUSTER" >> $GITHUB_OUTPUT
 
       - name: configure AWS credentials for EKS
@@ -74,7 +75,7 @@ jobs:
       - name: helm history
         if: github.event.inputs.revision <= 0
         run: |
-          helm history -n ${{ steps.job_properties.outputs.namespace }} ${{ steps.job_properties.outputs.namespace }} >> $GITHUB_SUMMARY
+          helm history -n ${{ steps.job_properties.outputs.namespace }} ${{ steps.job_properties.outputs.namespace }} >> $GITHUB_STEP_SUMMARY
 
       - name: helm rollback
         if: github.event.inputs.revision > 0
