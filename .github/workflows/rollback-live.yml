@@ -8,43 +8,70 @@ on:
         required: true
         description: 'helm revision'
         default: '0'
+      environment:
+        type: string
+        description: "Environment to run rollback"
+        required: true
+        default: "live"
 
 jobs:
   rollback:
     runs-on: live
     steps:
+      - name: set job properties
+        id: job_properties
+        run: |
+          declare -A AWS_ACCOUNTS_IDS AWS_REGIONS EKS_CLUSTERS
+
+          SYSTEM_DIR=$(ls charts)
+          NAMESPACE=$SYSTEM_DIR
+                
+          SQUAD=${{ inputs.environment }}
+          if [[ $SQUAD == 'cabal' || $SQUAD == 'fallen' || $SQUAD == 'vex' || $SQUAD == 'taken' || $SQUAD == 'hive' ]]; then
+            echo "namespace=${{ inputs.environment }}-$NAMESPACE" >> $GITHUB_OUTPUT
+            ENV=dev
+          else
+            echo "namespace=$NAMESPACE" >> $GITHUB_OUTPUT
+            ENV=${{ inputs.environment }}
+          fi
+
+          AWS_ACCOUNTS_IDS=([dev]=180811438061 [stg]=406026015868 [live]=114395709799)
+          AWS_REGIONS=([dev]=us-east-2 [stg]=us-east-2 [live]=us-east-1)
+          EKS_CLUSTERS=([dev]=k8s-dev-85c52b0e [stg]=k8s-stg-7a1d63f9 [live]=k8s-live-b2401546)
+
+          AWS_ACCOUNT_ID=${AWS_ACCOUNTS_IDS[$ENV]}
+          AWS_REGION=${AWS_REGIONS[$ENV]}
+          EKS_CLUSTER=${EKS_CLUSTERS[$ENV]}
+
+          echo "aws_region=$AWS_REGION" >> $GITHUB_OUTPUT
+          echo "aws_iam_role=arn:aws:iam::${AWS_ACCOUNT_ID}:role/CrossAccount-Global-Admin" >> $GITHUB_OUTPUT
+          echo "eks_cluster=$EKS_CLUSTER" >> $GITHUB_OUTPUT
+
       - name: configure AWS credentials for EKS
         uses: aws-actions/configure-aws-credentials@v1-node16
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1
+          aws-region: ${{ steps.job_properties.outputs.aws_region }}
           role-skip-session-tagging: true
-          role-to-assume: arn:aws:iam::114395709799:role/CrossAccount-Global-Admin
+          role-to-assume: ${{ steps.job_properties.outputs.aws_iam_role }}
           role-duration-seconds: 1200
           role-session-name: GitHubActionsDeploySession
           mask-aws-account-id: false
 
       - name: set cluster
         run: |
-          aws eks update-kubeconfig --name k8s-live-b2401546
+          aws eks update-kubeconfig --name ${{ steps.job_properties.outputs.eks_cluster }}
 
       - name: checkout
         uses: actions/checkout@v3
 
-      - name: get namespace
-        id: get_namespace
-        run: |
-          SYSTEM_DIR=$(ls charts)
-          NAMESPACE=$SYSTEM_DIR
-          echo "namespace=$NAMESPACE" >> $GITHUB_OUTPUT
-
       - name: helm history
         if: github.event.inputs.revision <= 0
         run: |
-          helm history -n ${{ steps.get_namespace.outputs.namespace }} ${{ steps.get_namespace.outputs.namespace }}
+          helm history -n ${{ steps.job_properties.outputs.namespace }} ${{ steps.job_properties.outputs.namespace }} >> $GITHUB_SUMMARY
 
       - name: helm rollback
         if: github.event.inputs.revision > 0
         run: |
-          helm rollback ${{ steps.get_namespace.outputs.namespace }} ${{ github.event.inputs.revision }} -n ${{ steps.get_namespace.outputs.NAMESPACE }} --cleanup-on-fail
+          helm rollback ${{ steps.job_properties.outputs.namespace }} ${{ github.event.inputs.revision }} -n ${{ steps.job_properties.outputs.NAMESPACE }} --cleanup-on-fail
