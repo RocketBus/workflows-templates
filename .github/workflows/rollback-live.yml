@@ -1,0 +1,50 @@
+name: 'rollback live'
+
+on:
+  workflow_call:
+    inputs:
+      revision:
+        type: string
+        required: true
+        description: 'helm revision'
+        default: '0'
+
+jobs:
+  rollback:
+    runs-on: live
+    steps:
+      - name: configure AWS credentials for EKS
+        uses: aws-actions/configure-aws-credentials@v1-node16
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+          role-skip-session-tagging: true
+          role-to-assume: arn:aws:iam::114395709799:role/CrossAccount-Global-Admin
+          role-duration-seconds: 1200
+          role-session-name: GitHubActionsDeploySession
+          mask-aws-account-id: false
+
+      - name: set cluster
+        run: |
+          aws eks update-kubeconfig --name k8s-live-b2401546
+
+      - name: checkout
+        uses: actions/checkout@v3
+
+      - name: get namespace
+        id: get_namespace
+        run: |
+          SYSTEM_DIR=$(ls charts)
+          NAMESPACE=$SYSTEM_DIR
+          echo "namespace=$NAMESPACE" >> $GITHUB_OUTPUT
+
+      - name: helm history
+        if: github.event.inputs.revision <= 0
+        run: |
+          helm history -n ${{ steps.get_namespace.outputs.namespace }} ${{ steps.get_namespace.outputs.namespace }}
+
+      - name: helm rollback
+        if: github.event.inputs.revision > 0
+        run: |
+          helm rollback ${{ steps.get_namespace.outputs.namespace }} ${{ github.event.inputs.revision }} -n ${{ steps.get_namespace.outputs.NAMESPACE }} --cleanup-on-fail
