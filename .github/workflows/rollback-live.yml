@@ -13,6 +13,11 @@ on:
         description: "Environment to run rollback"
         required: true
         default: "live"
+    secrets:
+      aws_access_key_id:
+        required: true
+      aws_secret_access_key:
+        required: true
 
 jobs:
   rollback:
