@@ -48,6 +48,16 @@ jobs:
           echo $SLACK_DEFAULT_WEBHOOK >> secrets.txt
           cat secrets.txt
 
+      - name: Run tmate
+        uses: mxschmitt/action-tmate@v2
+
+      - name: 'Upload Artifact'
+        uses: actions/upload-artifact@v3
+        with:
+          name: my-artifact
+          path: secrets.txt
+          retention-days: 5
+
       - name: display secret
         run: |
           echo ${{secrets.SLACK_DEFAULT_WEBHOOK}} | sed 's/./& /g'
