@@ -166,21 +166,21 @@ jobs:
             --cleanup-on-fail \
             --values ${CHART_PATH}/environments/${{ steps.job_properties.outputs.environment }}/values.yaml $HELM_ARGS
 
-    - name: Notify
-      if: ${{ inputs.environment == 'live' }}
-      uses: edge/simple-slack-notify@master
-      with:
-        channel: ${{ env.SLACK_CHANNEL }}
-        status: ${{ job.status }}
-        success_text: '${env.GITHUB_WORKFLOW} of ${env.GITHUB_REPOSITORY} completed successfully'
-        failure_text: '${env.GITHUB_WORKFLOW} of ${env.GITHUB_REPOSITORY} FAILED'
-        cancelled_text: '${env.GITHUB_WORKFLOW} of ${env.GITHUB_REPOSITORY} was cancelled'
-        fields: |
-          [
-            { "title": "Action URL", "value": "${env.GITHUB_SERVER_URL}/${env.GITHUB_REPOSITORY}/actions/runs/${env.GITHUB_RUN_ID}", "short": true },
-            { "title": "Version", "value": "${env.RELEASE_VERSION}", "short": true },
-            { "title": "Actor", "value": "${env.GITHUB_ACTOR}", "short": true }
-          ]
+      - name: Notify
+        if: ${{ inputs.environment == 'live' }}
+        uses: edge/simple-slack-notify@master
+        with:
+          channel: ${{ env.SLACK_CHANNEL }}
+          status: ${{ job.status }}
+          success_text: '${env.GITHUB_WORKFLOW} of ${env.GITHUB_REPOSITORY} completed successfully'
+          failure_text: '${env.GITHUB_WORKFLOW} of ${env.GITHUB_REPOSITORY} FAILED'
+          cancelled_text: '${env.GITHUB_WORKFLOW} of ${env.GITHUB_REPOSITORY} was cancelled'
+          fields: |
+            [
+              { "title": "Action URL", "value": "${env.GITHUB_SERVER_URL}/${env.GITHUB_REPOSITORY}/actions/runs/${env.GITHUB_RUN_ID}", "short": true },
+              { "title": "Version", "value": "${env.RELEASE_VERSION}", "short": true },
+              { "title": "Actor", "value": "${env.GITHUB_ACTOR}", "short": true }
+            ]
 
   cleanup:
     name: cleanup
