@@ -24,7 +24,7 @@ on:
         required: true
 
 env:
-  SLACK_WEBHOOK_URL: ${{ secrets.SLACK_DEFAULT_WEBHOOK }}
+  SLACK_WEBHOOK_URL: ${{ secrets.slack_default_webhook }}
   SLACK_CHANNEL: '#qa-team'
   RELEASE_VERSION: ${{ inputs.image_tag }}
 
