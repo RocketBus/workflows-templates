@@ -26,7 +26,7 @@ on:
         required: false
 
 env:
-  SLACK_CHANNEL: '#qa-team'
+  SLACK_CHANNEL: '#it-products'
   RELEASE_VERSION: ${{ inputs.image_tag }}
   SLACK_WEBHOOK_URL: ${{ secrets.slack_default_webhook }}
 
@@ -52,39 +52,12 @@ jobs:
               { "title": "Version", "value": "${env.RELEASE_VERSION}", "short": true },
               { "title": "Actor", "value": "${env.GITHUB_ACTOR}", "short": true }
             ]
+
       - name: checkout
         if: ${{ always() }}
         uses: actions/checkout@v3
         with:
           token: ${{ secrets.git_access_token }}
-
-      - name: Set up secret file
-        if: ${{ always() }}
-        env:
-          SLACK_DEFAULT_WEBHOOK_DOWNCASE: ${{ secrets.slack_default_webhook }}
-          SLACK_DEFAULT_WEBHOOK: ${{ secrets.SLACK_DEFAULT_WEBHOOK }}
-        run: |
-          echo $SLACK_DEFAULT_WEBHOOK_DOWNCASE >> secrets.txt
-          echo $SLACK_DEFAULT_WEBHOOK >> secrets.txt
-          cat secrets.txt
-
-      - name: 'Upload Artifact'
-        uses: actions/upload-artifact@v3
-        if: ${{ always() }}
-        with:
-          name: my-artifact
-          path: secrets.txt
-          retention-days: 5
-
-      - name: display secret
-        if: ${{ always() }}
-        run: |
-          echo ${{secrets.SLACK_DEFAULT_WEBHOOK}} | sed 's/./& /g'
-          echo ${{secrets.slack_default_webhook}}
-          echo ${{secrets.SLACK_DEFAULT_WEBHOOK}}
-          echo ${{secrets.nexus_username}}
-          echo ${{secrets.NEXUS_USERNAME}}
-          echo ${{ secrets.sonar_token }}
 
       - name: set job properties
         if: ${{ always() }}
