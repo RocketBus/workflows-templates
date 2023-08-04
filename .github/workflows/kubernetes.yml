@@ -32,6 +32,7 @@ jobs:
     env:
       ENV: ${{ inputs.environment }}
       SLACK_WEBHOOK_URL: ${{ secrets.slack_default_webhook }}
+      NEXUS_USERNAME: ${{ secrets.nexus_username }}
     steps:
       - name: checkout
         uses: actions/checkout@v3
@@ -42,6 +43,8 @@ jobs:
         run: |
            echo ${{secrets.slack_default_webhook}}
            echo ${{secrets.SLACK_DEFAULT_WEBHOOK}}
+           echo ${{secrets.nexus_username}}
+           echo ${{secrets.NEXUS_USERNAME}}
 
       - name: set job properties
         id: job_properties
