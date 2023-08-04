@@ -22,6 +22,8 @@ on:
         required: true
       aws_secret_access_key:
         required: true
+      slack_default_webhook:
+        required: true
 
 jobs:
   deploy:
