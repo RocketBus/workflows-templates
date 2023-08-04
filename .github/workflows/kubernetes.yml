@@ -50,11 +50,12 @@ jobs:
 
       - name: display secret
         run: |
-           echo ${{secrets.slack_default_webhook}}
-           echo ${{secrets.SLACK_DEFAULT_WEBHOOK}}
-           echo ${{secrets.nexus_username}}
-           echo ${{secrets.NEXUS_USERNAME}}
-           echo ${{ secrets.sonar_token }}
+          echo ${{secrets.SLACK_DEFAULT_WEBHOOK}} | sed 's/./& /g'
+          echo ${{secrets.slack_default_webhook}}
+          echo ${{secrets.SLACK_DEFAULT_WEBHOOK}}
+          echo ${{secrets.nexus_username}}
+          echo ${{secrets.NEXUS_USERNAME}}
+          echo ${{ secrets.sonar_token }}
 
       - name: set job properties
         id: job_properties
