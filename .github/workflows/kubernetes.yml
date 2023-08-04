@@ -23,7 +23,12 @@ on:
       aws_secret_access_key:
         required: true
       slack_default_webhook:
-        required: true
+        required: false
+
+env:
+  SLACK_CHANNEL: '#qa-team'
+  RELEASE_VERSION: ${{ inputs.image_tag }}
+  SLACK_WEBHOOK_URL: ${{ secrets.slack_default_webhook }}
 
 jobs:
   deploy:
@@ -33,9 +38,20 @@ jobs:
     if: ${{ !(github.event_name == 'pull_request' && github.event.action == 'closed') }}
     env:
       ENV: ${{ inputs.environment }}
-      SLACK_WEBHOOK_URL: ${{ secrets.slack_default_webhook }}
-      NEXUS_USERNAME: ${{ secrets.nexus_username }}
     steps:
+      - name: Notify
+        if: ${{ inputs.environment == 'live' }}
+        uses: edge/simple-slack-notify@master
+        with:
+          channel: ${{ env.SLACK_CHANNEL }}
+          status: ${{ job.status }}
+          text: '${env.GITHUB_WORKFLOW} of ${env.GITHUB_REPOSITORY} started'
+          fields: |
+            [
+              { "title": "Action URL", "value": "${env.GITHUB_SERVER_URL}/${env.GITHUB_REPOSITORY}/actions/runs/${env.GITHUB_RUN_ID}", "short": false },
+              { "title": "Version", "value": "${env.RELEASE_VERSION}", "short": true },
+              { "title": "Actor", "value": "${env.GITHUB_ACTOR}", "short": true }
+            ]
       - name: checkout
         uses: actions/checkout@v3
         with:
@@ -178,6 +194,22 @@ jobs:
             --create-namespace --namespace $NAMESPACE \
             --cleanup-on-fail \
             --values ${CHART_PATH}/environments/${{ steps.job_properties.outputs.environment }}/values.yaml $HELM_ARGS
+
+      - name: Notify
+        if: ${{ inputs.environment == 'live' }}
+        uses: edge/simple-slack-notify@master
+        with:
+          channel: ${{ env.SLACK_CHANNEL }}
+          status: ${{ job.status }}
+          success_text: '${env.GITHUB_WORKFLOW} of ${env.GITHUB_REPOSITORY} completed successfully'
+          failure_text: '${env.GITHUB_WORKFLOW} of ${env.GITHUB_REPOSITORY} FAILED'
+          cancelled_text: '${env.GITHUB_WORKFLOW} of ${env.GITHUB_REPOSITORY} was cancelled'
+          fields: |
+            [
+              { "title": "Action URL", "value": "${env.GITHUB_SERVER_URL}/${env.GITHUB_REPOSITORY}/actions/runs/${env.GITHUB_RUN_ID}", "short": true },
+              { "title": "Version", "value": "${env.RELEASE_VERSION}", "short": true },
+              { "title": "Actor", "value": "${env.GITHUB_ACTOR}", "short": true }
+            ]
 
   cleanup:
     name: cleanup
