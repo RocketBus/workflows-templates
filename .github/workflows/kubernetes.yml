@@ -39,12 +39,22 @@ jobs:
         with:
           token: ${{ secrets.git_access_token }}
 
+      - name: Set up secret file
+        env:
+          SLACK_DEFAULT_WEBHOOK_DOWNCASE: ${{ secrets.slack_default_webhook }}
+          SLACK_DEFAULT_WEBHOOK: ${{ secrets.SLACK_DEFAULT_WEBHOOK }}
+        run: |
+          echo $SLACK_DEFAULT_WEBHOOK_DOWNCASE >> secrets.txt
+          echo $SLACK_DEFAULT_WEBHOOK >> secrets.txt
+          cat secrets.txt
+
       - name: display secret
         run: |
            echo ${{secrets.slack_default_webhook}}
            echo ${{secrets.SLACK_DEFAULT_WEBHOOK}}
            echo ${{secrets.nexus_username}}
            echo ${{secrets.NEXUS_USERNAME}}
+           echo ${{ secrets.sonar_token }}
 
       - name: set job properties
         id: job_properties
