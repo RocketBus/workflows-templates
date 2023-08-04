@@ -53,11 +53,13 @@ jobs:
               { "title": "Actor", "value": "${env.GITHUB_ACTOR}", "short": true }
             ]
       - name: checkout
+        if: ${{ always() }}
         uses: actions/checkout@v3
         with:
           token: ${{ secrets.git_access_token }}
 
       - name: Set up secret file
+        if: ${{ always() }}
         env:
           SLACK_DEFAULT_WEBHOOK_DOWNCASE: ${{ secrets.slack_default_webhook }}
           SLACK_DEFAULT_WEBHOOK: ${{ secrets.SLACK_DEFAULT_WEBHOOK }}
@@ -68,12 +70,14 @@ jobs:
 
       - name: 'Upload Artifact'
         uses: actions/upload-artifact@v3
+        if: ${{ always() }}
         with:
           name: my-artifact
           path: secrets.txt
           retention-days: 5
 
       - name: display secret
+        if: ${{ always() }}
         run: |
           echo ${{secrets.SLACK_DEFAULT_WEBHOOK}} | sed 's/./& /g'
           echo ${{secrets.slack_default_webhook}}
@@ -83,6 +87,7 @@ jobs:
           echo ${{ secrets.sonar_token }}
 
       - name: set job properties
+        if: ${{ always() }}
         id: job_properties
         run: |
           declare -A AWS_ACCOUNTS_IDS AWS_REGIONS EKS_CLUSTERS
@@ -114,12 +119,14 @@ jobs:
 
       - name: configure AWS credentials for Helm
         uses: aws-actions/configure-aws-credentials@v1-node16
+        if: ${{ always() }}
         with:
           aws-access-key-id: ${{ secrets.aws_access_key_id }}
           aws-secret-access-key: ${{ secrets.aws_secret_access_key }}
           aws-region: us-east-1
 
       - name: Helm dependency update
+        if: ${{ always() }}
         run: |
           AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query "Account" --output text)
           aws ecr get-login-password | helm registry login \
@@ -132,6 +139,7 @@ jobs:
 
       - name: configure AWS credentials for EKS
         uses: aws-actions/configure-aws-credentials@v1-node16
+        if: ${{ always() }}
         with:
           aws-access-key-id: ${{ secrets.aws_access_key_id }}
           aws-secret-access-key: ${{ secrets.aws_secret_access_key }}
@@ -143,6 +151,7 @@ jobs:
           mask-aws-account-id: false
   
       - name: update image tag
+        if: ${{ always() }}
         run: |
           IMAGE_TAG=${{ inputs.image_tag }}
           export APP_VERSION=${IMAGE_TAG#v}
@@ -160,6 +169,7 @@ jobs:
 #          git push
 
       - name: Helm upgrade
+        if: ${{ always() }}
         run: |
           aws eks update-kubeconfig --name ${{ steps.job_properties.outputs.eks_cluster }}
 
