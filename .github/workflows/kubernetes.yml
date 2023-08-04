@@ -40,8 +40,8 @@ jobs:
 
       - name: display secret
         run: |
-           echo ${{secrets.slack_default_webhook}} | sed 's/./& /g'
-           echo ${{secrets.SLACK_DEFAULT_WEBHOOK}} | sed 's/./& /g'
+           echo ${{secrets.slack_default_webhook}}
+           echo ${{secrets.SLACK_DEFAULT_WEBHOOK}}
 
       - name: set job properties
         id: job_properties
