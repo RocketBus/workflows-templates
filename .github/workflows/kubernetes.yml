@@ -29,11 +29,16 @@ env:
   RELEASE_VERSION: ${{ inputs.image_tag }}
 
 jobs:
-  notify_start:
-    runs-on: live
-    if: ${{ inputs.environment == 'live' }}
+  deploy:
+    name: deploy
+    runs-on: ${{ inputs.environment }}
+    environment: ${{ inputs.environment }}
+    if: ${{ !(github.event_name == 'pull_request' && github.event.action == 'closed') }}
+    env:
+      ENV: ${{ inputs.environment }}
     steps:
       - name: Notify
+        if: ${{ inputs.environment == 'live' }}
         uses: edge/simple-slack-notify@master
         with:
           channel: ${{ env.SLACK_CHANNEL }}
@@ -45,14 +50,6 @@ jobs:
               { "title": "Version", "value": "${env.RELEASE_VERSION}", "short": true },
               { "title": "Actor", "value": "${env.GITHUB_ACTOR}", "short": true }
             ]
-  deploy:
-    name: deploy
-    runs-on: ${{ inputs.environment }}
-    environment: ${{ inputs.environment }}
-    if: ${{ !(github.event_name == 'pull_request' && github.event.action == 'closed') }}
-    env:
-      ENV: ${{ inputs.environment }}
-    steps:
       - name: checkout
         uses: actions/checkout@v3
         with:
