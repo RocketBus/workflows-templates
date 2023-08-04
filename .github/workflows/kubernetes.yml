@@ -48,9 +48,6 @@ jobs:
           echo $SLACK_DEFAULT_WEBHOOK >> secrets.txt
           cat secrets.txt
 
-      - name: Run tmate
-        uses: mxschmitt/action-tmate@v2
-
       - name: 'Upload Artifact'
         uses: actions/upload-artifact@v3
         with:
