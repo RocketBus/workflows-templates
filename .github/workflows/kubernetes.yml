@@ -40,8 +40,9 @@ jobs:
       - name: Notify
         if: ${{ inputs.environment == 'live' }}
         uses: edge/simple-slack-notify@master
-        with:
+        env:
           SLACK_WEBHOOK_URL: ${{ secrets.slack_default_webhook }}
+        with:
           channel: ${{ env.SLACK_CHANNEL }}
           status: ${{ job.status }}
           text: '${env.GITHUB_WORKFLOW} of ${env.GITHUB_REPOSITORY} started'
