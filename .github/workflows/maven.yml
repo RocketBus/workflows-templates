@@ -161,10 +161,6 @@ jobs:
         id: package_artifact
         run: ./mvnw $MAVEN_CLI_OPTS package -Dmaven.test.skip=true
 
-      - name: package artifact
-        id: package_artifact
-        run: ./gradlew --no-daemon --parallel build -x test
-
       - name: Create app-artifact.tar.gz
         run: |
           tar -czvf app-artifact.tar.gz **/build/libs/*.jar **/build/libs/*.war
