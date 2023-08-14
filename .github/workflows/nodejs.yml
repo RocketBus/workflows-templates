@@ -39,6 +39,30 @@ env:
   NODE_OPTIONS: "--max_old_space_size=4096"
 
 jobs:
+  job_properties:
+    name: job properties
+    runs-on: live
+    outputs:
+      namespace: ${{ steps.job_properties.outputs.namespace }}
+      aws_region: ${{ steps.job_properties.outputs.aws_region }}
+      aws_iam_role: ${{ steps.job_properties.outputs.aws_iam_role }}
+    steps:
+      - name: set job properties
+        id: job_properties
+        run: |
+          declare -A AWS_ACCOUNTS_IDS AWS_REGIONS
+          
+          AWS_ACCOUNTS_IDS=([dev]=180811438061 [stg]=406026015868 [live]=114395709799)
+          AWS_REGIONS=([dev]=us-east-2 [stg]=us-east-2 [live]=us-east-1)
+          
+          AWS_ACCOUNT_ID=${AWS_ACCOUNTS_IDS[$ENV]}
+          AWS_REGION=${AWS_REGIONS[$ENV]}          
+          NAMESPACE=$(ls charts)
+
+          echo "namespace=$NAMESPACE" >> $GITHUB_OUTPUT
+          echo "aws_region=$AWS_REGION" >> $GITHUB_OUTPUT
+          echo "aws_iam_role=arn:aws:iam::${AWS_ACCOUNT_ID}:role/CrossAccount-Global-Admin" >> $GITHUB_OUTPUT
+
   lint:
     name: lint
     runs-on: ${{ inputs.environment }}
@@ -83,6 +107,8 @@ jobs:
   unit_tests:
     name: unit tests
     runs-on: ${{ inputs.environment }}
+    needs:
+      - job_properties
     if: ${{ (github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'tag') }}
     steps:
       - name: checkout
@@ -121,11 +147,19 @@ jobs:
             yarn run test
           fi
 
-      - name: archive unit tests report
-        uses: actions/upload-artifact@v3
+      - name: Create unit-tests-report.tar.gz
+        run: |
+          tar -czvf unit-tests-report.tar.gz coverage/
+
+      - name: Archive Application Artifact
+        uses: RocketBus/actions/.github/actions/utils/s3-artifact-upload@acme-3879
         with:
-          name: unit-tests-report
-          path: coverage/
+          name: unit-tests-report-${{needs.job_properties.outputs.namespace}}-${{ github.run_id }}.tar.gz
+          paths: 'unit-tests-report.tar.gz'
+          bucket_region: ${{needs.job_properties.outputs.aws_region}}
+          bucket_name: ${{ needs.job_properties.outputs.namespace }}
+          actions_iam_role: ${{ needs.job_properties.outputs.aws_iam_role }}
+
 
   integration_tests:
     name: integration tests
@@ -200,6 +234,7 @@ jobs:
     name: sonarqube
     runs-on: ${{ inputs.environment }}
     needs:
+      - job_properties
       - lint
       - unit_tests
       - integration_tests
@@ -233,10 +268,13 @@ jobs:
             yarn install --frozen-lockfile
           fi
 
-      - name: download unit tests report
-        uses: actions/download-artifact@v3
+      - name: Download Application Artifact
+        uses: RocketBus/actions/.github/actions/utils/s3-artifact-download@acme-3879
         with:
-          name: unit-tests-report
+          name: unit-tests-report-${{needs.job_properties.outputs.namespace}}-${{ github.run_id }}
+          bucket_region: ${{needs.job_properties.outputs.aws_region}}
+          bucket_name: ${{ needs.job_properties.outputs.namespace }}
+          actions_iam_role: ${{ needs.job_properties.outputs.aws_iam_role }}
           path: coverage
 
       - name: set sonar parameters
@@ -267,6 +305,7 @@ jobs:
     name: package
     runs-on: ${{ inputs.environment }}
     needs:
+      - job_properties
       - sonarqube
     if: ${{ !inputs.package_disabled && ((github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'tag')) }}
     steps:
@@ -312,13 +351,18 @@ jobs:
             yarn run build${NODE_ENV_SCRIPT:+:$NODE_ENV_SCRIPT}
           fi
 
-      - name: archive artifact
-        uses: actions/upload-artifact@v3
+      - name: Create unit-tests-report.tar.gz
+        run: |
+          tar -czvf unit-tests-report.tar.gz dist/ build/
+
+      - name: Archive Application Artifact
+        uses: RocketBus/actions/.github/actions/utils/s3-artifact-upload@acme-3879
         with:
-          name: app-artifact
-          path: |
-            dist/
-            build/
+          name: unit-tests-report-${{needs.job_properties.outputs.namespace}}-${{ github.run_id }}.tar.gz
+          paths: 'unit-tests-report.tar.gz'
+          bucket_region: ${{needs.job_properties.outputs.aws_region}}
+          bucket_name: ${{ needs.job_properties.outputs.namespace }}
+          actions_iam_role: ${{ needs.job_properties.outputs.aws_iam_role }}
 
   release:
     name: release
