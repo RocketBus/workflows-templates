@@ -71,11 +71,20 @@ jobs:
       - name: checkout
         uses: actions/checkout@v3
 
-      - name: download artifact
-        uses: actions/download-artifact@v3
+      - name: get namespace
+        id: get_namespace
+        run: |          
+          NAMESPACE=$(ls charts)
+          echo "namespace=$NAMESPACE" >> $GITHUB_OUTPUT
+
+      - name: Download Application Artifact
+        uses: RocketBus/actions/.github/actions/utils/s3-artifact-download@acme-3879
         continue-on-error: true
         with:
-          name: app-artifact
+          name: ${{ steps.get_namespace.outputs.namespace }}-${{ github.run_id }}
+          bucket_region: ${{ vars.ARTIFACTS_BUCKET_REGION }}
+          bucket_name: ${{ vars.ARTIFACTS_BUCKET_NAME }}
+          actions_iam_role: ${{ vars.ACTIONS_IAM_ROLE }}
 
       - name: unzip tar.gz artifact
         run: |

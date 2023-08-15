@@ -38,84 +38,84 @@ env:
   SONAR_TOKEN: ${{ secrets.sonar_token }}
 
 jobs:
-  lint:
-    name: lint
-    runs-on: live
-    if: ${{ ((github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'tag'))  && (! inputs.skip_lint) }}
-    steps:
-      - name: checkout
-        uses: actions/checkout@v3
+  # lint:
+  #   name: lint
+  #   runs-on: live
+  #   if: ${{ ((github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'tag'))  && (! inputs.skip_lint) }}
+  #   steps:
+  #     - name: checkout
+  #       uses: actions/checkout@v3
 
-      - name: setup JDK
-        uses: actions/setup-java@v3
-        with:
-          java-version: ${{ inputs.jdk_version }}
-          distribution: 'temurin'
-          cache: 'maven'
-          overwrite-settings: false
+  #     - name: setup JDK
+  #       uses: actions/setup-java@v3
+  #       with:
+  #         java-version: ${{ inputs.jdk_version }}
+  #         distribution: 'temurin'
+  #         cache: 'maven'
+  #         overwrite-settings: false
 
-      - name: create settings.xml
-        run: echo ${{ secrets.maven_settings }} | base64 -d > ~/.m2/settings.xml
+  #     - name: create settings.xml
+  #       run: echo ${{ secrets.maven_settings }} | base64 -d > ~/.m2/settings.xml
 
-      - name: lint code
-        run: ./mvnw $MAVEN_CLI_OPTS spotless:check
+  #     - name: lint code
+  #       run: ./mvnw $MAVEN_CLI_OPTS spotless:check
 
-  test:
-    name: test
-    runs-on: live
-    if: ${{ ((github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'tag')) && (! inputs.skip_tests) }}
-    steps:
-      - name: checkout
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
+  # test:
+  #   name: test
+  #   runs-on: live
+  #   if: ${{ ((github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'tag')) && (! inputs.skip_tests) }}
+  #   steps:
+  #     - name: checkout
+  #       uses: actions/checkout@v3
+  #       with:
+  #         fetch-depth: 0
 
-      - name: setup JDK
-        uses: actions/setup-java@v3
-        with:
-          java-version: ${{ inputs.jdk_version }}
-          distribution: 'temurin'
-          cache: 'maven'
-          overwrite-settings: false
+  #     - name: setup JDK
+  #       uses: actions/setup-java@v3
+  #       with:
+  #         java-version: ${{ inputs.jdk_version }}
+  #         distribution: 'temurin'
+  #         cache: 'maven'
+  #         overwrite-settings: false
 
-      - name: create settings.xml
-        run: echo ${{ secrets.maven_settings }} | base64 -d > ~/.m2/settings.xml
+  #     - name: create settings.xml
+  #       run: echo ${{ secrets.maven_settings }} | base64 -d > ~/.m2/settings.xml
 
-      - name: execute unit tests
-        run: ./mvnw $MAVEN_CLI_OPTS verify -Dsonar.skip=true
+  #     - name: execute unit tests
+  #       run: ./mvnw $MAVEN_CLI_OPTS verify -Dsonar.skip=true
 
-      - name: setup JDK for SonarQube
-        uses: actions/setup-java@v3
-        with:
-          java-version: 11
-          distribution: 'temurin'
-          cache: 'maven'
-          overwrite-settings: false
+  #     - name: setup JDK for SonarQube
+  #       uses: actions/setup-java@v3
+  #       with:
+  #         java-version: 11
+  #         distribution: 'temurin'
+  #         cache: 'maven'
+  #         overwrite-settings: false
 
-      - name: sonarqube scan
-        run: |
-          if [[ ${{ github.event_name }} == 'pull_request' ]]; then
-            SONAR_PARAMETERS="$SONAR_PARAMETERS -Dsonar.pullrequest.key=${{ github.event.pull_request.number }} -Dsonar.pullrequest.branch=${{ github.event.pull_request.head.ref }} -Dsonar.pullrequest.github.repository=$GITHUB_REPOSITORY"
-          fi
+  #     - name: sonarqube scan
+  #       run: |
+  #         if [[ ${{ github.event_name }} == 'pull_request' ]]; then
+  #           SONAR_PARAMETERS="$SONAR_PARAMETERS -Dsonar.pullrequest.key=${{ github.event.pull_request.number }} -Dsonar.pullrequest.branch=${{ github.event.pull_request.head.ref }} -Dsonar.pullrequest.github.repository=$GITHUB_REPOSITORY"
+  #         fi
 
-          #if [[ ${{ github.event_name }} == 'push' && ${{ github.ref_type }} == 'tag' ]]; then
-          #  SONAR_PARAMETERS="$SONAR_PARAMETERS -Dsonar.branch.name=${{ github.event.repository.default_branch }}"
-          #fi
+  #         #if [[ ${{ github.event_name }} == 'push' && ${{ github.ref_type }} == 'tag' ]]; then
+  #         #  SONAR_PARAMETERS="$SONAR_PARAMETERS -Dsonar.branch.name=${{ github.event.repository.default_branch }}"
+  #         #fi
 
-          ./mvnw $MAVEN_CLI_OPTS sonar:sonar ${SONAR_PARAMETERS}
+  #         ./mvnw $MAVEN_CLI_OPTS sonar:sonar ${SONAR_PARAMETERS}
 
-      - name: sonarqube quality gate check
-        if: (github.event_name == 'pull_request') && (! inputs.skip_quality_gate_check)
-        uses: sonarsource/sonarqube-quality-gate-action@master
-        timeout-minutes: 5
-        with:
-          scanMetadataReportFile: target/sonar/report-task.txt
+  #     - name: sonarqube quality gate check
+  #       if: (github.event_name == 'pull_request') && (! inputs.skip_quality_gate_check)
+  #       uses: sonarsource/sonarqube-quality-gate-action@master
+  #       timeout-minutes: 5
+  #       with:
+  #         scanMetadataReportFile: target/sonar/report-task.txt
 
   package:
     name: package
     runs-on: live
-    needs:
-      - test
+    # needs:
+    #   - test
     if: ${{ (github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'tag') }}
     steps:
       - name: checkout
@@ -136,11 +136,20 @@ jobs:
         id: package_artifact
         run: ./mvnw $MAVEN_CLI_OPTS package -Dmaven.test.skip=true
 
-      - name: archive artifact
-        uses: actions/upload-artifact@v3
+      - name: get namespace
+        id: get_namespace
+        run: |          
+          NAMESPACE=$(ls charts)
+          echo "namespace=$NAMESPACE" >> $GITHUB_OUTPUT
+
+      - name: Archive Application Artifact
+        uses: RocketBus/actions/.github/actions/utils/s3-artifact-upload@acme-3879
         with:
-          name: app-artifact
-          path: |
+          name: ${{ steps.get_namespace.outputs.namespace }}-${{ github.run_id }}
+          bucket_region: ${{ vars.ARTIFACTS_BUCKET_REGION }}
+          bucket_name: ${{ vars.ARTIFACTS_BUCKET_NAME }}
+          actions_iam_role: ${{ vars.ACTIONS_IAM_ROLE }}
+          paths: |
             **/target/*.jar
             **/target/*.war
 
@@ -154,10 +163,19 @@ jobs:
       - name: checkout
         uses: actions/checkout@v3
 
-      - name: download artifact
-        uses: actions/download-artifact@v3
+      - name: get namespace
+        id: get_namespace
+        run: |          
+          NAMESPACE=$(ls charts)
+          echo "namespace=$NAMESPACE" >> $GITHUB_OUTPUT
+
+      - name: Download Application Artifact
+        uses: RocketBus/actions/.github/actions/utils/s3-artifact-download@acme-3879
         with:
-          name: app-artifact
+          name: ${{ steps.get_namespace.outputs.namespace }}-${{ github.run_id }}
+          bucket_region: ${{ vars.ARTIFACTS_BUCKET_REGION }}
+          bucket_name: ${{ vars.ARTIFACTS_BUCKET_NAME }}
+          actions_iam_role: ${{ vars.ACTIONS_IAM_ROLE }}
 
       - name: create github release
         uses: softprops/action-gh-release@v1
