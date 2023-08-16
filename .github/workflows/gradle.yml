@@ -70,10 +70,13 @@ jobs:
       - name: execute unit tests
         run: ./gradlew --no-daemon --parallel test jacocoTestReport
 
-      - name: archive unit tests report
-        uses: actions/upload-artifact@v3
+      - name: Archive Application Artifact
+        uses: RocketBus/actions/.github/actions/utils/s3-artifact-upload@acme-3879
         with:
           name: unit-tests-report
+          bucket_region: ${{ vars.ARTIFACTS_BUCKET_REGION }}
+          bucket_name: ${{ vars.ARTIFACTS_BUCKET_NAME }}
+          actions_iam_role: ${{ vars.ACTIONS_IAM_ROLE }}
           path: |
             **/build/reports/jacoco/jacocoTestReport
 
@@ -121,10 +124,13 @@ jobs:
           cache: 'gradle'
           overwrite-settings: false
 
-      - name: download unit tests report
-        uses: actions/download-artifact@v3
+      - name: Download Application Artifact
+        uses: RocketBus/actions/.github/actions/utils/s3-artifact-download@acme-3879
         with:
           name: unit-tests-report
+          bucket_region: ${{ vars.ARTIFACTS_BUCKET_REGION }}
+          bucket_name: ${{ vars.ARTIFACTS_BUCKET_NAME }}
+          actions_iam_role: ${{ vars.ACTIONS_IAM_ROLE }}
 
       - name: sonarqube scan
         env:
@@ -174,10 +180,13 @@ jobs:
         id: package_artifact
         run: ./gradlew --no-daemon --parallel build -x test
 
-      - name: archive artifact
-        uses: actions/upload-artifact@v3
+      - name: Archive Application Artifact
+        uses: RocketBus/actions/.github/actions/utils/s3-artifact-upload@acme-3879
         with:
-          name: app-artifact
+          name: app_artifact
+          bucket_region: ${{ vars.ARTIFACTS_BUCKET_REGION }}
+          bucket_name: ${{ vars.ARTIFACTS_BUCKET_NAME }}
+          actions_iam_role: ${{ vars.ACTIONS_IAM_ROLE }}
           path: |
             **/build/libs/*.jar
             **/build/libs/*.war
@@ -192,10 +201,13 @@ jobs:
       - name: checkout
         uses: actions/checkout@v3
 
-      - name: download artifact
-        uses: actions/download-artifact@v3
+      - name: Download Application Artifact
+        uses: RocketBus/actions/.github/actions/utils/s3-artifact-download@acme-3879
         with:
-          name: app-artifact
+          name: app_artifact
+          bucket_region: ${{ vars.ARTIFACTS_BUCKET_REGION }}
+          bucket_name: ${{ vars.ARTIFACTS_BUCKET_NAME }}
+          actions_iam_role: ${{ vars.ACTIONS_IAM_ROLE }}
 
       - name: create github release
         uses: softprops/action-gh-release@v1

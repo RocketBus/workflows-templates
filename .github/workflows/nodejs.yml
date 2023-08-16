@@ -121,11 +121,16 @@ jobs:
             yarn run test
           fi
 
-      - name: archive unit tests report
-        uses: actions/upload-artifact@v3
+      - name: Archive Application Artifact
+        uses: RocketBus/actions/.github/actions/utils/s3-artifact-upload@acme-3879
         with:
           name: unit-tests-report
-          path: coverage/
+          bucket_region: ${{ vars.ARTIFACTS_BUCKET_REGION }}
+          bucket_name: ${{ vars.ARTIFACTS_BUCKET_NAME }}
+          actions_iam_role: ${{ vars.ACTIONS_IAM_ROLE }}
+          paths: |
+            coverage/
+
 
   integration_tests:
     name: integration tests
@@ -233,10 +238,13 @@ jobs:
             yarn install --frozen-lockfile
           fi
 
-      - name: download unit tests report
-        uses: actions/download-artifact@v3
+      - name: Download Application Artifact
+        uses: RocketBus/actions/.github/actions/utils/s3-artifact-download@acme-3879
         with:
           name: unit-tests-report
+          bucket_region: ${{ vars.ARTIFACTS_BUCKET_REGION }}
+          bucket_name: ${{ vars.ARTIFACTS_BUCKET_NAME }}
+          actions_iam_role: ${{ vars.ACTIONS_IAM_ROLE }}
           path: coverage
 
       - name: set sonar parameters
@@ -312,10 +320,13 @@ jobs:
             yarn run build${NODE_ENV_SCRIPT:+:$NODE_ENV_SCRIPT}
           fi
 
-      - name: archive artifact
-        uses: actions/upload-artifact@v3
+      - name: Archive Application Artifact
+        uses: RocketBus/actions/.github/actions/utils/s3-artifact-upload@acme-3879
         with:
-          name: app-artifact
+          name: app_artifact
+          bucket_region: ${{ vars.ARTIFACTS_BUCKET_REGION }}
+          bucket_name: ${{ vars.ARTIFACTS_BUCKET_NAME }}
+          actions_iam_role: ${{ vars.ACTIONS_IAM_ROLE }}
           path: |
             dist/
             build/
