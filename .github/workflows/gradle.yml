@@ -74,6 +74,12 @@ jobs:
       - name: execute unit tests
         run: ./gradlew --no-daemon --parallel test jacocoTestReport
 
+      - name: List directory contents
+        run: ls -la build/reports/jacoco/jacocoTestReport
+
+      - name: List directory contents
+        run: ls build/reports/jacoco
+
       - name: Archive Application Artifact
         uses: RocketBus/actions/.github/actions/utils/s3-artifact-upload@acme-3879
         with:
