@@ -331,7 +331,7 @@ jobs:
           bucket_region: ${{ vars.ARTIFACTS_BUCKET_REGION }}
           bucket_name: ${{ vars.ARTIFACTS_BUCKET_NAME }}
           actions_iam_role: ${{ vars.ACTIONS_IAM_ROLE }}
-          path: |
+          paths: |
             dist/
             build/
 
