@@ -143,7 +143,7 @@ jobs:
       - name: Archive Application Artifact
         uses: RocketBus/actions/.github/actions/utils/s3-artifact-upload@acme-3879
         with:
-          name: app_artifact
+          name: app-artifact
           bucket_region: ${{ vars.ARTIFACTS_BUCKET_REGION }}
           bucket_name: ${{ vars.ARTIFACTS_BUCKET_NAME }}
           actions_iam_role: ${{ vars.ACTIONS_IAM_ROLE }}
@@ -164,7 +164,7 @@ jobs:
       - name: Download Application Artifact
         uses: RocketBus/actions/.github/actions/utils/s3-artifact-download@acme-3879
         with:
-          name: app_artifact
+          name: app-artifact
           bucket_region: ${{ vars.ARTIFACTS_BUCKET_REGION }}
           bucket_name: ${{ vars.ARTIFACTS_BUCKET_NAME }}
           actions_iam_role: ${{ vars.ACTIONS_IAM_ROLE }}
