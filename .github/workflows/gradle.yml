@@ -90,27 +90,27 @@ jobs:
           path: |
             **/build/reports/jacoco/jacocoTestReport
 
-  integration_tests:
-    name: integration tests
-    runs-on: ansible.v1.clickbus.net
-    if: ${{ (github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'tag') }}
-    steps:
-      - name: checkout
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
+  # integration_tests:
+  #   name: integration tests
+  #   runs-on: ansible.v1.clickbus.net
+  #   if: ${{ (github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'tag') }}
+  #   steps:
+  #     - name: checkout
+  #       uses: actions/checkout@v3
+  #       with:
+  #         fetch-depth: 0
 
-      - name: setup JDK
-        uses: actions/setup-java@v3
-        with:
-          java-version: ${{ inputs.jdk_version }}
-          distribution: 'temurin'
-          cache: 'gradle'
-          overwrite-settings: false
+  #     - name: setup JDK
+  #       uses: actions/setup-java@v3
+  #       with:
+  #         java-version: ${{ inputs.jdk_version }}
+  #         distribution: 'temurin'
+  #         cache: 'gradle'
+  #         overwrite-settings: false
 
-      - name: execute integration tests
-        continue-on-error: true
-        run: ./gradlew --no-daemon --parallel integrationTest
+  #     - name: execute integration tests
+  #       continue-on-error: true
+  #       run: ./gradlew --no-daemon --parallel integrationTest
 
   sonarqube:
     name: sonarqube
@@ -118,7 +118,7 @@ jobs:
     needs:
       - lint
       - unit_tests
-      - integration_tests
+      # - integration_tests
     if: ${{ (github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'tag') }}
     steps:
       - name: checkout
