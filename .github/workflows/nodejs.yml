@@ -125,6 +125,12 @@ jobs:
             yarn run test
           fi
 
+      - name: List directory contents
+        run: ls -la
+
+      - name: List directory contents
+        run: ls -la coverage/
+
       - name: Archive Application Artifact
         uses: RocketBus/actions/.github/actions/utils/s3-artifact-upload@acme-3879
         with:
