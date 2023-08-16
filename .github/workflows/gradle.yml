@@ -26,6 +26,10 @@ env:
   SONAR_HOST_URL: "https://sonar.clickbus.net"
   SONAR_TOKEN: ${{ secrets.sonar_token }}
 
+permissions:
+  id-token: write
+  contents: read
+
 jobs:
   lint:
     name: lint

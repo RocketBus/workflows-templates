@@ -38,6 +38,10 @@ env:
   SONAR_TOKEN: ${{ secrets.sonar_token }}
   NODE_OPTIONS: "--max_old_space_size=4096"
 
+permissions:
+  id-token: write
+  contents: read
+
 jobs:
   lint:
     name: lint
