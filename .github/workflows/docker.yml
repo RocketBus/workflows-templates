@@ -85,7 +85,7 @@ jobs:
         uses: RocketBus/actions/.github/actions/utils/s3-artifact-download@acme-3879
         continue-on-error: true
         with:
-          name: ${{ steps.get_namespace.outputs.namespace }}-${{ github.run_id }}
+          name: app_artifact
           bucket_region: ${{ vars.ARTIFACTS_BUCKET_REGION }}
           bucket_name: ${{ vars.ARTIFACTS_BUCKET_NAME }}
           actions_iam_role: ${{ vars.ACTIONS_IAM_ROLE }}
