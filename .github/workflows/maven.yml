@@ -140,8 +140,8 @@ jobs:
         id: package_artifact
         run: ./mvnw $MAVEN_CLI_OPTS package -Dmaven.test.skip=true
 
-      - name: Archive Application Artifact
-        uses: RocketBus/actions/.github/actions/utils/s3-artifact-upload@acme-3879
+      - name: archive artifact
+        uses: RocketBus/actions/.github/actions/utils/s3-artifact-upload@v1
         with:
           name: app-artifact
           bucket_region: ${{ vars.ARTIFACTS_BUCKET_REGION }}
@@ -161,7 +161,7 @@ jobs:
       - name: checkout
         uses: actions/checkout@v3
 
-      - name: Download Application Artifact
+      - name: download artifact
         uses: RocketBus/actions/.github/actions/utils/s3-artifact-download@v1
         with:
           name: app-artifact

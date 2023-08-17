@@ -75,13 +75,7 @@ jobs:
       - name: checkout
         uses: actions/checkout@v3
 
-      - name: get namespace
-        id: get_namespace
-        run: |          
-          NAMESPACE=$(ls charts)
-          echo "namespace=$NAMESPACE" >> $GITHUB_OUTPUT
-
-      - name: Download Application Artifact
+      - name: download artifact
         uses: RocketBus/actions/.github/actions/utils/s3-artifact-download@v1
         continue-on-error: true
         with:

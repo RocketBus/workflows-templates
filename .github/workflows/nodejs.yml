@@ -125,8 +125,8 @@ jobs:
             yarn run test
           fi
 
-      - name: Archive Application Artifact
-        uses: RocketBus/actions/.github/actions/utils/s3-artifact-upload@acme-3879
+      - name: archive artifact
+        uses: RocketBus/actions/.github/actions/utils/s3-artifact-upload@v1
         with:
           name: unit-tests-report
           bucket_region: ${{ vars.ARTIFACTS_BUCKET_REGION }}
@@ -242,8 +242,8 @@ jobs:
             yarn install --frozen-lockfile
           fi
 
-      - name: Download Application Artifact
-        uses: RocketBus/actions/.github/actions/utils/s3-artifact-download@acme-3879
+      - name: download artifact
+        uses: RocketBus/actions/.github/actions/utils/s3-artifact-download@v1
         with:
           name: unit-tests-report
           bucket_region: ${{ vars.ARTIFACTS_BUCKET_REGION }}
@@ -324,8 +324,8 @@ jobs:
             yarn run build${NODE_ENV_SCRIPT:+:$NODE_ENV_SCRIPT}
           fi
 
-      - name: Archive Application Artifact
-        uses: RocketBus/actions/.github/actions/utils/s3-artifact-upload@acme-3879
+      - name: archive artifact
+        uses: RocketBus/actions/.github/actions/utils/s3-artifact-upload@v1
         with:
           name: app-artifact
           bucket_region: ${{ vars.ARTIFACTS_BUCKET_REGION }}

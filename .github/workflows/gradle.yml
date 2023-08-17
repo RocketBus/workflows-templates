@@ -74,14 +74,8 @@ jobs:
       - name: execute unit tests
         run: ./gradlew --no-daemon --parallel test jacocoTestReport
 
-      - name: List directory contents
-        run: ls -la build/reports/jacoco/jacocoTestReport
-
-      - name: List directory contents
-        run: ls build/reports/jacoco
-
-      - name: Archive Application Artifact
-        uses: RocketBus/actions/.github/actions/utils/s3-artifact-upload@acme-3879
+      - name: archive artifact
+        uses: RocketBus/actions/.github/actions/utils/s3-artifact-upload@v1
         with:
           name: unit-tests-report
           bucket_region: ${{ vars.ARTIFACTS_BUCKET_REGION }}
@@ -134,7 +128,7 @@ jobs:
           cache: 'gradle'
           overwrite-settings: false
 
-      - name: Download Application Artifact
+      - name: download artifact
         uses: RocketBus/actions/.github/actions/utils/s3-artifact-download@v1
         with:
           name: unit-tests-report
@@ -190,8 +184,8 @@ jobs:
         id: package_artifact
         run: ./gradlew --no-daemon --parallel build -x test
 
-      - name: Archive Application Artifact
-        uses: RocketBus/actions/.github/actions/utils/s3-artifact-upload@acme-3879
+      - name: archive artifact
+        uses: RocketBus/actions/.github/actions/utils/s3-artifact-upload@v1
         with:
           name: app-artifact
           bucket_region: ${{ vars.ARTIFACTS_BUCKET_REGION }}
@@ -211,7 +205,7 @@ jobs:
       - name: checkout
         uses: actions/checkout@v3
 
-      - name: Download Application Artifact
+      - name: download artifact
         uses: RocketBus/actions/.github/actions/utils/s3-artifact-download@v1
         with:
           name: app-artifact
