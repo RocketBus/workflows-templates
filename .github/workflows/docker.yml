@@ -82,7 +82,7 @@ jobs:
           echo "namespace=$NAMESPACE" >> $GITHUB_OUTPUT
 
       - name: Download Application Artifact
-        uses: RocketBus/actions/.github/actions/utils/s3-artifact-download@acme-3879
+        uses: RocketBus/actions/.github/actions/utils/s3-artifact-download@v1
         continue-on-error: true
         with:
           name: app-artifact
