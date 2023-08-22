@@ -37,6 +37,10 @@ env:
   SONAR_HOST_URL: "https://sonar.clickbus.net"
   SONAR_TOKEN: ${{ secrets.sonar_token }}
 
+permissions:
+  id-token: write
+  contents: read
+
 jobs:
   lint:
     name: lint
@@ -137,10 +141,13 @@ jobs:
         run: ./mvnw $MAVEN_CLI_OPTS package -Dmaven.test.skip=true
 
       - name: archive artifact
-        uses: actions/upload-artifact@v3
+        uses: RocketBus/actions/.github/actions/utils/s3-artifact-upload@v1
         with:
           name: app-artifact
-          path: |
+          bucket_region: ${{ vars.ARTIFACTS_BUCKET_REGION }}
+          bucket_name: ${{ vars.ARTIFACTS_BUCKET_NAME }}
+          actions_iam_role: ${{ vars.ACTIONS_IAM_ROLE }}
+          paths: |
             **/target/*.jar
             **/target/*.war
 
@@ -155,9 +162,12 @@ jobs:
         uses: actions/checkout@v3
 
       - name: download artifact
-        uses: actions/download-artifact@v3
+        uses: RocketBus/actions/.github/actions/utils/s3-artifact-download@v1
         with:
           name: app-artifact
+          bucket_region: ${{ vars.ARTIFACTS_BUCKET_REGION }}
+          bucket_name: ${{ vars.ARTIFACTS_BUCKET_NAME }}
+          actions_iam_role: ${{ vars.ACTIONS_IAM_ROLE }}
 
       - name: create github release
         uses: softprops/action-gh-release@v1

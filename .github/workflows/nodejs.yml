@@ -38,6 +38,10 @@ env:
   SONAR_TOKEN: ${{ secrets.sonar_token }}
   NODE_OPTIONS: "--max_old_space_size=4096"
 
+permissions:
+  id-token: write
+  contents: read
+
 jobs:
   lint:
     name: lint
@@ -121,11 +125,16 @@ jobs:
             yarn run test
           fi
 
-      - name: archive unit tests report
-        uses: actions/upload-artifact@v3
+      - name: archive artifact
+        uses: RocketBus/actions/.github/actions/utils/s3-artifact-upload@v1
         with:
           name: unit-tests-report
-          path: coverage/
+          bucket_region: ${{ vars.ARTIFACTS_BUCKET_REGION }}
+          bucket_name: ${{ vars.ARTIFACTS_BUCKET_NAME }}
+          actions_iam_role: ${{ vars.ACTIONS_IAM_ROLE }}
+          paths: |
+            coverage/
+
 
   integration_tests:
     name: integration tests
@@ -233,10 +242,13 @@ jobs:
             yarn install --frozen-lockfile
           fi
 
-      - name: download unit tests report
-        uses: actions/download-artifact@v3
+      - name: download artifact
+        uses: RocketBus/actions/.github/actions/utils/s3-artifact-download@v1
         with:
           name: unit-tests-report
+          bucket_region: ${{ vars.ARTIFACTS_BUCKET_REGION }}
+          bucket_name: ${{ vars.ARTIFACTS_BUCKET_NAME }}
+          actions_iam_role: ${{ vars.ACTIONS_IAM_ROLE }}
           path: coverage
 
       - name: set sonar parameters
@@ -313,10 +325,13 @@ jobs:
           fi
 
       - name: archive artifact
-        uses: actions/upload-artifact@v3
+        uses: RocketBus/actions/.github/actions/utils/s3-artifact-upload@v1
         with:
           name: app-artifact
-          path: |
+          bucket_region: ${{ vars.ARTIFACTS_BUCKET_REGION }}
+          bucket_name: ${{ vars.ARTIFACTS_BUCKET_NAME }}
+          actions_iam_role: ${{ vars.ACTIONS_IAM_ROLE }}
+          paths: |
             dist/
             build/
 
