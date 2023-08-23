@@ -41,7 +41,7 @@ env:
 
 jobs:
   build:
-    runs-on: ${{ inputs.env }}
+    runs-on:  actions-runner-set
     outputs:
       aws_account_id: ${{ steps.env.outputs.aws_account_id }}
       aws_region: ${{ steps.env.outputs.aws_region }}
@@ -161,7 +161,7 @@ jobs:
 
   test:
     if: ${{ needs.build.outputs.tests_avaliable != '[""]' && (! inputs.skip_tests) }}
-    runs-on: ${{ inputs.env }}
+    runs-on:  actions-runner-set
     needs:
       - build
     strategy:
@@ -190,7 +190,7 @@ jobs:
 
   release:
     if: ${{ always() && needs.build.result == 'success' }}
-    runs-on: ${{ inputs.env }}
+    runs-on:  actions-runner-set
     needs:
       - build
       - test
