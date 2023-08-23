@@ -29,7 +29,7 @@ env:
 jobs:
   deploy:
     if: ${{ ! inputs.destroy }}
-    runs-on:  actions-runner-set
+    runs-on: ${{ inputs.env }}
     environment: ${{ inputs.env }}
     steps:
       - uses: actions/checkout@v3
@@ -150,7 +150,7 @@ jobs:
 
   destroy:
     if: ${{ inputs.destroy }}
-    runs-on:  actions-runner-set
+    runs-on: ${{ inputs.env }}
     environment: ${{ inputs.env }}
     steps:
       - uses: actions/checkout@v3
