@@ -38,7 +38,7 @@ env:
   SONAR_TOKEN: ${{ secrets.sonar_token }}
   AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
   AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-  AWS_PROFILE: "clickbus-dev"
+  AWS_REGION: "us-east-1" 
 
 permissions:
   id-token: write
