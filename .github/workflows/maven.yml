@@ -31,7 +31,7 @@ on:
       aws_access_key_id:
         required: true
       aws_secret_access_key:
-        required: true        
+        required: true
 
 env:
   MAVEN_CLI_OPTS: "-B -U -e -fae -ntp -V"
