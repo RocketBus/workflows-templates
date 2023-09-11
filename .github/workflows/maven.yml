@@ -28,6 +28,10 @@ on:
         required: true
       sonar_token:
         required: true
+      aws_access_key_id:
+        required: true
+      aws_secret_access_key:
+        required: true
 
 env:
   MAVEN_CLI_OPTS: "-B -U -e -fae -ntp -V"
