@@ -10,7 +10,7 @@ on:
       skip_quality_gate_check:
         type: boolean
         required: false
-        default: true
+        default: false
     secrets:
       nexus_username:
         required: true
