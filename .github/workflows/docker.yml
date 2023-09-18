@@ -53,7 +53,7 @@ permissions:
 jobs:
   lint:
       name: lint
-      runs-on: live
+      runs-on: actions-runner-set
       if: ${{ (github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && (github.ref_type == 'tag' || inputs.docker_tag_suffix != '')) }}
       steps:
         - name: checkout
@@ -67,7 +67,7 @@ jobs:
 
   build:
     name: build
-    runs-on: live
+    runs-on: actions-runner-set
     needs:
       - lint
     if: ${{ (github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && (github.ref_type == 'tag' || inputs.docker_tag_suffix != '')) }}
@@ -202,7 +202,7 @@ jobs:
 
   image_scan:
     name: image scan
-    runs-on: live
+    runs-on: actions-runner-set
     needs:
       - lint
       - build
