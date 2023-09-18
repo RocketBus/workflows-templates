@@ -51,298 +51,298 @@ jobs:
       - name: checkout
         uses: actions/checkout@v3
 
-      - name: setup Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: ${{ inputs.node_version }}
-          cache: npm
+#       - name: setup Node.js
+#         uses: actions/setup-node@v3
+#         with:
+#           node-version: ${{ inputs.node_version }}
+#           cache: npm
 
-      - name: install Yarn
-        if: ${{ inputs.node_package_manager == 'yarn' }}
-        run: npm install --global yarn
+#       - name: install Yarn
+#         if: ${{ inputs.node_package_manager == 'yarn' }}
+#         run: npm install --global yarn
 
-      - name: setup Yarn cache
-        uses: actions/setup-node@v3
-        if: ${{ inputs.node_package_manager == 'yarn' }}
-        with:
-          node-version: ${{ inputs.node_version }}
-          cache: yarn
+#       - name: setup Yarn cache
+#         uses: actions/setup-node@v3
+#         if: ${{ inputs.node_package_manager == 'yarn' }}
+#         with:
+#           node-version: ${{ inputs.node_version }}
+#           cache: yarn
 
-      - name: install dependencies
-        run: |
-          if [[ ${{ inputs.node_package_manager }} == 'npm' ]]; then
-            npm ci --prefer-offline
-          elif [[ ${{ inputs.node_package_manager }} == 'yarn' ]]; then
-            yarn install --frozen-lockfile
-          fi
+#       - name: install dependencies
+#         run: |
+#           if [[ ${{ inputs.node_package_manager }} == 'npm' ]]; then
+#             npm ci --prefer-offline
+#           elif [[ ${{ inputs.node_package_manager }} == 'yarn' ]]; then
+#             yarn install --frozen-lockfile
+#           fi
 
-      - name: lint code
-        run: |
-          if [[ ${{ inputs.node_package_manager }} == 'npm' ]]; then
-            npm run lint
-          elif [[ ${{ inputs.node_package_manager }} == 'yarn' ]]; then
-            yarn run lint
-          fi
+#       - name: lint code
+#         run: |
+#           if [[ ${{ inputs.node_package_manager }} == 'npm' ]]; then
+#             npm run lint
+#           elif [[ ${{ inputs.node_package_manager }} == 'yarn' ]]; then
+#             yarn run lint
+#           fi
 
-  unit_tests:
-    name: unit tests
-    runs-on: actions-runner-set
-    if: ${{ (github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'tag') }}
-    steps:
-      - name: checkout
-        uses: actions/checkout@v3
+#   unit_tests:
+#     name: unit tests
+#     runs-on: actions-runner-set
+#     if: ${{ (github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'tag') }}
+#     steps:
+#       - name: checkout
+#         uses: actions/checkout@v3
 
-      - name: setup Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: ${{ inputs.node_version }}
-          cache: npm
+#       - name: setup Node.js
+#         uses: actions/setup-node@v3
+#         with:
+#           node-version: ${{ inputs.node_version }}
+#           cache: npm
 
-      - name: install Yarn
-        if: ${{ inputs.node_package_manager == 'yarn' }}
-        run: npm install --global yarn
+#       - name: install Yarn
+#         if: ${{ inputs.node_package_manager == 'yarn' }}
+#         run: npm install --global yarn
 
-      - name: setup Yarn cache
-        uses: actions/setup-node@v3
-        if: ${{ inputs.node_package_manager == 'yarn' }}
-        with:
-          node-version: ${{ inputs.node_version }}
-          cache: yarn
+#       - name: setup Yarn cache
+#         uses: actions/setup-node@v3
+#         if: ${{ inputs.node_package_manager == 'yarn' }}
+#         with:
+#           node-version: ${{ inputs.node_version }}
+#           cache: yarn
 
-      - name: install dependencies
-        run: |
-          if [[ ${{ inputs.node_package_manager }} == 'npm' ]]; then
-            npm ci --prefer-offline
-          elif [[ ${{ inputs.node_package_manager }} == 'yarn' ]]; then
-            yarn install --frozen-lockfile
-          fi
+#       - name: install dependencies
+#         run: |
+#           if [[ ${{ inputs.node_package_manager }} == 'npm' ]]; then
+#             npm ci --prefer-offline
+#           elif [[ ${{ inputs.node_package_manager }} == 'yarn' ]]; then
+#             yarn install --frozen-lockfile
+#           fi
 
-      - name: execute unit tests
-        run: |
-          if [[ ${{ inputs.node_package_manager }} == 'npm' ]]; then
-            npm run test
-          elif [[ ${{ inputs.node_package_manager }} == 'yarn' ]]; then
-            yarn run test
-          fi
+#       - name: execute unit tests
+#         run: |
+#           if [[ ${{ inputs.node_package_manager }} == 'npm' ]]; then
+#             npm run test
+#           elif [[ ${{ inputs.node_package_manager }} == 'yarn' ]]; then
+#             yarn run test
+#           fi
 
-      - name: archive artifact
-        uses: RocketBus/actions/.github/actions/utils/s3-artifact-upload@v1
-        with:
-          name: unit-tests-report
-          bucket_region: ${{ vars.ARTIFACTS_BUCKET_REGION }}
-          bucket_name: ${{ vars.ARTIFACTS_BUCKET_NAME }}
-          actions_iam_role: ${{ vars.ACTIONS_IAM_ROLE }}
-          paths: |
-            coverage/
+#       - name: archive artifact
+#         uses: RocketBus/actions/.github/actions/utils/s3-artifact-upload@v1
+#         with:
+#           name: unit-tests-report
+#           bucket_region: ${{ vars.ARTIFACTS_BUCKET_REGION }}
+#           bucket_name: ${{ vars.ARTIFACTS_BUCKET_NAME }}
+#           actions_iam_role: ${{ vars.ACTIONS_IAM_ROLE }}
+#           paths: |
+#             coverage/
 
 
-  integration_tests:
-    name: integration tests
-    runs-on: ${{ inputs.environment }}
-    if: ${{ (github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'tag') }}
-    steps:
-      - name: checkout
-        uses: actions/checkout@v3
+#   integration_tests:
+#     name: integration tests
+#     runs-on: ${{ inputs.environment }}
+#     if: ${{ (github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'tag') }}
+#     steps:
+#       - name: checkout
+#         uses: actions/checkout@v3
 
-      - name: setup Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: ${{ inputs.node_version }}
-          cache: npm
+#       - name: setup Node.js
+#         uses: actions/setup-node@v3
+#         with:
+#           node-version: ${{ inputs.node_version }}
+#           cache: npm
 
-      - name: install Yarn
-        if: ${{ inputs.node_package_manager == 'yarn' }}
-        run: npm install --global yarn
+#       - name: install Yarn
+#         if: ${{ inputs.node_package_manager == 'yarn' }}
+#         run: npm install --global yarn
 
-      - name: setup Yarn cache
-        uses: actions/setup-node@v3
-        if: ${{ inputs.node_package_manager == 'yarn' }}
-        with:
-          node-version: ${{ inputs.node_version }}
-          cache: yarn
+#       - name: setup Yarn cache
+#         uses: actions/setup-node@v3
+#         if: ${{ inputs.node_package_manager == 'yarn' }}
+#         with:
+#           node-version: ${{ inputs.node_version }}
+#           cache: yarn
 
-      - name: install dependencies
-        run: |
-          if [[ ${{ inputs.node_package_manager }} == 'npm' ]]; then
-            npm ci --prefer-offline
-          elif [[ ${{ inputs.node_package_manager }} == 'yarn' ]]; then
-            yarn install --frozen-lockfile
-          fi
+#       - name: install dependencies
+#         run: |
+#           if [[ ${{ inputs.node_package_manager }} == 'npm' ]]; then
+#             npm ci --prefer-offline
+#           elif [[ ${{ inputs.node_package_manager }} == 'yarn' ]]; then
+#             yarn install --frozen-lockfile
+#           fi
 
-      - name: execute integration tests
-        continue-on-error: true
-        run: |
-          if [[ ${{ inputs.node_package_manager }} == 'npm' ]]; then
-            npm run test:integration
-          elif [[ ${{ inputs.node_package_manager }} == 'yarn' ]]; then
-            yarn run test:integration
-          fi
+#       - name: execute integration tests
+#         continue-on-error: true
+#         run: |
+#           if [[ ${{ inputs.node_package_manager }} == 'npm' ]]; then
+#             npm run test:integration
+#           elif [[ ${{ inputs.node_package_manager }} == 'yarn' ]]; then
+#             yarn run test:integration
+#           fi
 
-  audit:
-    name: audit dependencies
-    runs-on: ${{ inputs.environment }}
-    if: ${{ (github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'tag') }}
-    steps:
-      - name: checkout
-        uses: actions/checkout@v3
+#   audit:
+#     name: audit dependencies
+#     runs-on: ${{ inputs.environment }}
+#     if: ${{ (github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'tag') }}
+#     steps:
+#       - name: checkout
+#         uses: actions/checkout@v3
 
-      - name: setup Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: ${{ inputs.node_version }}
-          cache: npm
+#       - name: setup Node.js
+#         uses: actions/setup-node@v3
+#         with:
+#           node-version: ${{ inputs.node_version }}
+#           cache: npm
 
-      - name: install Yarn
-        if: ${{ inputs.node_package_manager == 'yarn' }}
-        run: npm install --global yarn
+#       - name: install Yarn
+#         if: ${{ inputs.node_package_manager == 'yarn' }}
+#         run: npm install --global yarn
 
-      - name: execute audit
-        continue-on-error: true
-        run: |
-          if [[ ${{ inputs.node_package_manager }} == 'npm' ]]; then
-            npm audit --audit-level=high
-          elif [[ ${{ inputs.node_package_manager }} == 'yarn' ]]; then
-            yarn audit --level high
-          fi
+#       - name: execute audit
+#         continue-on-error: true
+#         run: |
+#           if [[ ${{ inputs.node_package_manager }} == 'npm' ]]; then
+#             npm audit --audit-level=high
+#           elif [[ ${{ inputs.node_package_manager }} == 'yarn' ]]; then
+#             yarn audit --level high
+#           fi
 
-  sonarqube:
-    name: sonarqube
-    runs-on: actions-runner-set
-    needs:
-      - lint
-      - unit_tests
-      - integration_tests
-    if: ${{ (github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'tag') }}
-    steps:
-      - name: checkout
-        uses: actions/checkout@v3
+#   sonarqube:
+#     name: sonarqube
+#     runs-on: actions-runner-set
+#     needs:
+#       - lint
+#       - unit_tests
+#       - integration_tests
+#     if: ${{ (github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'tag') }}
+#     steps:
+#       - name: checkout
+#         uses: actions/checkout@v3
 
-      - name: setup Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: ${{ inputs.node_version }}
-          cache: npm
+#       - name: setup Node.js
+#         uses: actions/setup-node@v3
+#         with:
+#           node-version: ${{ inputs.node_version }}
+#           cache: npm
 
-      - name: install Yarn
-        if: ${{ inputs.node_package_manager == 'yarn' }}
-        run: npm install --global yarn
+#       - name: install Yarn
+#         if: ${{ inputs.node_package_manager == 'yarn' }}
+#         run: npm install --global yarn
 
-      - name: setup Yarn cache
-        uses: actions/setup-node@v3
-        if: ${{ inputs.node_package_manager == 'yarn' }}
-        with:
-          node-version: ${{ inputs.node_version }}
-          cache: yarn
+#       - name: setup Yarn cache
+#         uses: actions/setup-node@v3
+#         if: ${{ inputs.node_package_manager == 'yarn' }}
+#         with:
+#           node-version: ${{ inputs.node_version }}
+#           cache: yarn
 
-      - name: install dependencies
-        run: |
-          if [[ ${{ inputs.node_package_manager }} == 'npm' ]]; then
-            npm ci --prefer-offline
-          elif [[ ${{ inputs.node_package_manager }} == 'yarn' ]]; then
-            yarn install --frozen-lockfile
-          fi
+#       - name: install dependencies
+#         run: |
+#           if [[ ${{ inputs.node_package_manager }} == 'npm' ]]; then
+#             npm ci --prefer-offline
+#           elif [[ ${{ inputs.node_package_manager }} == 'yarn' ]]; then
+#             yarn install --frozen-lockfile
+#           fi
 
-      - name: download artifact
-        uses: RocketBus/actions/.github/actions/utils/s3-artifact-download@v1
-        with:
-          name: unit-tests-report
-          bucket_region: ${{ vars.ARTIFACTS_BUCKET_REGION }}
-          bucket_name: ${{ vars.ARTIFACTS_BUCKET_NAME }}
-          actions_iam_role: ${{ vars.ACTIONS_IAM_ROLE }}
+#       - name: download artifact
+#         uses: RocketBus/actions/.github/actions/utils/s3-artifact-download@v1
+#         with:
+#           name: unit-tests-report
+#           bucket_region: ${{ vars.ARTIFACTS_BUCKET_REGION }}
+#           bucket_name: ${{ vars.ARTIFACTS_BUCKET_NAME }}
+#           actions_iam_role: ${{ vars.ACTIONS_IAM_ROLE }}
 
-      - name: set sonar parameters
-        id: set_sonar_parameters
-        run: |
-          if [[ ${{ github.event_name }} == 'pull_request' ]]; then
-            SONAR_PARAMETERS="$SONAR_PARAMETERS -Dsonar.pullrequest.key=${{ github.event.pull_request.number }} -Dsonar.pullrequest.branch=${{ github.event.pull_request.head.ref }} -Dsonar.pullrequest.github.repository=$GITHUB_REPOSITORY"
-          fi
+#       - name: set sonar parameters
+#         id: set_sonar_parameters
+#         run: |
+#           if [[ ${{ github.event_name }} == 'pull_request' ]]; then
+#             SONAR_PARAMETERS="$SONAR_PARAMETERS -Dsonar.pullrequest.key=${{ github.event.pull_request.number }} -Dsonar.pullrequest.branch=${{ github.event.pull_request.head.ref }} -Dsonar.pullrequest.github.repository=$GITHUB_REPOSITORY"
+#           fi
 
-          if [[ ${{ github.event_name }} == 'push' && ${{ github.ref_type }} == 'tag' ]]; then
-            SONAR_PARAMETERS="$SONAR_PARAMETERS -Dsonar.branch.name=${{ github.event.repository.default_branch }}"
-          fi
+#           if [[ ${{ github.event_name }} == 'push' && ${{ github.ref_type }} == 'tag' ]]; then
+#             SONAR_PARAMETERS="$SONAR_PARAMETERS -Dsonar.branch.name=${{ github.event.repository.default_branch }}"
+#           fi
 
-          echo "args=$SONAR_PARAMETERS" >> $GITHUB_OUTPUT
+#           echo "args=$SONAR_PARAMETERS" >> $GITHUB_OUTPUT
 
-      - name: sonarqube scan
-        uses: sonarsource/sonarqube-scan-action@master
-        with:
-          args: >
-            ${{ steps.set_sonar_parameters.outputs.args }}
+#       - name: sonarqube scan
+#         uses: sonarsource/sonarqube-scan-action@master
+#         with:
+#           args: >
+#             ${{ steps.set_sonar_parameters.outputs.args }}
 
-      - name: sonarqube quality gate check
-        if: (github.event_name == 'pull_request') && (! inputs.skip_quality_gate_check)
-        uses: sonarsource/sonarqube-quality-gate-action@master
-        timeout-minutes: 5
+#       - name: sonarqube quality gate check
+#         if: (github.event_name == 'pull_request') && (! inputs.skip_quality_gate_check)
+#         uses: sonarsource/sonarqube-quality-gate-action@master
+#         timeout-minutes: 5
 
-  package:
-    name: package
-    runs-on: ${{ inputs.environment }}
-    needs:
-      - sonarqube
-    if: ${{ !inputs.package_disabled && ((github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'tag')) }}
-    steps:
-      - name: checkout
-        uses: actions/checkout@v3
+#   package:
+#     name: package
+#     runs-on: ${{ inputs.environment }}
+#     needs:
+#       - sonarqube
+#     if: ${{ !inputs.package_disabled && ((github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'tag')) }}
+#     steps:
+#       - name: checkout
+#         uses: actions/checkout@v3
 
-      - name: setup Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: ${{ inputs.node_version }}
-          cache: npm
+#       - name: setup Node.js
+#         uses: actions/setup-node@v3
+#         with:
+#           node-version: ${{ inputs.node_version }}
+#           cache: npm
 
-      - name: install Yarn
-        if: ${{ inputs.node_package_manager == 'yarn' }}
-        run: npm install --global yarn
+#       - name: install Yarn
+#         if: ${{ inputs.node_package_manager == 'yarn' }}
+#         run: npm install --global yarn
 
-      - name: setup Yarn cache
-        uses: actions/setup-node@v3
-        if: ${{ inputs.node_package_manager == 'yarn' }}
-        with:
-          node-version: ${{ inputs.node_version }}
-          cache: yarn
+#       - name: setup Yarn cache
+#         uses: actions/setup-node@v3
+#         if: ${{ inputs.node_package_manager == 'yarn' }}
+#         with:
+#           node-version: ${{ inputs.node_version }}
+#           cache: yarn
 
-      - name: install dependencies
-        run: |
-          if [[ ${{ inputs.node_package_manager }} == 'npm' ]]; then
-            npm ci --prefer-offline
-          elif [[ ${{ inputs.node_package_manager }} == 'yarn' ]]; then
-            yarn install --frozen-lockfile
-          fi
+#       - name: install dependencies
+#         run: |
+#           if [[ ${{ inputs.node_package_manager }} == 'npm' ]]; then
+#             npm ci --prefer-offline
+#           elif [[ ${{ inputs.node_package_manager }} == 'yarn' ]]; then
+#             yarn install --frozen-lockfile
+#           fi
 
-      - name: package artifact
-        id: package_artifact
-        run: |
-          if [[ -n "${{ inputs.environment }}" ]]; then
-            NODE_ENV_SCRIPT=${{ inputs.environment }}
-          fi
+#       - name: package artifact
+#         id: package_artifact
+#         run: |
+#           if [[ -n "${{ inputs.environment }}" ]]; then
+#             NODE_ENV_SCRIPT=${{ inputs.environment }}
+#           fi
 
-          if [[ ${{ inputs.node_package_manager }} == 'npm' ]]; then
-            npm run build${NODE_ENV_SCRIPT:+:$NODE_ENV_SCRIPT}
-          elif [[ ${{ inputs.node_package_manager }} == 'yarn' ]]; then
-            npm install --global yarn
-            yarn run build${NODE_ENV_SCRIPT:+:$NODE_ENV_SCRIPT}
-          fi
+#           if [[ ${{ inputs.node_package_manager }} == 'npm' ]]; then
+#             npm run build${NODE_ENV_SCRIPT:+:$NODE_ENV_SCRIPT}
+#           elif [[ ${{ inputs.node_package_manager }} == 'yarn' ]]; then
+#             npm install --global yarn
+#             yarn run build${NODE_ENV_SCRIPT:+:$NODE_ENV_SCRIPT}
+#           fi
 
-      - name: archive artifact
-        uses: RocketBus/actions/.github/actions/utils/s3-artifact-upload@v1
-        with:
-          name: app-artifact
-          bucket_region: ${{ vars.ARTIFACTS_BUCKET_REGION }}
-          bucket_name: ${{ vars.ARTIFACTS_BUCKET_NAME }}
-          actions_iam_role: ${{ vars.ACTIONS_IAM_ROLE }}
-          paths: |
-            dist/
-            build/
+#       - name: archive artifact
+#         uses: RocketBus/actions/.github/actions/utils/s3-artifact-upload@v1
+#         with:
+#           name: app-artifact
+#           bucket_region: ${{ vars.ARTIFACTS_BUCKET_REGION }}
+#           bucket_name: ${{ vars.ARTIFACTS_BUCKET_NAME }}
+#           actions_iam_role: ${{ vars.ACTIONS_IAM_ROLE }}
+#           paths: |
+#             dist/
+#             build/
 
-  release:
-    name: release
-    runs-on: ${{ inputs.environment }}
-    needs:
-      - package
-    if: ${{ always() && (needs.package.result == 'success' || needs.package.result == 'skipped') && (github.event_name == 'push' && github.ref_type == 'tag') }}
-    steps:
-      - name: checkout
-        uses: actions/checkout@v3
+#   release:
+#     name: release
+#     runs-on: ${{ inputs.environment }}
+#     needs:
+#       - package
+#     if: ${{ always() && (needs.package.result == 'success' || needs.package.result == 'skipped') && (github.event_name == 'push' && github.ref_type == 'tag') }}
+#     steps:
+#       - name: checkout
+#         uses: actions/checkout@v3
 
-      - name: create github release
-        uses: softprops/action-gh-release@v1
+#       - name: create github release
+#         uses: softprops/action-gh-release@v1
