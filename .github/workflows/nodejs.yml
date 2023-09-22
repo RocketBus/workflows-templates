@@ -23,6 +23,10 @@ on:
         type: boolean
         required: false
         default: false
+      force_test:
+        type: boolean
+        required: false
+        default: false
     secrets:
       nexus_username:
         required: true
@@ -46,7 +50,7 @@ jobs:
   lint:
     name: lint
     runs-on: actions-runner-set
-    if: ${{ github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize') || (github.event_name == 'push' && (github.ref_type == 'tag' || github.ref == format('refs/heads/{0}', github.event.repository.default_branch)) ) }}
+    if: ${{ !inputs.force_test || ((github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'tag')) }}
     steps:
       - name: checkout
         uses: actions/checkout@v3
@@ -87,7 +91,7 @@ jobs:
   unit_tests:
     name: unit tests
     runs-on: actions-runner-set
-    if: ${{ github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize') || (github.event_name == 'push' && (github.ref_type == 'tag' || github.ref == format('refs/heads/{0}', github.event.repository.default_branch)) ) }}
+    if: ${{ !inputs.force_test || ((github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'tag')) }}
     steps:
       - name: checkout
         uses: actions/checkout@v3
@@ -139,7 +143,7 @@ jobs:
   integration_tests:
     name: integration tests
     runs-on: ${{ inputs.environment }}
-    if: ${{ github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize') || (github.event_name == 'push' && (github.ref_type == 'tag' || github.ref == format('refs/heads/{0}', github.event.repository.default_branch)) ) }}
+    if: ${{ !inputs.force_test || ((github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'tag')) }}
     steps:
       - name: checkout
         uses: actions/checkout@v3
@@ -181,7 +185,7 @@ jobs:
   audit:
     name: audit dependencies
     runs-on: ${{ inputs.environment }}
-    if: ${{ github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize') || (github.event_name == 'push' && (github.ref_type == 'tag' || github.ref == format('refs/heads/{0}', github.event.repository.default_branch)) ) }}
+    if: ${{ !inputs.force_test || ((github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'tag')) }}
     steps:
       - name: checkout
         uses: actions/checkout@v3
@@ -212,7 +216,7 @@ jobs:
       - lint
       - unit_tests
       - integration_tests
-    if: ${{ github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize') || (github.event_name == 'push' && (github.ref_type == 'tag' || github.ref == format('refs/heads/{0}', github.event.repository.default_branch)) ) }}
+    if: ${{ !inputs.force_test || ((github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'tag')) }}
     steps:
       - name: checkout
         uses: actions/checkout@v3
@@ -279,7 +283,7 @@ jobs:
     runs-on: ${{ inputs.environment }}
     needs:
       - sonarqube
-    if: ${{ !inputs.package_disabled && ((github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && (github.ref_type == 'tag' || github.ref == format('refs/heads/{0}', github.event.repository.default_branch))) ) }}
+    if: ${{ !inputs.package_disabled && ((github.event_name == 'pull_request' && (github.event.action == 'opened' || github.event.action == 'synchronize')) || (github.event_name == 'push' && github.ref_type == 'tag')) }}
     steps:
       - name: checkout
         uses: actions/checkout@v3
