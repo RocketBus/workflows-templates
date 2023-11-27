@@ -105,14 +105,14 @@ jobs:
           fi
 
           if [[ ${{ github.event_name }} == 'pull_request' ]]; then
-            PREFIX_HOST=pr-${{ github.event.number }}
+            PREFIX_NAME=pr-${{ github.event.number }}
             PR_RELEASE_NAME=${RELEASE_NAME}-pr${{ github.event.number }}
           
             helm upgrade \
               --install ${PR_RELEASE_NAME} ${CHART_PATH} \
               --create-namespace --namespace ${NAMESPACE} \
               --values ${CHART_PATH}/environments/${ENV}/values.yaml ${HELM_ARGS} \
-              --set image.repository=${ECR_REPOSITORY} --set image.tag=${IMAGE_TAG} --set ingress.preffixHost=${PREFIX_HOST}
+              --set image.repository=${ECR_REPOSITORY} --set image.tag=${IMAGE_TAG} --set prefixName=${PREFIX_NAME}
           else
             helm upgrade \
               --install ${RELEASE_NAME} ${CHART_PATH} \
