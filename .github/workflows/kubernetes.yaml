@@ -106,7 +106,7 @@ jobs:
 
           if [[ ${{ github.event_name }} == 'pull_request' ]]; then
             PREFIX_NAME=pr-${{ github.event.number }}
-            PR_RELEASE_NAME=${RELEASE_NAME}-pr${{ github.event.number }}
+            PR_RELEASE_NAME=${PREFIX_NAME}-${RELEASE_NAME}
           
             helm upgrade \
               --install ${PR_RELEASE_NAME} ${CHART_PATH} \
@@ -193,8 +193,8 @@ jobs:
           aws eks update-kubeconfig --name ${{ steps.env.outputs.eks_cluster }}
 
           if [[ ${{ github.event_name }} == 'pull_request' ]]; then
-            PREFIX_HOST=pr-${{ github.event.number }}
-            RELEASE_NAME=${RELEASE_NAME}-pr${{ github.event.number }}
+            PREFIX_NAME=pr-${{ github.event.number }}
+            PR_RELEASE_NAME=${PREFIX_NAME}-${RELEASE_NAME}
           fi
 
           helm uninstall ${RELEASE_NAME} -n ${NAMESPACE}
