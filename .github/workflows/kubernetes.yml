@@ -40,7 +40,7 @@ jobs:
       ENV: ${{ inputs.environment }}
     steps:
       - name: Notify
-        if: ${{ inputs.environment == 'live' }}
+        if: ${{ inputs.environment == 'live' || inputs.environment == 'live2' }}
         uses: edge/simple-slack-notify@master
         with:
           channel: ${{ env.SLACK_CHANNEL }}
@@ -65,9 +65,9 @@ jobs:
         run: |
           declare -A AWS_ACCOUNTS_IDS AWS_REGIONS EKS_CLUSTERS
 
-          AWS_ACCOUNTS_IDS=([dev]=180811438061 [stg]=406026015868 [live]=114395709799)
+          AWS_ACCOUNTS_IDS=([dev]=180811438061 [stg]=406026015868 [live]=114395709799 [live2]=114395709799)
           AWS_REGIONS=([dev]=us-east-2 [stg]=us-east-2 [live]=us-east-1)
-          EKS_CLUSTERS=([dev]=k8s-dev-85c52b0e [stg]=k8s-stg-7a1d63f9 [live]=k8s-live-b2401546)
+          EKS_CLUSTERS=([dev]=k8s-dev-85c52b0e [stg]=k8s-stg-7a1d63f9 [live]=k8s-live-b2401546 [live2]=k8s-live-b2401546)
 
           AWS_ACCOUNT_ID=${AWS_ACCOUNTS_IDS[$ENV]}
           AWS_REGION=${AWS_REGIONS[$ENV]}
@@ -209,9 +209,9 @@ jobs:
         run: |
           declare -A AWS_ACCOUNTS_IDS AWS_REGIONS EKS_CLUSTERS
           
-          AWS_ACCOUNTS_IDS=([dev]=180811438061 [stg]=406026015868 [live]=114395709799)
+          AWS_ACCOUNTS_IDS=([dev]=180811438061 [stg]=406026015868 [live]=114395709799 [live2]=114395709799)
           AWS_REGIONS=([dev]=us-east-2 [stg]=us-east-2 [live]=us-east-1)
-          EKS_CLUSTERS=([dev]=k8s-dev-85c52b0e [stg]=k8s-stg-7a1d63f9 [live]=k8s-live-b2401546)
+          EKS_CLUSTERS=([dev]=k8s-dev-85c52b0e [stg]=k8s-stg-7a1d63f9 [live]=k8s-live-b2401546 [live2]=k8s-live-b2401546)
 
           AWS_ACCOUNT_ID=${AWS_ACCOUNTS_IDS[$ENV]}
           AWS_REGION=${AWS_REGIONS[$ENV]}
