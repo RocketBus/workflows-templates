@@ -76,10 +76,15 @@ jobs:
           echo "aws_region=$AWS_REGION" >> $GITHUB_OUTPUT
           echo "aws_iam_role=arn:aws:iam::${AWS_ACCOUNT_ID}:role/CrossAccount-Global-Admin" >> $GITHUB_OUTPUT
           echo "eks_cluster=$EKS_CLUSTER" >> $GITHUB_OUTPUT
-
-          echo RELEASE_NAME=${{ inputs.project_name }} >> $GITHUB_ENV
-          echo NAMESPACE=${{ inputs.project_name }} >> $GITHUB_ENV
-          echo CHART_PATH=charts/${{ inputs.project_name }} >> $GITHUB_ENV
+          if [[  $SQUAD == 'search' ]]; then
+            echo RELEASE_NAME=platform-bff-search >> $GITHUB_ENV
+            echo NAMESPACE=platform-bff-search >> $GITHUB_ENV
+            echo CHART_PATH=search >> $GITHUB_ENV
+          else
+            echo RELEASE_NAME=${{ inputs.project_name }} >> $GITHUB_ENV
+            echo NAMESPACE=${{ inputs.project_name }} >> $GITHUB_ENV
+            echo CHART_PATH=charts/${{ inputs.project_name }} >> $GITHUB_ENV
+          fi
 
           echo SLACK_WEBHOOK_URL=${{ secrets.slack_default_webhook }} >> $GITHUB_ENV
                 
