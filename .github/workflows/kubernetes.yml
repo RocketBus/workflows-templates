@@ -152,7 +152,7 @@ jobs:
           aws eks update-kubeconfig --name ${{ steps.job_properties.outputs.eks_cluster }}
 
           SQUAD=${{ inputs.squad }}
-          if [[ $SQUAD == 'cabal' || $SQUAD == 'fallen' || $SQUAD == 'vex' || $SQUAD == 'taken' || $SQUAD == 'hive' ]]; then
+          if [[ $SQUAD == 'cabal' || $SQUAD == 'fallen' || $SQUAD == 'vex' || $SQUAD == 'taken' || $SQUAD == 'hive' || $SQUAD == 'search' ]]; then
             RELEASE_NAME=${{ steps.job_properties.outputs.environment }}-${{ inputs.project_name }}
           # removido pr acme-3327
           # elif [[ ${{ github.event_name }} == 'pull_request' ]]; then
