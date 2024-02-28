@@ -1,0 +1,33 @@
+name: Azion purge cache
+
+on:
+  workflow_call:
+    inputs:
+      url_wildcard:
+        type: string
+        required: true
+        description: "https://www.clickbus.com.br/*"
+    secrets:
+      azion_api_key:
+        required: true
+
+jobs:
+  cache:
+    runs-on: live
+    steps:
+      - name: Wait pods substitution
+        run: sleep 60s
+        shell: bash
+
+      - name: Purge cache Azion
+        run: |
+          curl --location 'https://api.azionapi.net/purge/wildcard' \
+            --header 'Accept: application/json; version=3' \
+            --header 'Authorization: Token ${{ secrets.azion_api_key }}' \
+            --header 'Content-Type: application/json' \
+            --data '{
+                "urls": [
+                    "${{ inputs.url_wildcard }}"
+                ],
+                "method": "delete"
+            }'
